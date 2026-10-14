@@ -27,15 +27,36 @@ async function flclashRelease(): Promise<any> {
   })();
   return releaseMemo;
 }
-function flclash(platform: string, label: string, re: RegExp): Target {
+// 不依赖 API 的版本解析：/releases/latest 会 302 到 /releases/tag/vX.Y.Z，资源文件名有固定规律。
+let tagMemo: Promise<string> | null = null;
+async function flclashLatestTag(): Promise<string> {
+  if (tagMemo) return tagMemo;
+  tagMemo = (async () => {
+    const r = await fetch('https://github.com/chen08209/FlClash/releases/latest', { method: 'GET', redirect: 'manual', headers: H });
+    try { await r.body?.cancel(); } catch {}
+    const loc = r.headers.get('location') || '';
+    const m = /\/releases\/tag\/(v[\d.]+)/.exec(loc);
+    if (!m) { tagMemo = null; throw new Error(`cannot resolve latest tag (${r.status})`); }
+    return m[1];
+  })();
+  return tagMemo;
+}
+function flclash(platform: string, label: string, suffix: string, re: RegExp): Target {
   return {
     id: `flclash/${platform}`, app: 'flclash', platform, label,
     async resolve() {
-      const rel = await flclashRelease();
-      const a = (rel.assets as any[]).find((x) => re.test(x.name));
-      if (!a) throw new Error(`asset not found for ${platform}`);
-      const sha = typeof a.digest === 'string' && a.digest.startsWith('sha256:') ? a.digest.slice(7) : null;
-      return { url: a.browser_download_url, filename: a.name, version: rel.tag_name, sha256: sha };
+      const tag = await flclashLatestTag();
+      const ver = tag.replace(/^v/, '');
+      const filename = `FlClash-${ver}-${suffix}`;
+      const url = `https://github.com/chen08209/FlClash/releases/download/${tag}/${filename}`;
+      // 校验值来自 API 的 digest 字段；API 配额用尽时跳过，不影响镜像
+      let sha256: string | null = null;
+      try {
+        const rel = await flclashRelease();
+        const a = (rel.assets as any[]).find((x) => re.test(x.name));
+        if (a && typeof a.digest === 'string' && a.digest.startsWith('sha256:')) sha256 = a.digest.slice(7);
+      } catch {}
+      return { url, filename, version: tag, sha256 };
     },
   };
 }
@@ -106,12 +127,12 @@ function codexMac(): Target {
 }
 
 export const TARGETS: Target[] = [
-  flclash('macos-arm64', 'macOS · Apple 芯片', /macos-arm64\.dmg$/),
-  flclash('macos-amd64', 'macOS · Intel', /macos-amd64\.dmg$/),
-  flclash('windows', 'Windows', /windows-amd64-setup\.exe$/),
-  flclash('linux-deb', 'Linux · .deb', /linux-amd64\.deb$/),
-  flclash('linux-appimage', 'Linux · AppImage', /linux-amd64\.AppImage$/),
-  flclash('android', 'Android', /android-arm64-v8a\.apk$/),
+  flclash('macos-arm64', 'macOS · Apple 芯片', 'macos-arm64.dmg', /macos-arm64\.dmg$/),
+  flclash('macos-amd64', 'macOS · Intel', 'macos-amd64.dmg', /macos-amd64\.dmg$/),
+  flclash('windows', 'Windows', 'windows-amd64-setup.exe', /windows-amd64-setup\.exe$/),
+  flclash('linux-deb', 'Linux · .deb', 'linux-amd64.deb', /linux-amd64\.deb$/),
+  flclash('linux-appimage', 'Linux · AppImage', 'linux-amd64.AppImage', /linux-amd64\.AppImage$/),
+  flclash('android', 'Android', 'android-arm64-v8a.apk', /android-arm64-v8a\.apk$/),
   claudeRedirect('macos', 'macOS', 'https://claude.ai/api/desktop/darwin/universal/dmg/latest/redirect', 'Claude.dmg'),
   claudeRedirect('windows-x64', 'Windows · x64', 'https://claude.ai/api/desktop/win32/x64/setup/latest/redirect', 'Claude-Setup-x64.exe'),
   claudeRedirect('windows-arm64', 'Windows · ARM64', 'https://claude.ai/api/desktop/win32/arm64/setup/latest/redirect', 'Claude-Setup-arm64.exe'),
