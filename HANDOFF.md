@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-13 20:32 America/New_York · 更新者：Claude（会话 session_017nqPj8MzXKK8YfLau84Y55）
+最后更新：2026-10-13 20:40 America/New_York · 更新者：Claude（会话 session_017nqPj8MzXKK8YfLau84Y55）
 
 ---
 
@@ -42,7 +42,7 @@ door4ai-lab/
 ├── src/
 │   ├── content.config.ts   ← 文章 schema：title, description, pubDate, updatedDate?, tags[], lab?, series?, order?
 │   ├── content/blog/*.md   ← 文章正文（markdown）
-│   ├── data/resources.ts   ← Resource 页的条目（分 section，每条 title/url/note）
+│   ├── data/resources.ts   ← Resource 页的条目（每条 title/note/links[]，links 按平台分列）
 │   ├── layouts/Base.astro  ← 全站布局 + 全部 CSS（颜色 token、字体、深浅色、入口卡片）
 │   └── pages/
 │       ├── index.astro         ← 首页 = 门厅：项目名 + 入口模块（Course / Resource）
@@ -59,7 +59,7 @@ door4ai-lab/
 ### 写一篇新文章的标准流程
 1. 实验页：写成单文件 HTML（内联 CSS/JS，可用 cdnjs 等 CDN 加载库），放到 `public/labs/<slug>/index.html`。
 2. 文章：`src/content/blog/<slug>.md`，frontmatter 写 `lab: /labs/<slug>/`；属于课程的写 `series: ai-mastery` 和 `order: <数字>`（10、20、30… 留空隙便于插入）。不写 series 的文章不会出现在课程目录里。
-   - 加资源：编辑 `src/data/resources.ts`，不需要新建页面。
+   - 加资源：编辑 `src/data/resources.ts`，不需要新建页面。**Resource 页只放本人明确指定的条目，AI 不得自行添加。**
 3. 本地 `npm run build` 必须通过。
 4. commit → push `main` → 等 1–2 分钟 → 打开 https://lab.door4ai.com 验证文章页和实验页都能打开。
 5. 更新本文件第 5、6 节。
@@ -78,6 +78,7 @@ door4ai-lab/
 - 不加 license；仓库 public。
 - 用 Astro + Cloudflare Pages，不自建服务器。
 - 实验页用独立 HTML + iframe 嵌入，而不是做成 Astro 组件——便于把同一个 HTML 作为 Claude artifact 预览、也便于全屏分享。
+- **Resource 页只放本人指定的内容**（目前：FlClash、Codex、Claude 的下载入口 + door4ai.com）。下载链接必须同时覆盖 macOS 和 Windows，有 Linux 版的也要列出。不要往里放论文、教程等「推荐阅读」。
 - 首页是「门厅」而不是文章流：只放项目名和入口模块。目前两个入口：「AI 从入门到精通」（课程，按讲排序）和「Resource」（资源库）。新增板块 = 新增一张入口卡片 + 一个页面。
 
 ## 5. 当前状态
@@ -86,12 +87,13 @@ door4ai-lab/
 - [x] 本机 `~/Documents/Agents/door4ai-lab` 已与 GitHub 同步
 - [x] 首页改为入口模块布局；新增 /ai/ 课程目录与 /resources/ 资源库（2026-10-13）
 - [ ] 第 2 讲：题目未定
-- [ ] Resource 目前只有 7 条，随课程扩充
 - [ ] 关于页只有两句话，待充实
 - [ ] 没有统计/分析（可考虑 Cloudflare Web Analytics，免费，一行脚本）
 - [ ] 没有评论、订阅、付费墙——课程售卖形态未定，先积累内容
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-13 · Claude** — 按本人要求重做 Resource：删掉自行添加的论文/教程，只保留 FlClash、Codex、Claude 三个下载入口（各列 macOS / Windows / Linux，FlClash 另有 Android）和 door4ai.com。链接经核实（FlClash GitHub releases latest；Codex 桌面应用 chatgpt.com/codex，Linux 为 CLI；Claude 官方直链 + Linux beta 文档）。改 `src/data/resources.ts`、`src/pages/resources.astro`、Base.astro 样式、首页卡片文案。
 
 - **2026-10-13 · Claude** — 首页重构为门厅（项目名 + Course / Resource 两个入口卡片）；新增 `src/pages/ai.astro`（课程目录）、`src/pages/resources.astro` + `src/data/resources.ts`（资源库，7 条）；schema 加 `series`/`order`；导航改为 AI从入门到精通 / Resource / 关于。本地 build 通过，push 后线上验证通过。
 

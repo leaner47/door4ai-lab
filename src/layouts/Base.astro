@@ -68,9 +68,13 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     .postlist a.t{font-size:22px;font-weight:700;text-decoration:none;color:var(--fg)}
     .postlist p{margin:6px 0 0;color:var(--muted)}
     .reslist{list-style:none;padding:0;margin:20px 0 0}
-    .reslist li{padding:12px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr;gap:4px}
-    .reslist a{font-weight:700;text-decoration:none}
+    .reslist li{padding:18px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr;gap:6px}
+    .reslist .rt{font-size:22px;font-weight:700}
     .reslist .d{color:var(--muted);font-size:15px}
+    .plat{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:8px}
+    .plat a{display:block;text-decoration:none;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-weight:700;min-width:0}
+    .plat a:hover{border-color:var(--accent)}
+    .plat a small{display:block;font-weight:400;color:var(--muted);font-size:12.5px;line-height:1.5;margin-top:3px;word-break:break-all}
     .tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
     .tag{font-family:var(--mono);font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:1px 7px}
   </style>

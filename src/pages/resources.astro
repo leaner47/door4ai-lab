@@ -2,21 +2,20 @@
 import Base from '../layouts/Base.astro';
 import { resources } from '../data/resources';
 ---
-<Base title="Resource · Door4AI Lab" description="论文、工具、开源项目和值得读的材料，按主题整理。">
+<Base title="Resource · Door4AI Lab" description="常用工具的下载入口，按平台分列。">
   <div class="eyebrow">Resource</div>
   <h1>Resource</h1>
-  <p class="prose" style="color:var(--muted)">按主题整理，每条附一句为什么值得看。会随课程进度持续增加。</p>
-  {resources.map((g) => (
-    <section style="margin-top:36px">
-      <h2 style="font-size:20px;margin:0 0 4px">{g.section}</h2>
-      <ul class="reslist">
-        {g.items.map((r) => (
-          <li>
-            <a href={r.url} target="_blank" rel="noopener">{r.title} ↗</a>
-            <span class="d">{r.note}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  ))}
+  <ul class="reslist">
+    {resources.map((r) => (
+      <li>
+        <span class="rt">{r.title}</span>
+        <span class="d">{r.note}</span>
+        <div class="plat">
+          {r.links.map((l) => (
+            <a href={l.url} target="_blank" rel="noopener" title={l.hint}>{l.label} ↗{l.hint && <small>{l.hint}</small>}</a>
+          ))}
+        </div>
+      </li>
+    ))}
+  </ul>
 </Base>
