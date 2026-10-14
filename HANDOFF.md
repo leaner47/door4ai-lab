@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 19:35 America/New_York · 更新者：Claude（会话 session_01DR5LFdGneALqpA1WLAEDZS）
+最后更新：2026-10-14 19:40 America/New_York · 更新者：Claude（会话 session_017CU4NcQfTghfgs5thFLD9Y）
 
 ---
 
@@ -82,6 +82,8 @@ door4ai-lab/
 
 ## 4. 已做的关键决定（不要反复讨论）
 
+- 课程顺序：硬件入门讲（computer-anatomy，order 2）放在注意力（order 5）之前，作为零基础第一课。
+- 生成型实验页（由脚本产出的 HTML）把生成脚本放在 `labs-src/<slug>/`，产物仍放 `public/labs/<slug>/index.html`。
 - 域名用子域名 `lab.door4ai.com`（door4ai.com 根域名有正在运行的业务；matrix-tech-inyz.com 留给公司）。
 - 博客放子域名而非 `blog.`，取 `lab` 呼应「实验室」定位。
 - 不加 license；仓库 public。
@@ -102,6 +104,7 @@ door4ai-lab/
 - [x] 首页改为入口模块布局；新增 /ai/ 课程目录与 /resources/ 资源库（2026-10-13）
 - [x] 安装包镜像上线并验证：12 个文件（FlClash v0.9.0 ×6、Claude 2.37337.1 ×5、Codex/ChatGPT.dmg ×1），登录后点击即下，支持断点续传（2026-10-14）
 - [x] 新增《注意力里的 Q、K、V 到底在干什么》+「注意力实验室」六个实验，排为第 1 讲（order 5），KV Cache 顺延为第 2 讲（2026-10-14）
+- [x] 新增入门讲《电脑里到底有什么：CPU、GPU、内存、显存与 Docker》+ 五个等距图解实验，排在课程最前（order 2）（2026-10-14）
 - [ ] 下一讲：题目未定（候选见第 7 节）
 - [ ] 关于页只有两句话，待充实
 - [ ] 没有统计/分析（可考虑 Cloudflare Web Analytics，免费，一行脚本）
@@ -109,6 +112,7 @@ door4ai-lab/
 
 ## 6. 工作日志（倒序，每次工作追加一条）
 
+- **2026-10-14 · Claude** — 新文章《电脑里到底有什么：CPU、GPU、内存、显存与 Docker》（`src/content/blog/computer-anatomy.md`，series ai-mastery，**order 2**，排在注意力之前，作为零基础入门讲）+ 实验页 `public/labs/computer-anatomy/index.html`：五张可交互等距实物图（Anatomy skill 风格）——Fig1 CPU/GPU 芯片并行 vs 串行赛跑；Fig2 主板+显卡，模型大小滑块填充显存/内存颗粒并给出带宽上限 token/s；Fig3 M4 Max 式统一内存封装（与 Fig2 共用滑块对比）；Fig4 Docker 集装箱船+龙门吊装卸；Fig5 机柜服务器 vs 书桌个人电脑+对比表。数字取公开规格（4090 82.6 TFLOPS / 1008 GB/s，DDR5 双通道 89.6 GB/s，M4 Max 546 GB/s）。生成脚本放 `labs-src/computer-anatomy/`（kit 不入库，见其 README）。本地 build 通过；headless Chromium 检查桌面、390px 无横向滚动、深浅色、线端检查 0。从云端会话推送。
 - **2026-10-14 · Claude** — Safari 全息层只占左上角小块：第二次修复，holo-card.js 的 resize() 现在把卡片、rotor、face、img、canvas 全部钉成显式像素尺寸（Safari 对 3D 容器里百分比高度解析异常）。
 
 - **2026-10-14 · Claude** — 新文章《注意力里的 Q、K、V 到底在干什么》（`src/content/blog/attention-qkv.md`，series ai-mastery，order 5）+ 实验页 `public/labs/attention-qkv/index.html`：00 箭头直觉 / 01 Q·K 二维对齐 + 因果遮罩 / 02 softmax 与 √d（真实随机高斯向量）/ 03 加权求和 V 与残差 / 04 多头弧线 / 05 头合并 + GPT-3、Llama-3-70B、Llama-3-8B 参数构成计算 / 06 MLP 与「迈克尔·乔丹」与门。按 3Blue1Brown 讲法。本地 build 通过，Playwright 检查桌面与 400px 无横向滚动、深浅色正常。因本人 Mac 中途断开，从云端会话直接推送；Mac 本地副本里有这两个文件的未跟踪副本（内容相同），pull 前删掉即可。

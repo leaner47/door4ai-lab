@@ -3,3 +3,7 @@ dist/
 .astro/
 .DS_Store
 .wrangler/
+labs-src/*/kit/
+labs-src/*/scripts/
+labs-src/*/index.html
+labs-src/*/shots/
