@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-13 20:55 America/New_York · 更新者：Claude（会话 session_017nqPj8MzXKK8YfLau84Y55）
+最后更新：2026-10-14 09:25 America/New_York · 更新者：Claude（会话 session_017nqPj8MzXKK8YfLau84Y55）
 
 ---
 
@@ -93,6 +93,8 @@ door4ai-lab/
 - [ ] 没有评论、订阅、付费墙——课程售卖形态未定，先积累内容
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-14 · Claude** — Resource 平台按钮去掉 ↗ 箭头（`src/pages/resources.astro`）。
 
 - **2026-10-13 · Claude** — (1) 登录门禁：新建 Cloudflare Access 应用「Door4AI Lab」保护 /ai /resources /posts /labs，策略「Door4AI Lab students」仅放行本人邮箱，会话 1 个月；导航「关于」改为「登录」，登录后显示邮箱 + 退出；删除 about.astro。(2) 布局：页眉/页脚全宽贴两端，首页 motto 用 flex 撑满剩余视口，字号上限提到 96px。
 

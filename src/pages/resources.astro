@@ -12,7 +12,7 @@ import { resources } from '../data/resources';
         <span class="d">{r.note}</span>
         <div class="plat">
           {r.links.map((l) => (
-            <a href={l.url} target="_blank" rel="noopener" title={l.hint}>{l.label} ↗{l.hint && <small>{l.hint}</small>}</a>
+            <a href={l.url} target="_blank" rel="noopener" title={l.hint}>{l.label}{l.hint && <small>{l.hint}</small>}</a>
           ))}
         </div>
       </li>
