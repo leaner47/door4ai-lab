@@ -5,18 +5,6 @@ export type Resource = { title: string; note: string; links: Link[] };
 
 export const resources: Resource[] = [
   {
-    title: 'FlClash',
-    note: '开源跨平台代理客户端（Clash 内核）。安装包由本站镜像，每天自动同步 GitHub 最新版本。',
-    links: [
-      { label: 'macOS · Apple 芯片', dl: 'flclash/macos-arm64' },
-      { label: 'macOS · Intel', dl: 'flclash/macos-amd64' },
-      { label: 'Windows', dl: 'flclash/windows' },
-      { label: 'Linux · .deb', dl: 'flclash/linux-deb' },
-      { label: 'Linux · AppImage', dl: 'flclash/linux-appimage' },
-      { label: 'Android', dl: 'flclash/android' },
-    ],
-  },
-  {
     title: 'Codex',
     note: 'OpenAI 的编程智能体。桌面版现已并入新版 ChatGPT 桌面应用，macOS 由本站镜像；Windows 只通过 Microsoft Store 分发；Linux 用命令行版。',
     links: [
@@ -34,6 +22,18 @@ export const resources: Resource[] = [
       { label: 'Windows · ARM64', dl: 'claude/windows-arm64' },
       { label: 'Linux · .deb (x64)', dl: 'claude/linux-amd64' },
       { label: 'Linux · .deb (ARM64)', dl: 'claude/linux-arm64' },
+    ],
+  },
+  {
+    title: 'FlClash',
+    note: '开源跨平台代理客户端（Clash 内核）。安装包由本站镜像，每天自动同步 GitHub 最新版本。',
+    links: [
+      { label: 'macOS · Apple 芯片', dl: 'flclash/macos-arm64' },
+      { label: 'macOS · Intel', dl: 'flclash/macos-amd64' },
+      { label: 'Windows', dl: 'flclash/windows' },
+      { label: 'Linux · .deb', dl: 'flclash/linux-deb' },
+      { label: 'Linux · AppImage', dl: 'flclash/linux-appimage' },
+      { label: 'Android', dl: 'flclash/android' },
     ],
   },
   {

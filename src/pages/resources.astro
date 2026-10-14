@@ -4,32 +4,41 @@ import HoloCard from '../components/HoloCard.astro';
 import { resources } from '../data/resources';
 // 每个软件的 logo、品牌色（同时用作箔片色与光晕色）和箔纹
 const look: Record<string, { logo: string; preset: any; accent: string; foil: string; scale?: number }> = {
-  'FlClash': { logo: 'flclash.png', preset: 'shards', accent: '#5b7cf5', foil: '#6e8cff', scale: 0.5 },
   'Codex': { logo: 'openai.svg', preset: 'cosmos', accent: '#9fb3c8', foil: '#e6ebf0', scale: 0.44 },
   'Claude': { logo: 'claude.svg', preset: 'glitter', accent: '#d97757', foil: '#e8a07f', scale: 0.46 },
+  'FlClash': { logo: 'flclash.png', preset: 'shards', accent: '#5b7cf5', foil: '#6e8cff', scale: 0.5 },
   'door4ai.com': { logo: 'door4ai.svg', preset: 'gold', accent: '#1f5fd1', foil: '#9fc0ff', scale: 0.44 },
 };
+const CARD_W = 170;
 ---
-<Base title="Resource · Door4AI Lab" description="常用工具的下载入口，由本站镜像最新安装包。">
-  <div class="eyebrow">Resource</div>
-  <h1>Resource</h1>
-  <p class="prose" style="color:var(--muted)">安装包由本站镜像并每天同步官方最新版本。点击卡片即下载。</p>
+<Base title="Resource · Door4AI Lab" description="常用工具的下载入口，由本站镜像最新安装包。" full>
+  <div class="reshead">
+    <div class="eyebrow">Resource</div>
+    <h1>Resource</h1>
+    <p class="prose" style="color:var(--muted)">安装包由本站镜像并每天同步官方最新版本。拖动转盘或点击侧边卡片切换，点击正面卡片下载。</p>
+  </div>
   {resources.map((r) => { const k = look[r.title] || { logo: '', preset: 'bursts', accent: '#6f9cf0', foil: '#e2e6ec' }; return (
-    <section class="resgroup">
-      <h2 class="rt">{r.title}</h2>
-      <p class="d">{r.note}</p>
-      <div class="cards">
-        {r.links.map((l) => (
-          <figure class="cardwrap">
-            <HoloCard title={l.label} kicker={r.title} foot={l.dl ? '点击下载' : (l.hint || '打开')} logo={k.logo || undefined} logoScale={k.scale} preset={k.preset} accent={k.accent} foil={k.foil} width={150}
-              href={l.dl ? `/dl/${l.dl}` : l.url} external={!l.dl} dl={l.dl} />
-            <figcaption data-cap={l.dl}>{l.dl ? '检查镜像状态…' : (l.hint || '')}</figcaption>
-          </figure>
-        ))}
+    <section class="resgroup" style={`--brand:${k.accent}`}>
+      <div class="reshead">
+        <h2 class="rt">{r.title}</h2>
+        <p class="d">{r.note}</p>
+      </div>
+      <div class="ccar" style={`--w:${CARD_W}px`} data-card-w={CARD_W} data-gap="34" data-tilt="-4" data-min-slots="12" data-drift={r.links.length > 1 ? 5 : 0} aria-roledescription="carousel" aria-label={`${r.title} 下载`}>
+        <div class="ccar__ring">
+          {r.links.map((l) => (
+            <figure class="ccar__tile cardwrap">
+              <HoloCard title={l.label} kicker={r.title} foot={l.dl ? '点击下载' : (l.hint || '打开')} logo={k.logo || undefined} logoScale={k.scale} preset={k.preset} accent={k.accent} foil={k.foil} width={CARD_W}
+                href={l.dl ? `/dl/${l.dl}` : l.url} external={!l.dl} dl={l.dl} />
+              <figcaption data-cap={l.dl}>{l.dl ? '检查镜像状态…' : (l.hint || '')}</figcaption>
+            </figure>
+          ))}
+        </div>
       </div>
     </section>
   ); })}
   <script>
+    import { initCarousels } from '../scripts/circular-carousel.js';
+    initCarousels();
     // 读镜像清单，把版本号 / 大小 / 同步时间填到卡片下方
     (async () => {
       const fmt = (n) => (n >= 1e9 ? (n / 1e9).toFixed(2) + ' GB' : n >= 1e6 ? (n / 1e6).toFixed(1) + ' MB' : Math.round(n / 1e3) + ' KB');

@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 17:50 America/New_York · 更新者：Claude（会话 session_017nqPj8MzXKK8YfLau84Y55）
+最后更新：2026-10-14 18:00 America/New_York · 更新者：Claude（会话 session_017nqPj8MzXKK8YfLau84Y55）
 
 ---
 
@@ -46,6 +46,7 @@ door4ai-lab/
 │   ├── content/blog/*.md   ← 文章正文（markdown）
 │   ├── components/HoloCard.astro ← 全息卡片（移植自 React Bits HoloCard，MIT + Commons Clause）；卡面是由 props 生成的 SVG
 │   ├── scripts/holo-card.js / .css ← HoloCard 的 WebGL 着色器与交互（原版去 React 化）
+│   ├── scripts/circular-carousel.js ← 3D 转盘（仿 React Bits CircularCarousel 自写）：拖动/惯性/吸附/点侧卡转到正面；少于 12 张时按弧形排列并限制转动范围
 │   ├── data/resources.ts   ← Resource 页的条目（link.dl = 镜像 id 走 /dl/，link.url = 外链）
 │   ├── layouts/Base.astro  ← 全站布局 + 导航 + 全部 CSS；导航右侧「登录/退出」由脚本调 /cdn-cgi/access/get-identity 判断；prop `full` 让 main 占满宽度（首页用）
 │   └── pages/
@@ -89,6 +90,7 @@ door4ai-lab/
 - **Resource 页只放本人指定的内容**（目前：FlClash、Codex、Claude 的下载入口 + door4ai.com）。下载链接必须同时覆盖 macOS 和 Windows，有 Linux 版的也要列出。不要往里放论文、教程等「推荐阅读」。
 - 首页极简：页眉左右贴屏幕两端（全宽），屏幕中央一句「Attention is all you need」撑满剩余高度；没有标题、介绍或卡片。导航：AI从入门到精通 / Resource / 登录（无「关于」页）。新增板块 = 新增一个页面 + 导航里加一项 + 若需登录则在 Access 应用里加该路径。
 - 课程与资源页必须登录才能看（Cloudflare Access），首页公开。
+- Resource 页顺序固定：**Codex → Claude → FlClash → door4ai.com**（`src/data/resources.ts` 的数组顺序）。每个软件的卡片在一行里以 3D 转盘（`.ccar`）排列：拖动旋转、惯性、松手吸附、点击侧边卡转到正面、正面卡点击即下载、键盘左右键可切换。
 - Resource 页：每个软件一个分组（标题 + 说明），**每个平台的下载按钮本身是一张 HoloCard 全息卡**：卡面以 **logo 为主**（`public/logos/`：flclash.png 来自 FlClash 仓库，openai.svg / claude.svg 来自 @lobehub/icons-static-svg（MIT），door4ai.svg 即本站 favicon），上方软件名、logo 下方平台、底部「点击下载」。箔纹颜色跟随品牌色：`look` 表里每个软件配 logo / preset / accent（光晕、边框）/ foil（箔片色），着色器新增 `uTint`（data-tint，默认 0.65）把彩虹箔向品牌色拉。卡下小字显示版本 · 大小 · 同步日期。
 - 安装包由本站 R2 镜像、仅登录用户可下（/dl 在 Access 内）。Codex 桌面版已并入新版 ChatGPT 桌面应用：macOS 镜像 `codex-app-prod/ChatGPT.dmg`，Windows 只有 Microsoft Store（不镜像，外链），Linux 为 CLI（外链）。新增镜像目标 = 在 `functions/_lib/sources.ts` 加一个 target，并在 `src/data/resources.ts` 加 `dl:` 按钮。
 
@@ -104,6 +106,8 @@ door4ai-lab/
 - [ ] 没有评论、订阅、付费墙——课程售卖形态未定，先积累内容
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-14 · Claude** — 每个软件的卡片改为一行 3D 转盘（`src/scripts/circular-carousel.js`，仿 React Bits CircularCarousel：拖动/惯性/吸附/侧卡点击转正/弧形布局），顺序调整为 Codex、Claude、FlClash、door4ai.com；卡宽 170。本地 Playwright 验证拖动与初始居中。
 
 - **2026-10-14 · Claude** — 卡面改为 logo 为主：加入 `public/logos/`（FlClash 官方图标、OpenAI / Claude 图标取自 lobehub icons 包、door4ai 用本站 favicon），HoloCard.astro 在构建时把 logo 内嵌进卡面 SVG；着色器加 `uTint` 让箔纹颜色贴合各品牌色（FlClash 蓝、Codex 银白、Claude 橙、door4ai 蓝金）。
 
