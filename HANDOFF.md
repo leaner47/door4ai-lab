@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-13 20:45 America/New_York · 更新者：Claude（会话 session_017nqPj8MzXKK8YfLau84Y55）
+最后更新：2026-10-13 20:48 America/New_York · 更新者：Claude（会话 session_017nqPj8MzXKK8YfLau84Y55）
 
 ---
 
@@ -65,7 +65,7 @@ door4ai-lab/
 5. 更新本文件第 5、6 节。
 
 ### 实验页设计规范（沿用第一篇）
-- 颜色用 CSS token（`--bg --paper --fg --muted --line --accent --warn --ok`），深浅色都要定义，`body` 必须有显式背景色。
+- 颜色用 CSS token（`--bg --paper --fg --muted --line --accent --warn --ok`），深浅色都要定义，`body` 必须有显式背景色。**背景色定稿：深色 `#000` 纯黑（卡片 `#111214`），浅色 `#f7f3ea` 米白（卡片 `#fffdf8`）**，站点和实验页保持一致。
 - 字体栈同上（Times New Roman 在前，中文回退到苹方/黑体）。
 - 每个实验 = 控件条（滑块/分段按钮）→ 画图区（SVG 或 canvas）→ 读数行（大数字 + 小标签）→ 一句「注意看什么」的 note。
 - 真实计算，不画假数据；数值用公开架构参数（如 Llama-3-70B：80 层 × 8 KV 头 × 128 维）。
@@ -92,6 +92,8 @@ door4ai-lab/
 - [ ] 没有评论、订阅、付费墙——课程售卖形态未定，先积累内容
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-13 · Claude** — 背景色改为深色纯黑 / 浅色米白（Base.astro 与 KV 实验页同步）。
 
 - **2026-10-13 · Claude** — 首页再简化：去掉 h1 和两张入口卡片，屏幕中央只剩居中的「Attention is all you need」（all 为斜体强调色）；入口统一走右上角导航。删除 `.hero/.entries/.entry` 样式，新增 `.motto-only/.motto`。
 

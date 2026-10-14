@@ -10,21 +10,21 @@
 <style>
 /* Layout: a single reading column (68ch) with full-width lab panels that break out slightly; each lab = controls strip on top, drawing below, readout row at bottom. */
 :root{
-  --bg:#f6f5f1; --paper:#ffffff; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
   --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
   /* Latin & digits: Times New Roman first; CJK glyphs fall through to 苹方/黑体 (system PingFang or Heiti, then Noto Sans SC). */
   --mono:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
   --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
-  --heat0:#f6f5f1; --heat1:#1f5fd1;
+  --heat0:#f7f3ea; --heat1:#1f5fd1;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#15181c; --paper:#1d2127; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
   --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f;
-  --heat0:#1d2127; --heat1:#6f9cf0; color-scheme:dark } }
+  --heat0:#111214; --heat1:#6f9cf0; color-scheme:dark } }
 :root[data-theme="dark"]{
-  --bg:#15181c; --paper:#1d2127; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
   --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f;
-  --heat0:#1d2127; --heat1:#6f9cf0; color-scheme:dark }
+  --heat0:#111214; --heat1:#6f9cf0; color-scheme:dark }
 
 body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
 .aside{border-left:3px solid var(--accent);padding:4px 0 4px 16px;margin:16px 0;max-width:68ch;font-size:15.5px}
