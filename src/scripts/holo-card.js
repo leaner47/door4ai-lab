@@ -26,6 +26,7 @@ uniform float uRadius;
 uniform float uGlare;
 uniform vec3 uFoil;
 uniform float uReady;
+uniform float uTint;
 
 out vec4 outColor;
 
@@ -254,6 +255,8 @@ void main() {
   }
   vec3 tint = hue(phase);
   if (uPreset == 7) tint = mix(tint, metal, 0.65);
+  // brand tint: pull the rainbow toward the foil colour (0 = original rainbow, 1 = monochrome brand)
+  tint = mix(tint, uFoil * (0.6 + 0.9 * (0.5 + 0.5 * cos(phase * TAU))), uTint);
   float glint = pow(max(dot(normalize(vec3(f.facet, 1.0)), halfway), 0.0), 24.0) * step(0.001, length(f.facet));
   bool layered = uPreset == 2 || uPreset == 4 || uPreset == 5 || uPreset == 7;
   vec3 foil = (layered ? tint : mix(tint, vec3(1.0), 0.12)) * (1.15 + 0.3 * sheen) + metal * glint * 1.2;
@@ -303,6 +306,7 @@ export function initHoloCard(root) {
     tiltMax: clamp(+(ds.tilt ?? 14), 0, 45),
     hoverScale: clamp(+(ds.hover ?? 1.04), 0.8, 1.3),
     idle: ds.idle !== 'false',
+    tint: clamp(+(ds.tint ?? 0), 0, 1),
   };
   const rotor = root.querySelector('.holo-card__rotor');
   const shadow = root.querySelector('.holo-card__shadow');
@@ -327,7 +331,7 @@ export function initHoloCard(root) {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
-      for (const n of ['uArt','uSize','uAspect','uTilt','uLight','uDistance','uPreset','uIntensity','uScale','uEdge','uFrame','uRadius','uGlare','uFoil','uReady']) U[n] = gl.getUniformLocation(program, n);
+      for (const n of ['uArt','uSize','uAspect','uTilt','uLight','uDistance','uPreset','uIntensity','uScale','uEdge','uFrame','uRadius','uGlare','uFoil','uReady','uTint']) U[n] = gl.getUniformLocation(program, n);
     }
   }
   const st = { tiltX: 0, tiltY: 0, tiltVX: 0, tiltVY: 0, lightX: 0.36, lightY: 0.26, lightVX: 0, lightVY: 0, lift: 1, liftV: 0, clock: Math.random() * 40 };
@@ -345,7 +349,7 @@ export function initHoloCard(root) {
     gl.uniform1i(U.uPreset, s.preset); gl.uniform1f(U.uIntensity, s.intensity); gl.uniform1f(U.uScale, s.scale);
     gl.uniform1f(U.uEdge, s.edgeSparkle); gl.uniform1f(U.uFrame, s.frame);
     gl.uniform1f(U.uRadius, s.radius / Math.max(1, canvas.clientWidth)); gl.uniform1f(U.uGlare, s.glare);
-    gl.uniform3f(U.uFoil, s.foil[0], s.foil[1], s.foil[2]); gl.uniform1f(U.uReady, textureReady ? 1 : 0);
+    gl.uniform3f(U.uFoil, s.foil[0], s.foil[1], s.foil[2]); gl.uniform1f(U.uReady, textureReady ? 1 : 0); gl.uniform1f(U.uTint, s.tint);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   };
   const tick = (now) => {

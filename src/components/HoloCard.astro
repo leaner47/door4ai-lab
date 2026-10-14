@@ -1,40 +1,59 @@
 ---
-// Holographic card (ported from React Bits HoloCard). The art is an SVG generated from the props.
+// Holographic card (ported from React Bits HoloCard). The art is an SVG generated from the props:
+// a brand logo in the middle, the app name on top, the platform under the logo, a footer line.
 // With `href` the whole card is a link (used as a download button).
+import fs from 'node:fs';
+import path from 'node:path';
 interface Props {
-  title: string;        // big text in the middle (e.g. platform)
-  kicker?: string;      // small text at the top (e.g. app name)
-  foot?: string;        // small text at the bottom (e.g. 点击下载)
+  title: string;        // platform label, e.g. "macOS · Apple 芯片"
+  kicker?: string;      // app name
+  foot?: string;        // bottom line, e.g. 点击下载
+  logo?: string;        // file under public/logos/, e.g. "claude.svg"
+  logoScale?: number;   // 0..1 of card width (default 0.5)
   preset?: 'bursts' | 'stars' | 'shards' | 'cosmos' | 'rainbow' | 'swirl' | 'glitter' | 'gold';
-  foil?: string;
+  foil?: string;        // foil tint — pass the brand color
   width?: number;
-  accent?: string;
+  accent?: string;      // glow/border color — brand color
   href?: string;
   external?: boolean;
-  dl?: string;          // mirror id, exposed as data-dl for the manifest script
+  dl?: string;
 }
-const { title, kicker = '', foot = '点击下载', preset = 'glitter', foil = '#e2e6ec', width = 150, accent = '#6f9cf0', href, external = false, dl } = Astro.props;
+const { title, kicker = '', foot = '点击下载', logo, logoScale = 0.5, preset = 'glitter', foil = '#e2e6ec', width = 150, accent = '#6f9cf0', href, external = false, dl } = Astro.props;
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-// split the title on " · " so two-part labels stack
+
+// embed the logo as a data URI so the whole card art is one self-contained image (WebGL texture)
+let logoHref = '';
+if (logo) {
+  const file = path.join(process.cwd(), 'public', 'logos', logo);
+  const buf = fs.readFileSync(file);
+  if (logo.endsWith('.svg')) {
+    const txt = buf.toString('utf8').replace(/currentColor/g, '#ffffff');
+    logoHref = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(txt);
+  } else {
+    logoHref = `data:image/${logo.endsWith('.png') ? 'png' : 'jpeg'};base64,` + buf.toString('base64');
+  }
+}
+const L = Math.round(630 * logoScale);
 const parts = title.split(' · ');
-const tsize = Math.max(...parts.map((p) => p.length)) > 9 ? 64 : 84;
-const lines = parts.map((p, i) => `<text x="315" y="${parts.length === 1 ? 470 : 420 + i * 100}" text-anchor="middle" font-family="Times New Roman, Times, PingFang SC, Heiti SC, sans-serif" font-size="${i === 0 ? tsize : tsize * 0.8}" font-weight="700" fill="#f4f1ea">${esc(p)}</text>`).join('');
+const t1 = parts[0], t2 = parts.slice(1).join(' · ');
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="630" height="880" viewBox="0 0 630 880">
 <defs>
-  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0c0f14"/><stop offset="1" stop-color="#1b2230"/></linearGradient>
-  <radialGradient id="glow" cx="0.5" cy="0.35" r="0.7"><stop offset="0" stop-color="${accent}" stop-opacity="0.5"/><stop offset="1" stop-color="${accent}" stop-opacity="0"/></radialGradient>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0b0d11"/><stop offset="1" stop-color="#161b24"/></linearGradient>
+  <radialGradient id="glow" cx="0.5" cy="0.42" r="0.6"><stop offset="0" stop-color="${accent}" stop-opacity="0.42"/><stop offset="1" stop-color="${accent}" stop-opacity="0"/></radialGradient>
 </defs>
 <rect width="630" height="880" fill="url(#bg)"/>
 <rect width="630" height="880" fill="url(#glow)"/>
-<rect x="28" y="28" width="574" height="824" rx="22" fill="none" stroke="${accent}" stroke-opacity="0.5" stroke-width="3"/>
-<text x="315" y="150" text-anchor="middle" font-family="Times New Roman, Times, serif" font-size="56" letter-spacing="2" fill="${accent}">${esc(kicker)}</text>
-${lines}
-<text x="315" y="790" text-anchor="middle" font-family="Times New Roman, Times, PingFang SC, Heiti SC, sans-serif" font-size="38" fill="#aab2bf">${esc(foot)}</text>
+<rect x="28" y="28" width="574" height="824" rx="22" fill="none" stroke="${accent}" stroke-opacity="0.55" stroke-width="3"/>
+<text x="315" y="120" text-anchor="middle" font-family="Times New Roman, Times, serif" font-size="44" letter-spacing="2" fill="${accent}">${esc(kicker)}</text>
+${logoHref ? `<image href="${logoHref}" x="${315 - L / 2}" y="${400 - L / 2}" width="${L}" height="${L}" preserveAspectRatio="xMidYMid meet"/>` : ''}
+<text x="315" y="${400 + L / 2 + 86}" text-anchor="middle" font-family="Times New Roman, Times, PingFang SC, Heiti SC, sans-serif" font-size="58" font-weight="700" fill="#f4f1ea">${esc(t1)}</text>
+${t2 ? `<text x="315" y="${400 + L / 2 + 140}" text-anchor="middle" font-family="Times New Roman, Times, PingFang SC, Heiti SC, sans-serif" font-size="38" fill="#d5d9e0">${esc(t2)}</text>` : ''}
+<text x="315" y="800" text-anchor="middle" font-family="Times New Roman, Times, PingFang SC, Heiti SC, sans-serif" font-size="32" fill="#9aa1ab">${esc(foot)}</text>
 </svg>`;
 const image = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 const Tag = href ? 'a' : 'div';
 ---
-<Tag class="holo-card" aria-label={`${kicker} ${title}`} data-image={image} data-preset={preset} data-foil={foil} data-intensity="0.55" data-edge="0.8" data-tilt="16" data-hover="1.06" data-dl={dl} href={href} target={external ? '_blank' : undefined} rel={external ? 'noopener' : undefined} style={`--hc-w:${width}px`}>
+<Tag class="holo-card" aria-label={`${kicker} ${title}`} data-image={image} data-preset={preset} data-foil={foil} data-intensity="0.6" data-edge="0.8" data-tint="0.65" data-tilt="16" data-hover="1.06" data-dl={dl} href={href} target={external ? '_blank' : undefined} rel={external ? 'noopener' : undefined} style={`--hc-w:${width}px`}>
   <span class="holo-card__shadow" aria-hidden="true"></span>
   <div class="holo-card__rotor">
     <div class="holo-card__face holo-card__face--front">
