@@ -380,9 +380,12 @@ export function initHoloCard(root) {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     // Size from the card element itself (it has an explicit width + aspect-ratio); Safari reports
     // stale client sizes for a canvas inside a 3D-transformed face, which left a small viewport.
-    let cw = root.clientWidth || canvas.clientWidth, ch = root.clientHeight || canvas.clientHeight;
-    if (!cw) cw = parseFloat(getComputedStyle(root).width) || 0;
-    if (!ch && cw) ch = cw / 0.716;
+    const cw = parseFloat(getComputedStyle(root).width) || root.clientWidth || canvas.clientWidth || 0;
+    const ch = Math.round(cw / 0.716);
+    // Safari gives the canvas a wrong CSS box inside the 3D face (percent sizes against an
+    // aspect-ratio box), so pin every box to explicit pixels.
+    root.style.height = ch + 'px';
+    [rotor, canvas.parentElement, canvas, canvas.parentElement.querySelector('img')].forEach((el) => { if (el) { el.style.width = cw + 'px'; el.style.height = ch + 'px'; } });
     const w = Math.max(1, Math.round(cw * dpr)), h = Math.max(1, Math.round(ch * dpr));
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
     draw(); wake();

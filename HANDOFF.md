@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 18:20 America/New_York · 更新者：Claude（会话 session_01DR5LFdGneALqpA1WLAEDZS）
+最后更新：2026-10-14 19:35 America/New_York · 更新者：Claude（会话 session_01DR5LFdGneALqpA1WLAEDZS）
 
 ---
 
@@ -108,6 +108,8 @@ door4ai-lab/
 - [ ] 没有评论、订阅、付费墙——课程售卖形态未定，先积累内容
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-14 · Claude** — Safari 全息层只占左上角小块：第二次修复，holo-card.js 的 resize() 现在把卡片、rotor、face、img、canvas 全部钉成显式像素尺寸（Safari 对 3D 容器里百分比高度解析异常）。
 
 - **2026-10-14 · Claude** — 新文章《注意力里的 Q、K、V 到底在干什么》（`src/content/blog/attention-qkv.md`，series ai-mastery，order 5）+ 实验页 `public/labs/attention-qkv/index.html`：00 箭头直觉 / 01 Q·K 二维对齐 + 因果遮罩 / 02 softmax 与 √d（真实随机高斯向量）/ 03 加权求和 V 与残差 / 04 多头弧线 / 05 头合并 + GPT-3、Llama-3-70B、Llama-3-8B 参数构成计算 / 06 MLP 与「迈克尔·乔丹」与门。按 3Blue1Brown 讲法。本地 build 通过，Playwright 检查桌面与 400px 无横向滚动、深浅色正常。因本人 Mac 中途断开，从云端会话直接推送；Mac 本地副本里有这两个文件的未跟踪副本（内容相同），pull 前删掉即可。
 
