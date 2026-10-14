@@ -6,12 +6,26 @@ const UA = 'door4ai-lab-mirror/1.0 (+https://lab.door4ai.com)';
 const H = { 'User-Agent': UA, Accept: '*/*' };
 
 // ---------- FlClash: GitHub latest release ----------
+// GitHub API 匿名配额很小（按出口 IP 计），同一轮同步里多个 target 共用一次结果，并用 Cache API 存 10 分钟。
+let releaseMemo: Promise<any> | null = null;
 async function flclashRelease(): Promise<any> {
-  const r = await fetch('https://api.github.com/repos/chen08209/FlClash/releases/latest', {
-    headers: { ...H, Accept: 'application/vnd.github+json' },
-  });
-  if (!r.ok) throw new Error(`github ${r.status}`);
-  return r.json();
+  if (releaseMemo) return releaseMemo;
+  releaseMemo = (async () => {
+    const api = 'https://api.github.com/repos/chen08209/FlClash/releases/latest';
+    const cacheKey = new Request('https://lab.door4ai.com/__cache/flclash-latest.json');
+    const cache = (caches as any).default as Cache;
+    const hit = await cache.match(cacheKey);
+    if (hit) return hit.json();
+    const r = await fetch(api, { headers: { ...H, Accept: 'application/vnd.github+json' } });
+    if (!r.ok) {
+      releaseMemo = null;
+      throw new Error(`github ${r.status}`);
+    }
+    const data = await r.json();
+    await cache.put(cacheKey, new Response(JSON.stringify(data), { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=600' } }));
+    return data;
+  })();
+  return releaseMemo;
 }
 function flclash(platform: string, label: string, re: RegExp): Target {
   return {
