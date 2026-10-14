@@ -2,53 +2,51 @@
 import Base from '../layouts/Base.astro';
 import HoloCard from '../components/HoloCard.astro';
 import { resources } from '../data/resources';
-const look: Record<string, { preset: any; accent: string; mark: string; sub: string }> = {
-  'FlClash': { preset: 'shards', accent: '#4fb3ff', mark: 'F', sub: '代理客户端' },
-  'Codex': { preset: 'cosmos', accent: '#9bd9a8', mark: 'C', sub: 'OpenAI 编程智能体' },
-  'Claude': { preset: 'glitter', accent: '#e0a07a', mark: 'C', sub: 'Anthropic 桌面应用' },
-  'door4ai.com': { preset: 'gold', accent: '#f0c86f', mark: 'D', sub: '我做的网站' },
+const look: Record<string, { preset: any; accent: string }> = {
+  'FlClash': { preset: 'shards', accent: '#4fb3ff' },
+  'Codex': { preset: 'cosmos', accent: '#9bd9a8' },
+  'Claude': { preset: 'glitter', accent: '#e0a07a' },
+  'door4ai.com': { preset: 'gold', accent: '#f0c86f' },
 };
 ---
 <Base title="Resource · Door4AI Lab" description="常用工具的下载入口，由本站镜像最新安装包。">
   <div class="eyebrow">Resource</div>
   <h1>Resource</h1>
-  <p class="prose" style="color:var(--muted)">安装包由本站镜像并每天同步官方最新版本，点击即下载。</p>
-  <div class="rescards">
-    {resources.map((r) => { const k = look[r.title] || { preset: 'bursts', accent: '#6f9cf0', mark: r.title[0], sub: '' }; return (
-      <section class="rescard">
-        <HoloCard title={r.title} subtitle={k.sub} mark={k.mark} preset={k.preset} accent={k.accent} width={250} />
-        <p class="d">{r.note}</p>
-        <div class="plat">
-          {r.links.map((l) =>
-            l.dl ? (
-              <a href={`/dl/${l.dl}`} data-dl={l.dl}>{l.label}<small>检查镜像状态…</small></a>
-            ) : (
-              <a href={l.url} target="_blank" rel="noopener">{l.label}{l.hint && <small>{l.hint}</small>}</a>
-            )
-          )}
-        </div>
-      </section>
-    ); })}
-  </div>
+  <p class="prose" style="color:var(--muted)">安装包由本站镜像并每天同步官方最新版本。点击卡片即下载。</p>
+  {resources.map((r) => { const k = look[r.title] || { preset: 'bursts', accent: '#6f9cf0' }; return (
+    <section class="resgroup">
+      <h2 class="rt">{r.title}</h2>
+      <p class="d">{r.note}</p>
+      <div class="cards">
+        {r.links.map((l) => (
+          <figure class="cardwrap">
+            <HoloCard title={l.label} kicker={r.title} foot={l.dl ? '点击下载' : (l.hint || '打开')} preset={k.preset} accent={k.accent} width={150}
+              href={l.dl ? `/dl/${l.dl}` : l.url} external={!l.dl} dl={l.dl} />
+            <figcaption data-cap={l.dl}>{l.dl ? '检查镜像状态…' : (l.hint || '')}</figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
+  ); })}
   <script>
-    // 读镜像清单，把版本号 / 大小 / 同步时间填到按钮里
+    // 读镜像清单，把版本号 / 大小 / 同步时间填到卡片下方
     (async () => {
       const fmt = (n) => (n >= 1e9 ? (n / 1e9).toFixed(2) + ' GB' : n >= 1e6 ? (n / 1e6).toFixed(1) + ' MB' : Math.round(n / 1e3) + ' KB');
       try {
         const r = await fetch('/dl/manifest.json', { credentials: 'include' });
         if (!r.ok) throw new Error(String(r.status));
         const m = await r.json();
-        document.querySelectorAll('a[data-dl]').forEach((a) => {
-          const it = m.items[a.dataset.dl];
-          const s = a.querySelector('small');
-          if (!it || it.missing) { s.textContent = '镜像尚未同步'; a.classList.add('off'); return; }
+        document.querySelectorAll('figcaption[data-cap]').forEach((c) => {
+          const id = c.dataset.cap; const it = m.items[id];
+          const card = document.querySelector(`.holo-card[data-dl="${id}"]`);
+          if (!it || it.missing) { c.textContent = '镜像尚未同步'; card?.classList.add('off'); return; }
           const d = it.syncedAt ? new Date(it.syncedAt).toLocaleDateString('zh-CN') : '';
           const ver = /^v?\d+(\.\d+)+$/.test(it.version) ? it.version : '最新';
-          s.textContent = `${ver} · ${fmt(it.size)} · ${d} 同步`;
-          if (it.sha256) a.title = 'SHA256 ' + it.sha256;
+          c.textContent = `${ver} · ${fmt(it.size)} · ${d}`;
+          if (it.sha256 && card) card.title = 'SHA256 ' + it.sha256;
         });
       } catch (e) {
-        document.querySelectorAll('a[data-dl] small').forEach((s) => (s.textContent = '登录后可下载'));
+        document.querySelectorAll('figcaption[data-cap]').forEach((c) => (c.textContent = '登录后可下载'));
       }
     })();
   </script>

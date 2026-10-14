@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 17:40 America/New_York · 更新者：Claude（会话 session_017nqPj8MzXKK8YfLau84Y55）
+最后更新：2026-10-14 17:45 America/New_York · 更新者：Claude（会话 session_017nqPj8MzXKK8YfLau84Y55）
 
 ---
 
@@ -89,7 +89,7 @@ door4ai-lab/
 - **Resource 页只放本人指定的内容**（目前：FlClash、Codex、Claude 的下载入口 + door4ai.com）。下载链接必须同时覆盖 macOS 和 Windows，有 Linux 版的也要列出。不要往里放论文、教程等「推荐阅读」。
 - 首页极简：页眉左右贴屏幕两端（全宽），屏幕中央一句「Attention is all you need」撑满剩余高度；没有标题、介绍或卡片。导航：AI从入门到精通 / Resource / 登录（无「关于」页）。新增板块 = 新增一个页面 + 导航里加一项 + 若需登录则在 Access 应用里加该路径。
 - 课程与资源页必须登录才能看（Cloudflare Access），首页公开。
-- Resource 页每个条目是一张 HoloCard 全息卡（卡面：标题 + 一句副标题 + DOOR4AI LAB），卡下是说明和各平台下载按钮。每个条目的 preset / 强调色在 `src/pages/resources.astro` 的 `look` 表里。
+- Resource 页：每个软件一个分组（标题 + 说明），**每个平台的下载按钮本身是一张 HoloCard 全息卡**（卡面：软件名 / 平台 / 「点击下载」），点卡即下载，卡下小字显示版本 · 大小 · 同步日期。每个软件的箔纹 preset / 强调色在 `src/pages/resources.astro` 的 `look` 表里。
 - 安装包由本站 R2 镜像、仅登录用户可下（/dl 在 Access 内）。Codex 桌面版已并入新版 ChatGPT 桌面应用：macOS 镜像 `codex-app-prod/ChatGPT.dmg`，Windows 只有 Microsoft Store（不镜像，外链），Linux 为 CLI（外链）。新增镜像目标 = 在 `functions/_lib/sources.ts` 加一个 target，并在 `src/data/resources.ts` 加 `dl:` 按钮。
 
 ## 5. 当前状态
@@ -105,6 +105,7 @@ door4ai-lab/
 
 ## 6. 工作日志（倒序，每次工作追加一条）
 
+- **2026-10-14 · Claude** — 按本人澄清改为「下载按钮即全息卡」：HoloCard.astro 支持 `href`（整卡是链接）、kicker/foot 文案；resources.astro 改为分组 + 卡片行。
 - **2026-10-14 · Claude** — Resource 页改为 React Bits 风格的 HoloCard 全息卡片：把 HoloCard 的 WebGL 着色器与弹簧动画移植成无框架版本（`src/scripts/holo-card.js`），新建 `src/components/HoloCard.astro`（卡面 SVG 自动生成），`resources.astro` 改为卡片网格 + 卡下按钮；本地 Playwright 截图验证 4 张卡都渲染出全息效果。
 
 - **2026-10-14 · Claude** — 镜像首次全量同步完成并在登录态下验证下载（206 Range、正确文件名）。途中修复：GitHub 匿名 API 在 Cloudflare 出口 IP 上会 403 → FlClash 改由 `/releases/latest` 重定向解析版本、API 仅用于 sha256 且带 10 分钟缓存；claude.ai 的 latest 重定向不接受 HEAD → 改 GET 后立即取消正文。Resource 页对无语义版本号（Codex 只有 ETag）显示「最新」。
