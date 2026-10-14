@@ -1,0 +1,47 @@
+---
+// Holographic trading card (ported from React Bits HoloCard). The art is an SVG generated here from the props.
+interface Props {
+  title: string;
+  subtitle?: string;
+  mark?: string;      // large glyph/monogram at the top
+  preset?: 'bursts' | 'stars' | 'shards' | 'cosmos' | 'rainbow' | 'swirl' | 'glitter' | 'gold';
+  foil?: string;
+  width?: number;
+  accent?: string;    // art accent color
+}
+const { title, subtitle = '', mark = title.slice(0, 1), preset = 'glitter', foil = '#e2e6ec', width = 250, accent = '#6f9cf0' } = Astro.props;
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const tsize = title.length > 10 ? 62 : title.length > 7 ? 76 : 92;
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="630" height="880" viewBox="0 0 630 880">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0c0f14"/><stop offset="1" stop-color="#1b2230"/></linearGradient>
+  <radialGradient id="glow" cx="0.5" cy="0.3" r="0.7"><stop offset="0" stop-color="${accent}" stop-opacity="0.55"/><stop offset="1" stop-color="${accent}" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="630" height="880" fill="url(#bg)"/>
+<rect width="630" height="880" fill="url(#glow)"/>
+<rect x="28" y="28" width="574" height="824" rx="22" fill="none" stroke="${accent}" stroke-opacity="0.45" stroke-width="2"/>
+<rect x="44" y="44" width="542" height="792" rx="14" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="1"/>
+<text x="315" y="400" text-anchor="middle" font-family="Times New Roman, Times, serif" font-size="300" font-weight="700" fill="#ffffff" fill-opacity="0.08">${esc(mark)}</text>
+<text x="315" y="520" text-anchor="middle" font-family="Times New Roman, Times, serif" font-size="${tsize}" font-weight="700" fill="#f4f1ea">${esc(title)}</text>
+<text x="315" y="580" text-anchor="middle" font-family="Times New Roman, Times, PingFang SC, Heiti SC, sans-serif" font-size="26" fill="#aab2bf">${esc(subtitle)}</text>
+<text x="315" y="800" text-anchor="middle" font-family="Times New Roman, Times, serif" font-size="22" letter-spacing="6" fill="${accent}" fill-opacity="0.9">DOOR4AI LAB</text>
+</svg>`;
+const image = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+---
+<div class="holo-card" role="img" aria-label={title} data-image={image} data-preset={preset} data-foil={foil} data-intensity="0.7" data-edge="0.7" style={`--hc-w:${width}px`}>
+  <span class="holo-card__shadow" aria-hidden="true"></span>
+  <div class="holo-card__rotor">
+    <div class="holo-card__face holo-card__face--front">
+      <img src={image} alt="" draggable="false" />
+      <canvas></canvas>
+    </div>
+  </div>
+</div>
+
+<style is:global>
+  @import '../scripts/holo-card.css';
+</style>
+<script>
+  import { initHoloCards } from '../scripts/holo-card.js';
+  initHoloCards();
+</script>

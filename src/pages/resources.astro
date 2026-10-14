@@ -1,16 +1,23 @@
 ---
 import Base from '../layouts/Base.astro';
+import HoloCard from '../components/HoloCard.astro';
 import { resources } from '../data/resources';
+const look: Record<string, { preset: any; accent: string; mark: string; sub: string }> = {
+  'FlClash': { preset: 'shards', accent: '#4fb3ff', mark: 'F', sub: '代理客户端' },
+  'Codex': { preset: 'cosmos', accent: '#9bd9a8', mark: 'C', sub: 'OpenAI 编程智能体' },
+  'Claude': { preset: 'glitter', accent: '#e0a07a', mark: 'C', sub: 'Anthropic 桌面应用' },
+  'door4ai.com': { preset: 'gold', accent: '#f0c86f', mark: 'D', sub: '我做的网站' },
+};
 ---
 <Base title="Resource · Door4AI Lab" description="常用工具的下载入口，由本站镜像最新安装包。">
   <div class="eyebrow">Resource</div>
   <h1>Resource</h1>
   <p class="prose" style="color:var(--muted)">安装包由本站镜像并每天同步官方最新版本，点击即下载。</p>
-  <ul class="reslist">
-    {resources.map((r) => (
-      <li>
-        <span class="rt">{r.title}</span>
-        <span class="d">{r.note}</span>
+  <div class="rescards">
+    {resources.map((r) => { const k = look[r.title] || { preset: 'bursts', accent: '#6f9cf0', mark: r.title[0], sub: '' }; return (
+      <section class="rescard">
+        <HoloCard title={r.title} subtitle={k.sub} mark={k.mark} preset={k.preset} accent={k.accent} width={250} />
+        <p class="d">{r.note}</p>
         <div class="plat">
           {r.links.map((l) =>
             l.dl ? (
@@ -20,9 +27,9 @@ import { resources } from '../data/resources';
             )
           )}
         </div>
-      </li>
-    ))}
-  </ul>
+      </section>
+    ); })}
+  </div>
   <script>
     // 读镜像清单，把版本号 / 大小 / 同步时间填到按钮里
     (async () => {
