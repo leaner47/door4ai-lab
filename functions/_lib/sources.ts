@@ -44,7 +44,9 @@ function flclash(platform: string, label: string, re: RegExp): Target {
 async function followRedirects(url: string): Promise<{ finalUrl: string; headers: Headers }> {
   let u = url;
   for (let i = 0; i < 6; i++) {
-    const r = await fetch(u, { method: 'HEAD', redirect: 'manual', headers: H });
+    // 有的端点不接受 HEAD（claude.ai 返回 405），所以用 GET 并在拿到头之后立刻取消正文
+    const r = await fetch(u, { method: 'GET', redirect: 'manual', headers: H });
+    try { await r.body?.cancel(); } catch {}
     if (r.status >= 300 && r.status < 400 && r.headers.get('location')) {
       u = new URL(r.headers.get('location')!, u).toString();
       continue;
