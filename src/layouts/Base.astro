@@ -54,6 +54,23 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     .lab-frame{margin:28px 0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--paper)}
     .lab-frame iframe{display:block;width:100%;height:min(85vh,900px);border:0}
     .lab-frame .bar{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted)}
+    .hero{padding:48px 0 24px}
+    .hero h1{font-size:clamp(34px,6vw,56px);margin:10px 0 14px}
+    .entries{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin:28px 0 8px}
+    .entry{display:block;text-decoration:none;color:var(--fg);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:24px 22px 20px;transition:border-color .15s,transform .15s}
+    .entry:hover{border-color:var(--accent);transform:translateY(-2px)}
+    .entry .k{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+    .entry h2{font-size:24px;margin:6px 0 8px}
+    .entry p{margin:0;color:var(--muted);font-size:15px}
+    .entry .go{display:block;margin-top:14px;font-size:14px;color:var(--accent)}
+    .postlist{list-style:none;padding:0;margin:28px 0 0}
+    .postlist li{padding:18px 0;border-top:1px solid var(--line)}
+    .postlist a.t{font-size:22px;font-weight:700;text-decoration:none;color:var(--fg)}
+    .postlist p{margin:6px 0 0;color:var(--muted)}
+    .reslist{list-style:none;padding:0;margin:20px 0 0}
+    .reslist li{padding:12px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr;gap:4px}
+    .reslist a{font-weight:700;text-decoration:none}
+    .reslist .d{color:var(--muted);font-size:15px}
     .tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
     .tag{font-family:var(--mono);font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:1px 7px}
   </style>
@@ -62,7 +79,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
   <div class="wrap">
     <header class="site">
       <a class="brand" href="/">Door4AI <span>Lab</span></a>
-      <nav><a href="/">文章</a><a href="/about/">关于</a><a href="/rss.xml">RSS</a></nav>
+      <nav><a href="/ai/">AI从入门到精通</a><a href="/resources/">Resource</a><a href="/about/">关于</a></nav>
     </header>
     <main><slot /></main>
     <footer class="site">© {new Date().getFullYear()} Door4AI Lab · 动手理解 AI · <a href="https://door4ai.com">door4ai.com</a></footer>

@@ -1,21 +1,26 @@
 ---
 import Base from '../layouts/Base.astro';
 import { getCollection } from 'astro:content';
-const posts = (await getCollection('blog')).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
-const fmt = (d: Date) => d.toISOString().slice(0, 10);
+const course = (await getCollection('blog')).filter((p) => p.data.series === 'ai-mastery');
 ---
 <Base title="Door4AI Lab">
-  <div class="eyebrow">interactive explainers</div>
-  <h1>动手理解 AI</h1>
-  <p class="prose" style="color:var(--muted)">每篇文章配一个可以拖滑块、改参数的小实验。不看示意图，看真实计算。</p>
-  <ul style="list-style:none;padding:0;margin:40px 0 0">
-    {posts.map((p) => (
-      <li style="padding:18px 0;border-top:1px solid var(--line)">
-        <div class="eyebrow">{fmt(p.data.pubDate)}{p.data.lab && ' · 含实验'}</div>
-        <a href={`/posts/${p.id}/`} style="font-size:22px;font-weight:700;text-decoration:none;color:var(--fg)">{p.data.title}</a>
-        <p style="margin:6px 0 0;color:var(--muted)">{p.data.description}</p>
-        {p.data.tags.length > 0 && <div class="tags">{p.data.tags.map((t) => <span class="tag">{t}</span>)}</div>}
-      </li>
-    ))}
-  </ul>
+  <section class="hero">
+    <div class="eyebrow">lab.door4ai.com</div>
+    <h1>Door4AI Lab</h1>
+    <p class="prose" style="color:var(--muted);font-size:18px;margin:0">动手理解 AI。每个概念配一个可以拖滑块、改参数的实验，看真实计算，不看示意图。</p>
+  </section>
+  <div class="entries">
+    <a class="entry" href="/ai/">
+      <span class="k">Course</span>
+      <h2>AI 从入门到精通</h2>
+      <p>按顺序读的系统课程：从模型怎么算，到推理怎么省，每一讲都能亲手验证。</p>
+      <span class="go">{course.length} 讲已发布 →</span>
+    </a>
+    <a class="entry" href="/resources/">
+      <span class="k">Resource</span>
+      <h2>Resource</h2>
+      <p>论文、工具、开源项目和值得读的材料，按主题整理，附一句话说明为什么值得看。</p>
+      <span class="go">进入资源库 →</span>
+    </a>
+  </div>
 </Base>

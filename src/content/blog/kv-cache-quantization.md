@@ -4,6 +4,8 @@ description: "从一组数怎么压成 4 bit，讲到 DeepSeek 为什么能把 K
 pubDate: 2026-10-13
 tags: ["LLM 推理", "量化", "KV cache", "MLA"]
 lab: /labs/kv-cache/
+series: ai-mastery
+order: 10
 ---
 
 ## 起因：前文不变，结果也不变

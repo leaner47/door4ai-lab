@@ -1,0 +1,23 @@
+---
+import Base from '../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+const posts = (await getCollection('blog'))
+  .filter((p) => p.data.series === 'ai-mastery')
+  .sort((a, b) => (a.data.order ?? 999) - (b.data.order ?? 999));
+const fmt = (d: Date) => d.toISOString().slice(0, 10);
+---
+<Base title="AI 从入门到精通 · Door4AI Lab" description="系统课程：从模型怎么算到推理怎么省，每一讲配可交互实验。">
+  <div class="eyebrow">Course</div>
+  <h1>AI 从入门到精通</h1>
+  <p class="prose" style="color:var(--muted)">按顺序读。每一讲都有一个实验页，先玩实验再看文字，理解会快很多。</p>
+  <ul class="postlist">
+    {posts.map((p, i) => (
+      <li>
+        <div class="eyebrow">第 {i + 1} 讲 · {fmt(p.data.pubDate)}{p.data.lab && ' · 含实验'}</div>
+        <a class="t" href={`/posts/${p.id}/`}>{p.data.title}</a>
+        <p>{p.data.description}</p>
+        {p.data.tags.length > 0 && <div class="tags">{p.data.tags.map((t) => <span class="tag">{t}</span>)}</div>}
+      </li>
+    ))}
+  </ul>
+</Base>

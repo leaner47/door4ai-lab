@@ -10,6 +10,8 @@ const blog = defineCollection({
     updatedDate: z.coerce.date().optional(),
     tags: z.array(z.string()).default([]),
     lab: z.string().optional(), // path to an interactive lab page under /public/labs
+    series: z.string().optional(), // e.g. 'ai-mastery' → listed under AI从入门到精通
+    order: z.number().optional(),  // position within the series
   }),
 });
 
