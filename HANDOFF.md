@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-13 20:48 America/New_York · 更新者：Claude（会话 session_017nqPj8MzXKK8YfLau84Y55）
+最后更新：2026-10-13 20:55 America/New_York · 更新者：Claude（会话 session_017nqPj8MzXKK8YfLau84Y55）
 
 ---
 
@@ -24,6 +24,7 @@
 | 构建 | Framework preset: None；Build command `npm run build`；Output `dist`；Node 22 |
 | 部署触发 | push 到 `main` 自动构建部署，约 1–2 分钟 |
 | DNS | `door4ai.com` zone 内一条 CNAME：`lab` → `door4ai-lab.pages.dev`（Proxied）。**其余记录（admin/api/app/grafana/pay-api/@ 等）属于 door4ai.com 上正在运行的其他业务，绝对不要动。** |
+| 登录/访问控制 | Cloudflare Access（Zero Trust）应用 **Door4AI Lab**：保护 `lab.door4ai.com/ai`、`/resources`、`/posts`、`/labs` 四个路径；策略 **Door4AI Lab students**（Allow，按邮箱白名单，目前只有本人邮箱）；会话 1 个月；登录方式为邮箱一次性验证码（One-time PIN）。首页 `/` 公开。**加学员 = 在该策略的 Emails 列表里加邮箱**（Zero Trust → Access controls → Policies）。不要改 grafana / AI Gateway Admin 那两个应用和「Only me」策略。 |
 | GitHub App | Cloudflare Workers and Pages 已授权仓库：`door4ai-lab`、`door4ai-site`（后者是别的项目，不要动） |
 | 本机副本 | `~/Documents/Agents/door4ai-lab`（Mac），是 GitHub 仓库的 clone |
 
@@ -43,13 +44,12 @@ door4ai-lab/
 │   ├── content.config.ts   ← 文章 schema：title, description, pubDate, updatedDate?, tags[], lab?, series?, order?
 │   ├── content/blog/*.md   ← 文章正文（markdown）
 │   ├── data/resources.ts   ← Resource 页的条目（每条 title/note/links[]，links 按平台分列）
-│   ├── layouts/Base.astro  ← 全站布局 + 导航 + 全部 CSS（颜色 token、字体、深浅色）
+│   ├── layouts/Base.astro  ← 全站布局 + 导航 + 全部 CSS；导航右侧「登录/退出」由脚本调 /cdn-cgi/access/get-identity 判断；prop `full` 让 main 占满宽度（首页用）
 │   └── pages/
 │       ├── index.astro         ← 首页：只有居中的一句 motto，入口全在导航
 │       ├── ai.astro            ← 「AI 从入门到精通」课程目录：series == 'ai-mastery' 的文章按 order 排序
 │       ├── resources.astro     ← Resource 资源库，数据来自 src/data/resources.ts
 │       ├── posts/[...slug].astro ← 文章页；frontmatter 有 lab 时顶部 iframe 嵌入实验
-│       ├── about.astro
 │       └── rss.xml.js
 └── public/
     ├── favicon.svg
@@ -79,7 +79,8 @@ door4ai-lab/
 - 用 Astro + Cloudflare Pages，不自建服务器。
 - 实验页用独立 HTML + iframe 嵌入，而不是做成 Astro 组件——便于把同一个 HTML 作为 Claude artifact 预览、也便于全屏分享。
 - **Resource 页只放本人指定的内容**（目前：FlClash、Codex、Claude 的下载入口 + door4ai.com）。下载链接必须同时覆盖 macOS 和 Windows，有 Linux 版的也要列出。不要往里放论文、教程等「推荐阅读」。
-- 首页极简：屏幕中央只有一句「Attention is all you need」，没有标题、介绍或卡片。所有入口都在右上角导航（AI从入门到精通 / Resource / 关于）。新增板块 = 新增一个页面 + 导航里加一项（`src/layouts/Base.astro` 的 `<nav>`）。
+- 首页极简：页眉左右贴屏幕两端（全宽），屏幕中央一句「Attention is all you need」撑满剩余高度；没有标题、介绍或卡片。导航：AI从入门到精通 / Resource / 登录（无「关于」页）。新增板块 = 新增一个页面 + 导航里加一项 + 若需登录则在 Access 应用里加该路径。
+- 课程与资源页必须登录才能看（Cloudflare Access），首页公开。
 
 ## 5. 当前状态
 
@@ -92,6 +93,8 @@ door4ai-lab/
 - [ ] 没有评论、订阅、付费墙——课程售卖形态未定，先积累内容
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-13 · Claude** — (1) 登录门禁：新建 Cloudflare Access 应用「Door4AI Lab」保护 /ai /resources /posts /labs，策略「Door4AI Lab students」仅放行本人邮箱，会话 1 个月；导航「关于」改为「登录」，登录后显示邮箱 + 退出；删除 about.astro。(2) 布局：页眉/页脚全宽贴两端，首页 motto 用 flex 撑满剩余视口，字号上限提到 96px。
 
 - **2026-10-13 · Claude** — 背景色改为深色纯黑 / 浅色米白（Base.astro 与 KV 实验页同步）。
 
