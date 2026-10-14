@@ -1,0 +1,26 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getCollection, render } from 'astro:content';
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  return posts.map((post) => ({ params: { slug: post.id }, props: post }));
+}
+const post = Astro.props;
+const { Content } = await render(post);
+const fmt = (d: Date) => d.toISOString().slice(0, 10);
+---
+<Base title={`${post.data.title} · Door4AI Lab`} description={post.data.description}>
+  <article>
+    <div class="eyebrow">{fmt(post.data.pubDate)}{post.data.updatedDate && ` · 更新 ${fmt(post.data.updatedDate)}`}</div>
+    <h1>{post.data.title}</h1>
+    <p class="prose" style="color:var(--muted);margin-top:0">{post.data.description}</p>
+    {post.data.tags.length > 0 && <div class="tags">{post.data.tags.map((t) => <span class="tag">{t}</span>)}</div>}
+    {post.data.lab && (
+      <div class="lab-frame">
+        <div class="bar"><span>可交互实验</span><a href={post.data.lab} target="_blank" rel="noopener">全屏打开 ↗</a></div>
+        <iframe src={post.data.lab} title={post.data.title} loading="lazy"></iframe>
+      </div>
+    )}
+    <div class="prose"><Content /></div>
+  </article>
+</Base>

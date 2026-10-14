@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>img{max-width:100%}[hidden]{display:none!important}</style>
+<title>KV Cache 压缩实验室</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* Layout: a single reading column (68ch) with full-width lab panels that break out slightly; each lab = controls strip on top, drawing below, readout row at bottom. */
+:root{
+  --bg:#f6f5f1; --paper:#ffffff; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
+  /* Latin & digits: Times New Roman first; CJK glyphs fall through to 苹方/黑体 (system PingFang or Heiti, then Noto Sans SC). */
+  --mono:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  --heat0:#f6f5f1; --heat1:#1f5fd1;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#15181c; --paper:#1d2127; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f;
+  --heat0:#1d2127; --heat1:#6f9cf0; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#15181c; --paper:#1d2127; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f;
+  --heat0:#1d2127; --heat1:#6f9cf0; color-scheme:dark }
+
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.aside{border-left:3px solid var(--accent);padding:4px 0 4px 16px;margin:16px 0;max-width:68ch;font-size:15.5px}
+.aside b{display:block;margin-bottom:2px}
+.bits{display:inline-grid;grid-auto-flow:column;gap:3px;vertical-align:middle;margin:0 4px}
+.bits i{display:inline-block;width:14px;height:20px;border:1px solid var(--line);border-radius:2px;font-size:11px;text-align:center;line-height:20px;font-style:normal}
+.bits i.s{background:var(--warn-soft);border-color:var(--warn)}
+.bits i.e{background:var(--accent-soft);border-color:var(--accent)}
+.bits i.m{background:var(--line)}
+.wrap{max-width:860px;margin:0 auto;padding-inline:16px;padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);max-width:68ch;margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{font-family:var(--mono);color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{max-width:68ch;margin:12px 0}
+p code,li code{font-family:var(--mono);font-size:.88em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+ul{max-width:68ch;padding-left:1.2em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl input[type=range]{width:160px;accent-color:var(--accent)}
+.ctrl .val{font-family:var(--mono);font-weight:600;min-width:3ch;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+.seg button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px}
+.toggle input{accent-color:var(--warn)}
+svg{display:block;width:100%;height:auto}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-family:var(--mono);font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn b{color:var(--warn)}
+.ro.ok b{color:var(--ok)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.canvases{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:560px){.canvases{grid-template-columns:1fr}}
+.cv{min-width:0}
+.cv canvas{width:100%;max-width:100%;image-rendering:pixelated;border:1px solid var(--line);display:block}
+.cv .cap{font-size:13px;color:var(--muted);margin-top:6px}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+td.num{font-family:var(--mono);text-align:right}
+td.best{color:var(--ok);font-weight:600}
+td.worst{color:var(--warn);font-weight:600}
+select{font:inherit;font-size:14px;padding:4px 8px;border:1px solid var(--line);border-radius:4px;background:var(--paper);color:var(--fg)}
+.bar{height:26px;background:var(--line);border-radius:3px;overflow:hidden;position:relative;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--accent)}
+.bar i.over{background:var(--warn)}
+.bar .tick{position:absolute;top:0;bottom:0;width:2px;background:var(--fg);opacity:.6}
+.bar .tl{position:absolute;top:-18px;font-size:11px;font-family:var(--mono);color:var(--muted);transform:translateX(-50%)}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--muted);flex-wrap:wrap;margin-top:8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-1px;margin-right:4px}
+.key{margin-top:40px;border-top:1px solid var(--line);padding-top:20px}
+@media (prefers-reduced-motion:no-preference){ .bar i{transition:width .25s} }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">KV cache · quantization · low-rank</div>
+  <h1>KV Cache 压缩实验室</h1>
+  <p class="lede">五个可以动手的小实验，从"一组数怎么压成 4 bit"讲到"DeepSeek 为什么能把 KV 砍掉 90%"。每个实验都是真实计算，不是示意图：拖滑块，看数字怎么变。</p>
+</header>
+
+<!-- ============ 1 ============ -->
+<section id="s1">
+  <h2><span class="n">01</span>量化就是把数放到网格上</h2>
+  <p>一个 fp16 的数能表示 6 万多种取值；int4 只有 16 个档位。量化做的事是：看这组数的最小值和最大值，在两者之间均匀铺 2<sup>bits</sup> 条网格线，每个数吸附到最近的一条上。存的时候只存"第几条线"（整数 q），外加整组共享的 <code>scale</code>（网格间距）和 <code>zero</code>（起点）。</p>
+  <div class="aside"><b>为什么是"6 万多"和"16"？</b>
+  一个 bit 只能是 0 或 1，n 个 bit 能拼出 2<sup>n</sup> 种不同的组合。fp16 用 16 个 bit：
+  <span class="bits"><i class="s">±</i><i class="e">e</i><i class="e">e</i><i class="e">e</i><i class="e">e</i><i class="e">e</i><i class="m">m</i><i class="m">m</i><i class="m">m</i><i class="m">m</i><i class="m">m</i><i class="m">m</i><i class="m">m</i><i class="m">m</i><i class="m">m</i><i class="m">m</i></span>
+  1 位符号、5 位指数、10 位尾数，2<sup>16</sup> = 65 536 种组合（去掉 NaN、无穷等保留编码后约 6.3 万个有效数值）。它是"浮点"：指数位让小数点可以滑动，所以既能表示 0.0001 也能表示 60000。int4 只有 4 个 bit，2<sup>4</sup> = 16 种组合，而且是"定点"整数，只能表示 0～15（或 −8～7）这 16 个相邻的整数，没有小数、没有大范围。要让它承载原本 fp16 里的浮点值，就必须靠外部的 scale 和 zero 把这 16 个整数"映射"回真实范围。</div>
+  <div class="aside"><b>"2<sup>bits</sup> 条网格线"是什么意思？</b>
+  bits 就是你给每个数分配的位数。bits = 2 时有 2<sup>2</sup> = 4 条线，bits = 4 时有 16 条，bits = 8 时有 256 条。这些线在 [min, max] 之间等距排开，相邻两条线的间距就是 scale = (max − min) / (2<sup>bits</sup> − 1)。每个原值只能落到离它最近的一条线上，所以线越密，吸附过去时移动的距离（误差）越小；线越稀，误差越大。下面的图里，下排的灰色竖线就是这些网格线，拖 bits 滑块能直接看到它们变密变疏。</div>
+  <p>下面是一组 16 个真实采样值。上排是原值，下排是量化后的位置，竖线长度就是误差。试着把 bits 拉到 2，再打开"离群值"开关。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="b1">bits</label><input type="range" id="b1" min="1" max="8" value="4"><span class="val" id="b1v">4</span></div>
+      <label class="toggle"><input type="checkbox" id="out1"> 加入一个离群值 (×12)</label>
+      <button class="seg" id="reseed1" style="padding:0"><span style="padding:5px 11px;display:inline-block;font-size:13px">换一组数</span></button>
+    </div>
+    <svg id="svg1" viewBox="0 0 800 230" role="img" aria-label="量化前后的数值位置"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r1levels">16</b><span>可用档位 2^bits</span></div>
+      <div class="ro"><b id="r1used">—</b><span>实际被用到的档位</span></div>
+      <div class="ro"><b id="r1scale">—</b><span>scale（网格间距）</span></div>
+      <div class="ro warn"><b id="r1mse">—</b><span>相对均方误差</span></div>
+      <div class="ro ok"><b id="r1ratio">4×</b><span>压缩比 vs fp16</span></div>
+    </div>
+    <p class="note">开离群值后注意"实际被用到的档位"：一个 ×12 的数把网格撑宽，其余 15 个数挤在最左边两三格里，分辨率全被那一个数吃掉了。这就是 KV 量化的核心难题。</p>
+  </div>
+</section>
+
+<!-- ============ 2 ============ -->
+<section id="s2">
+  <h2><span class="n">02</span>注意力为什么扛得住这种误差</h2>
+  <p>注意力的计算是：query 和每个 token 的 K 做点积得到分数，softmax 之后变成权重，再用权重加权求和 V。softmax 是指数放大：分数最高的几个 token 拿走几乎全部权重，其余 token 的 K 偏一点，权重本来就接近 0，偏了还是接近 0。V 那一侧是加权平均，舍入误差正负抵消。</p>
+  <p>这里是 1 个 query 对 12 个 token 的真实 attention。深色是原始权重，浅色是量化 K/V 之后的权重。看右边"输出余弦相似度"在几 bit 时才开始明显下降。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="b2">bits</label><input type="range" id="b2" min="1" max="8" value="4"><span class="val" id="b2v">4</span></div>
+      <div class="ctrl"><label>量化对象</label>
+        <div class="seg" id="seg2">
+          <button aria-pressed="true" data-v="both">K 和 V</button>
+          <button aria-pressed="false" data-v="k">只 K</button>
+          <button aria-pressed="false" data-v="v">只 V</button>
+        </div>
+      </div>
+    </div>
+    <svg id="svg2" viewBox="0 0 800 220" role="img" aria-label="softmax 权重对比"></svg>
+    <div class="legend"><span><i style="background:var(--accent)"></i>原始权重</span><span><i style="background:var(--accent);opacity:.35"></i>量化后权重</span></div>
+    <div class="readout">
+      <div class="ro ok"><b id="r2cos">—</b><span>输出向量余弦相似度</span></div>
+      <div class="ro"><b id="r2top">—</b><span>top-1 token 是否不变</span></div>
+      <div class="ro warn"><b id="r2kl">—</b><span>权重分布 KL 散度</span></div>
+    </div>
+    <p class="note">经验规律：int8 几乎无损，int4 相似度仍在 0.99 以上，int2 开始翻车。而且"只 V"通常比"只 K"更耐压：K 的误差经过点积和 softmax 被指数放大，V 的误差只是被平均。</p>
+  </div>
+</section>
+
+<!-- ============ 3 ============ -->
+<section id="s3">
+  <h2><span class="n">03</span>K 的离群值长在通道上，V 的不是</h2>
+  <div class="aside"><b>先把三个词说清楚</b>
+  <b style="display:inline">token</b>：输入序列里的一个单元（大致一个字或一个词），每个 token 在每一层都会产生一个 K 向量和一个 V 向量。<br>
+  <b style="display:inline">通道（channel）</b>：向量里的某一维。一个 K 向量有 128 维，就是 128 个通道；第 7 通道指的是"每个 token 的 K 向量的第 7 个数"。<br>
+  <b style="display:inline">离群值（outlier）</b>：和周围数相比大得离谱的值。实验 01 已经演示过，一个离群值会把整组的 scale 撑大，让其余的数失去分辨率。</div>
+  <p>把一层的 KV cache 画成矩阵：每行是一个 token，每列是一个通道。于是"K 的离群值长在通道上"的意思就是：K 矩阵里有几条<b>竖着</b>的亮线，某几个固定的通道，对所有 token 都偏大。原因有两个：RoPE 位置编码是把相邻两维当作一个二维平面做旋转，某些低频维度在旋转后数值系统性地偏大；另外，某些注意力头会把少数几个维度当"锚点"用，这些维度的 K 值天生就大。无论哪种原因，离群出现的位置由<b>通道</b>决定，和这个 token 是什么字无关。</p>
+  <p>V 不一样。V 不经过 RoPE，也不参与点积打分，它就是"要被取走的内容"。V 矩阵里的大值是零散的：某个 token 整行偏大（这个 token 携带的信息多），或者某个单独的位置偏大，但不会在某一列上整齐排开。所以 V 的离群值要说有规律的话，更接近<b>按 token</b>（按行）分布。</p>
+  <p>这决定了分组方式。量化时的一组共享一个 scale，分组的目标是<b>让离群值和正常值不在同一组里</b>。<b>按 token 分组</b>（每行一个 scale）时，K 的每一行都包含那几个大通道，每一行的 scale 都被撑大，没有一行逃得掉。<b>按通道分组</b>（每列一个 scale）时，大通道自成一组，它的 scale 大是它自己的事，其余列不受影响。对 V 则反过来：按行分组时，偏大的那几行自成一组，其余行正常；按列分组反而让每一列都混进几个大值。下面的实验可以把两种分组各试一遍，表格里会给出误差数字。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>矩阵</label>
+        <div class="seg" id="seg3m"><button aria-pressed="true" data-v="K">K</button><button aria-pressed="false" data-v="V">V</button></div>
+      </div>
+      <div class="ctrl"><label>分组</label>
+        <div class="seg" id="seg3g"><button aria-pressed="true" data-v="token">按 token（每行）</button><button aria-pressed="false" data-v="channel">按通道（每列）</button></div>
+      </div>
+      <div class="ctrl"><label for="b3">bits</label><input type="range" id="b3" min="1" max="6" value="2"><span class="val" id="b3v">2</span></div>
+    </div>
+    <div class="canvases">
+      <div class="cv"><canvas id="cv3a" width="48" height="32"></canvas><div class="cap" id="cap3a">|原值| 热力图 · 32 token × 48 通道</div></div>
+      <div class="cv"><canvas id="cv3b" width="48" height="32"></canvas><div class="cap">量化误差 |x − x̂| 热力图（越亮误差越大）</div></div>
+    </div>
+    <table>
+      <thead><tr><th>矩阵</th><th>按 token 分组</th><th>按通道分组</th><th>更好的选择</th></tr></thead>
+      <tbody>
+        <tr><td>K</td><td class="num" id="t3kt">—</td><td class="num" id="t3kc">—</td><td id="t3kb">—</td></tr>
+        <tr><td>V</td><td class="num" id="t3vt">—</td><td class="num" id="t3vc">—</td><td id="t3vb">—</td></tr>
+      </tbody>
+    </table>
+    <p class="note">表里是当前 bits 下的相对均方误差。KIVI 论文的结论就是这张表：K 按通道、V 按 token，int2 都能用。KVQuant 更进一步，把那几个极端值单独用 fp16 存成稀疏矩阵，剩下的再量化。</p>
+  </div>
+</section>
+
+<!-- ============ 4 ============ -->
+<section id="s4">
+  <h2><span class="n">04</span>算一算到底省了多少显存</h2>
+  <p>每个 token 在每一层都要存一份 K 和一份 V：<code>2 × 层数 × KV头数 × 头维度 × 每个数的字节数</code>。GQA（分组查询注意力）让多个 query 头共用一个 KV 头，所以 70B 模型只有 8 个 KV 头而不是 64 个，这本身已经是一次 8 倍压缩。MLA 走得更远：每层只存一个 512 维的潜向量加 64 维的位置信息。</p>
+  <div class="aside"><b>什么是并发请求？</b>
+  一张 GPU 很少只服务一个人。推理服务器会把同时到达的多个对话（比如 32 个用户各自在问问题）打包成一个 batch 一起算，这样权重只需从显存读一次就能给 32 个人用，吞吐量高得多。但 KV cache 是每个对话各自一份的：32 个并发请求就是 32 份独立的 KV cache，显存占用线性叠加。这也是为什么服务商关心 KV 压缩远胜过个人用户：对个人来说 KV 压 4 倍只是"能跑更长上下文"，对服务商来说是"同一张卡能同时服务 4 倍的用户"，直接等于成本。</div>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="model4">模型</label>
+        <select id="model4">
+          <option value="llama8b">Llama-3 8B（GQA, 32层×8头×128）</option>
+          <option value="llama70b" selected>Llama-3 70B（GQA, 80层×8头×128）</option>
+          <option value="mha70b">假想 70B 无 GQA（80层×64头×128）</option>
+          <option value="dsv3">DeepSeek-V3（MLA, 61层×576维）</option>
+        </select>
+      </div>
+      <div class="ctrl"><label for="ctx4">上下文</label><input type="range" id="ctx4" min="10" max="20" value="17" step="0.25"><span class="val" id="ctx4v">128K</span></div>
+      <div class="ctrl"><label for="bits4">bits</label>
+        <select id="bits4"><option value="16">16 (bf16)</option><option value="8">8</option><option value="4">4</option><option value="2">2</option></select>
+      </div>
+      <div class="ctrl"><label for="batch4">并发请求</label><input type="range" id="batch4" min="1" max="64" value="1"><span class="val" id="batch4v">1</span></div>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r4tok">—</b><span>每 token 占用</span></div>
+      <div class="ro warn"><b id="r4tot">—</b><span>KV cache 总量</span></div>
+      <div class="ro"><b id="r4bw">—</b><span>每生成一个 token 要读的量</span></div>
+      <div class="ro ok"><b id="r4fit">—</b><span>一张 H100 (80 GB) 能放几份</span></div>
+    </div>
+    <div style="margin-top:28px;position:relative">
+      <div class="bar" id="bar4"><i id="bar4i" style="width:0%"></i><span class="tick" style="left:100%"></span><span class="tl" style="left:100%">80 GB</span></div>
+      <p class="note">横条满格 = 一张 H100 的 80 GB（还没算模型权重本身）。把 70B 拉到 128K、16 bit，再切到 4 bit，再换成 MLA，感受三种压缩的量级。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5 ============ -->
+<section id="s5">
+  <h2><span class="n">05</span>MLA：不压每个数，而是少存数</h2>
+  <p>量化压的是每个数的位宽，上限大约 4～8 倍。MLA（Multi-head Latent Attention）换了个思路：K 和 V 本来就是从同一个隐状态 <code>h</code> 乘两个矩阵投影出来的，信息高度冗余。那就不存 K 和 V，只存一个低维潜向量 <code>c = W_down · h</code>；用的时候再 <code>K = W_uk · c</code>、<code>V = W_uv · c</code> 展开。展开矩阵 <code>W_uk</code> 可以提前乘进 query 侧（矩阵乘法结合律），所以解码时根本不用真的把 K 还原出来。</p>
+  <p>下面的方块面积按维度数画。拖 <code>d_c</code> 看潜向量多小时还划算；DeepSeek-V3 选的是 512。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="dc5">潜向量维度 d_c</label><input type="range" id="dc5" min="64" max="4096" step="64" value="512"><span class="val" id="dc5v">512</span></div>
+      <div class="ctrl"><label for="heads5">注意力头数</label><input type="range" id="heads5" min="8" max="128" step="8" value="128"><span class="val" id="heads5v">128</span></div>
+    </div>
+    <svg id="svg5" viewBox="0 0 800 260" role="img" aria-label="MLA 与标准注意力的 KV 维度对比"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r5mha">—</b><span>MHA 每层每 token 存的数</span></div>
+      <div class="ro"><b id="r5gqa">—</b><span>GQA (8 KV头) 存的数</span></div>
+      <div class="ro ok"><b id="r5mla">—</b><span>MLA 存的数 (d_c + 64 rope)</span></div>
+      <div class="ro ok"><b id="r5x">—</b><span>MLA 相对 MHA 压缩比</span></div>
+    </div>
+    <p class="note">MLA 和量化正交：先用 MLA 把"数的个数"砍掉几十倍，再对潜向量做 int4/int8 量化，两段收益相乘。代价是 MLA 必须在训练时就这样设计，没法给已训好的模型事后加上；量化可以。</p>
+  </div>
+</section>
+
+<section class="key">
+  <h2>把这五件事串起来</h2>
+  <ul>
+    <li><b>量化</b> = 用 2<sup>bits</sup> 个档位近似一组数，每组额外存 scale 和 zero。</li>
+    <li><b>能用</b>是因为 softmax 只关心头部 token，V 侧误差被平均掉。</li>
+    <li><b>难点</b>是离群值撑大 scale；K 的离群值按通道分布，V 的按 token，所以 K 按通道分组、V 按 token 分组。</li>
+    <li><b>收益</b>：int4 直接把 KV cache 砍到 1/4，GQA 再砍 8 倍，MLA 在此之上还能砍几十倍。</li>
+    <li><b>边界</b>：量化是事后处理，MLA 要在训练时决定；两者可以叠加。</li>
+  </ul>
+</section>
+</div>
+
+<script>
+(function(){
+'use strict';
+// ---------- helpers ----------
+function rng(seed){ let a=seed>>>0; return function(){ a+=0x6D2B79F5; let t=a; t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296; }; }
+function normal(r){ const u=Math.max(r(),1e-9), v=r(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+function quant(arr,bits){
+  let mn=Infinity,mx=-Infinity; for(const x of arr){ if(x<mn)mn=x; if(x>mx)mx=x; }
+  const L=Math.pow(2,bits)-1; const scale=(mx-mn)/L||1e-9; const zero=mn;
+  const q=arr.map(x=>Math.round((x-zero)/scale)); const deq=q.map(k=>k*scale+zero);
+  return {q,deq,scale,zero,levels:L+1,mn,mx};
+}
+function relmse(a,b){ let e=0,s=0; for(let i=0;i<a.length;i++){ e+=(a[i]-b[i])**2; s+=a[i]**2; } return e/(s||1e-9); }
+function fmt(x,d){ return (+x).toFixed(d); }
+function svgEl(tag,attrs,parent){ const e=document.createElementNS('http://www.w3.org/2000/svg',tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(parent) parent.appendChild(e); return e; }
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function seg(id,cb){ const el=document.getElementById(id); el.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); cb(b.dataset.v); })); return ()=>el.querySelector('[aria-pressed=true]').dataset.v; }
+
+// ---------- 1: quantizer ----------
+let seed1=7;
+function data1(){ const r=rng(seed1); const a=[]; for(let i=0;i<16;i++) a.push(normal(r)); return a; }
+let base1=data1();
+const b1=document.getElementById('b1'), out1=document.getElementById('out1');
+function draw1(){
+  const bits=+b1.value; document.getElementById('b1v').textContent=bits;
+  const arr=base1.slice(); if(out1.checked) arr[5]=Math.abs(arr[5])*12+6;
+  const Q=quant(arr,bits);
+  const svg=document.getElementById('svg1'); svg.innerHTML='';
+  const fg=css('--fg'),muted=css('--muted'),line=css('--line'),acc=css('--accent'),warn=css('--warn');
+  const pad=40, W=800, x0=pad, x1=W-pad; const lo=Q.mn, hi=Q.mx; const span=(hi-lo)||1;
+  const X=v=>x0+(v-lo)/span*(x1-x0);
+  const yA=70,yB=160;
+  // grid lines
+  const showGrid=Q.levels<=128;
+  if(showGrid){ for(let k=0;k<Q.levels;k++){ const x=X(Q.zero+k*Q.scale); svgEl('line',{x1:x,y1:yB-28,x2:x,y2:yB+28,stroke:line,'stroke-width':1},svg); } }
+  svgEl('line',{x1:x0,y1:yA,x2:x1,y2:yA,stroke:line},svg);
+  svgEl('line',{x1:x0,y1:yB,x2:x1,y2:yB,stroke:muted,'stroke-width':1.5},svg);
+  svgEl('text',{x:x0,y:yA-30,fill:muted,'font-size':12,'font-family':'Times New Roman, Times, PingFang SC, Heiti SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans SC, sans-serif'},svg).textContent='原值 (fp16)';
+  svgEl('text',{x:x0,y:yB+50,fill:muted,'font-size':12,'font-family':'Times New Roman, Times, PingFang SC, Heiti SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans SC, sans-serif'},svg).textContent=showGrid?'量化网格 · 每条竖线是一个档位':'量化网格 · '+Q.levels+' 个档位（太密，不画）';
+  svgEl('text',{x:x0,y:yB+70,fill:muted,'font-size':11,'font-family':'Times New Roman, Times, PingFang SC, Heiti SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans SC, sans-serif'},svg).textContent='min '+fmt(lo,2);
+  svgEl('text',{x:x1,y:yB+70,fill:muted,'font-size':11,'text-anchor':'end','font-family':'Times New Roman, Times, PingFang SC, Heiti SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans SC, sans-serif'},svg).textContent='max '+fmt(hi,2);
+  const used=new Set(Q.q);
+  arr.forEach((v,i)=>{ const xa=X(v), xb=X(Q.deq[i]); const isOut=out1.checked&&i===5;
+    svgEl('line',{x1:xa,y1:yA,x2:xb,y2:yB,stroke:Math.abs(v-Q.deq[i])>Q.scale*0.3?warn:muted,'stroke-width':1,opacity:.7},svg);
+    svgEl('circle',{cx:xa,cy:yA,r:5,fill:isOut?warn:acc},svg);
+    svgEl('circle',{cx:xb,cy:yB,r:5,fill:css('--paper'),stroke:isOut?warn:acc,'stroke-width':2},svg);
+  });
+  document.getElementById('r1levels').textContent=Q.levels;
+  document.getElementById('r1used').textContent=used.size;
+  document.getElementById('r1scale').textContent=fmt(Q.scale,3);
+  document.getElementById('r1mse').textContent=fmt(relmse(arr,Q.deq)*100,2)+'%';
+  document.getElementById('r1ratio').textContent=fmt(16/bits,1)+'×';
+}
+b1.addEventListener('input',draw1); out1.addEventListener('change',draw1);
+document.getElementById('reseed1').addEventListener('click',()=>{ seed1=(seed1*31+17)%1000+1; base1=data1(); draw1(); });
+
+// ---------- 2: attention ----------
+const r2=rng(42); const D=16,N=12;
+const q2=Array.from({length:D},()=>normal(r2));
+const K2=Array.from({length:N},()=>Array.from({length:D},()=>normal(r2)));
+const V2=Array.from({length:N},()=>Array.from({length:D},()=>normal(r2)));
+// make a couple of keys clearly aligned with q so attention is peaked, like real heads
+for(let d=0;d<D;d++){ K2[3][d]=q2[d]*0.9+normal(r2)*0.3; K2[8][d]=q2[d]*0.6+normal(r2)*0.4; }
+function attn(K,V){ const s=K.map(k=>k.reduce((a,x,i)=>a+x*q2[i],0)/Math.sqrt(D)); const m=Math.max(...s); const e=s.map(x=>Math.exp(x-m)); const Z=e.reduce((a,b)=>a+b,0); const w=e.map(x=>x/Z); const o=new Array(D).fill(0); w.forEach((wi,t)=>{ for(let d=0;d<D;d++) o[d]+=wi*V[t][d]; }); return {w,o}; }
+function qrows(M,bits){ return M.map(row=>quant(row,bits).deq); }
+function cos(a,b){ let d=0,na=0,nb=0; for(let i=0;i<a.length;i++){ d+=a[i]*b[i]; na+=a[i]**2; nb+=b[i]**2; } return d/Math.sqrt(na*nb); }
+const b2=document.getElementById('b2'); const get2=seg('seg2',draw2);
+function draw2(){
+  const bits=+b2.value; document.getElementById('b2v').textContent=bits; const mode=get2();
+  const base=attn(K2,V2);
+  const Kq=(mode==='v')?K2:qrows(K2,bits), Vq=(mode==='k')?V2:qrows(V2,bits);
+  const qd=attn(Kq,Vq);
+  const svg=document.getElementById('svg2'); svg.innerHTML='';
+  const muted=css('--muted'),line=css('--line'),acc=css('--accent');
+  const x0=50,x1=780,y0=20,y1=180; const H=y1-y0; const maxw=Math.max(...base.w,...qd.w)*1.1;
+  for(const f of [0,0.25,0.5,0.75,1]){ const y=y1-f*H; svgEl('line',{x1:x0,y1:y,x2:x1,y2:y,stroke:line},svg); svgEl('text',{x:x0-8,y:y+4,fill:muted,'font-size':11,'text-anchor':'end','font-family':'Times New Roman, Times, PingFang SC, Heiti SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans SC, sans-serif'},svg).textContent=fmt(f*maxw,2); }
+  const bw=(x1-x0)/N;
+  for(let t=0;t<N;t++){ const x=x0+t*bw+6; const w=bw-12;
+    svgEl('rect',{x:x,y:y1-base.w[t]/maxw*H,width:w/2-1,height:base.w[t]/maxw*H,fill:acc},svg);
+    svgEl('rect',{x:x+w/2+1,y:y1-qd.w[t]/maxw*H,width:w/2-1,height:qd.w[t]/maxw*H,fill:acc,opacity:.35},svg);
+    svgEl('text',{x:x+w/2,y:y1+18,fill:muted,'font-size':11,'text-anchor':'middle','font-family':'Times New Roman, Times, PingFang SC, Heiti SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans SC, sans-serif'},svg).textContent='t'+t;
+  }
+  svgEl('text',{x:x0,y:y1+40,fill:muted,'font-size':12},svg).textContent='横轴：12 个 token；纵轴：softmax 权重';
+  const c=cos(base.o,qd.o); const el=document.getElementById('r2cos'); el.textContent=fmt(c,4); el.parentElement.className='ro '+(c>0.98?'ok':'warn');
+  const top=base.w.indexOf(Math.max(...base.w))===qd.w.indexOf(Math.max(...qd.w)); document.getElementById('r2top').textContent=top?'不变 ✓':'变了 ✗';
+  let kl=0; for(let t=0;t<N;t++) kl+=base.w[t]*Math.log(base.w[t]/Math.max(qd.w[t],1e-12)); document.getElementById('r2kl').textContent=fmt(kl,4);
+}
+b2.addEventListener('input',draw2);
+
+// ---------- 3: K/V heatmap ----------
+const T3=32,C3=48; const r3=rng(2024);
+const K3=[],V3=[];
+for(let t=0;t<T3;t++){ const kr=[],vr=[]; for(let c=0;c<C3;c++){ let k=normal(r3)*0.5; if(c===7||c===29) k=normal(r3)*0.5+6*(c===7?1:-1); if(c===40) k=normal(r3)*0.5+3; kr.push(k); vr.push(normal(r3)*0.5); } V3.push(vr); K3.push(kr); }
+// V: per-token scale variation + a few isolated outliers
+for(let t=0;t<T3;t++){ const s=(t%9===0)?3.5:1; for(let c=0;c<C3;c++) V3[t][c]*=s; }
+V3[5][12]+=5; V3[20][33]-=5; V3[27][3]+=4;
+function quantMatrix(M,group,bits){ const T=M.length,C=M[0].length; const out=M.map(r=>r.slice());
+  if(group==='token'){ for(let t=0;t<T;t++) out[t]=quant(M[t],bits).deq; }
+  else { for(let c=0;c<C;c++){ const col=M.map(r=>r[c]); const d=quant(col,bits).deq; for(let t=0;t<T;t++) out[t][c]=d[t]; } }
+  return out; }
+function err(M,Mq){ let e=0,s=0; for(let t=0;t<M.length;t++) for(let c=0;c<M[0].length;c++){ e+=(M[t][c]-Mq[t][c])**2; s+=M[t][c]**2; } return e/s; }
+function hexToRgb(h){ h=h.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; }
+function paint(cv,M,maxv,hot){ const ctx=cv.getContext('2d'); const img=ctx.createImageData(C3,T3); const c0=hexToRgb(css('--heat0')), c1=hexToRgb(hot?css('--warn'):css('--heat1'));
+  for(let t=0;t<T3;t++) for(let c=0;c<C3;c++){ const v=Math.min(Math.abs(M[t][c])/maxv,1); const i=(t*C3+c)*4; for(let k=0;k<3;k++) img.data[i+k]=Math.round(c0[k]+(c1[k]-c0[k])*v); img.data[i+3]=255; } ctx.putImageData(img,0,0); }
+const b3=document.getElementById('b3'); const get3m=seg('seg3m',draw3), get3g=seg('seg3g',draw3);
+function draw3(){
+  const bits=+b3.value; document.getElementById('b3v').textContent=bits; const which=get3m(), group=get3g();
+  const M=which==='K'?K3:V3; const Mq=quantMatrix(M,group,bits);
+  paint(document.getElementById('cv3a'),M,6.5,false);
+  const E=M.map((r,t)=>r.map((x,c)=>x-Mq[t][c])); paint(document.getElementById('cv3b'),E,1.5,true);
+  document.getElementById('cap3a').textContent='|原值| 热力图 · '+which+' · 32 token（行）× 48 通道（列）';
+  const kt=err(K3,quantMatrix(K3,'token',bits)), kc=err(K3,quantMatrix(K3,'channel',bits)), vt=err(V3,quantMatrix(V3,'token',bits)), vc=err(V3,quantMatrix(V3,'channel',bits));
+  const set=(id,v,best)=>{ const e=document.getElementById(id); e.textContent=fmt(v*100,2)+'%'; e.className='num '+(best?'best':'worst'); };
+  set('t3kt',kt,kt<kc); set('t3kc',kc,kc<=kt); set('t3vt',vt,vt<=vc); set('t3vc',vc,vc<vt);
+  document.getElementById('t3kb').textContent=kc<=kt?'按通道':'按 token'; document.getElementById('t3vb').textContent=vt<=vc?'按 token':'按通道';
+}
+b3.addEventListener('input',draw3);
+
+// ---------- 4: memory calculator ----------
+const models={ llama8b:{L:32,H:8,d:128,mla:false}, llama70b:{L:80,H:8,d:128,mla:false}, mha70b:{L:80,H:64,d:128,mla:false}, dsv3:{L:61,dc:576,mla:true} };
+const ctx4=document.getElementById('ctx4'),bits4=document.getElementById('bits4'),batch4=document.getElementById('batch4'),model4=document.getElementById('model4');
+function human(b){ if(b>=1e12) return fmt(b/1e12,2)+' TB'; if(b>=1e9) return fmt(b/1e9,1)+' GB'; if(b>=1e6) return fmt(b/1e6,1)+' MB'; if(b>=1e3) return fmt(b/1e3,1)+' KB'; return b+' B'; }
+function draw4(){
+  const m=models[model4.value]; const ctx=Math.round(Math.pow(2,+ctx4.value)); const bits=+bits4.value; const B=+batch4.value;
+  document.getElementById('ctx4v').textContent=ctx>=1024?Math.round(ctx/1024)+'K':ctx; document.getElementById('batch4v').textContent=B;
+  const perTok=(m.mla? m.L*m.dc : 2*m.L*m.H*m.d)*bits/8;
+  const total=perTok*ctx*B;
+  document.getElementById('r4tok').textContent=human(perTok);
+  document.getElementById('r4tot').textContent=human(total);
+  document.getElementById('r4bw').textContent=human(perTok*ctx)+' / token';
+  const fit=80e9/total; document.getElementById('r4fit').textContent=fit>=1?fmt(Math.floor(fit),0)+' 份':'放不下 ('+fmt(total/80e9,1)+'× 超出)';
+  const pct=Math.min(total/80e9*100,100); const i=document.getElementById('bar4i'); i.style.width=pct+'%'; i.className=total>80e9?'over':'';
+}
+[ctx4,bits4,batch4,model4].forEach(e=>e.addEventListener('input',draw4));
+
+// ---------- 5: MLA ----------
+const dc5=document.getElementById('dc5'),heads5=document.getElementById('heads5');
+function draw5(){
+  const dc=+dc5.value, h=+heads5.value, dh=128; document.getElementById('dc5v').textContent=dc; document.getElementById('heads5v').textContent=h;
+  const mha=2*h*dh, gqa=2*8*dh, mla=dc+64;
+  const svg=document.getElementById('svg5'); svg.innerHTML='';
+  const muted=css('--muted'),acc=css('--accent'),ok=css('--ok'),line=css('--line');
+  const rows=[['MHA  K+V',mha,acc],['GQA  K+V (8 KV 头)',gqa,acc],['MLA  c + rope',mla,ok]];
+  const x0=200,x1=780,maxv=Math.max(mha,gqa,mla);
+  rows.forEach((r,i)=>{ const y=30+i*75; const w=Math.max((x1-x0)*r[1]/maxv,2);
+    svgEl('text',{x:x0-12,y:y+28,fill:muted,'font-size':13,'text-anchor':'end','font-family':'Times New Roman, Times, PingFang SC, Heiti SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans SC, sans-serif'},svg).textContent=r[0];
+    svgEl('rect',{x:x0,y:y,width:w,height:44,fill:r[2],rx:2},svg);
+    svgEl('text',{x:x0+w+8,y:y+28,fill:css('--fg'),'font-size':13,'font-family':'Times New Roman, Times, PingFang SC, Heiti SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans SC, sans-serif'},svg).textContent=r[1]+' 个数';
+    // per-head segments for MHA/GQA
+    if(i<2){ const nh=i===0?h:8; const segw=w/(2*nh); if(segw>3) for(let s=1;s<2*nh;s++) svgEl('line',{x1:x0+s*segw,y1:y,x2:x0+s*segw,y2:y+44,stroke:css('--paper'),'stroke-width':1},svg); }
+  });
+  svgEl('text',{x:x0,y:250,fill:muted,'font-size':12},svg).textContent='方块长度 ∝ 每层每 token 需要缓存的数值个数；MHA/GQA 的分隔线是每个头的 K 或 V';
+  document.getElementById('r5mha').textContent=mha; document.getElementById('r5gqa').textContent=gqa; document.getElementById('r5mla').textContent=mla;
+  document.getElementById('r5x').textContent=fmt(mha/mla,1)+'×';
+}
+dc5.addEventListener('input',draw5); heads5.addEventListener('input',draw5);
+
+function all(){ draw1(); draw2(); draw3(); draw4(); draw5(); }
+all();
+if(window.matchMedia){ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',all); }
+new MutationObserver(all).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+})();
+</script>
+</body>
+</html>
