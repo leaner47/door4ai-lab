@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 19:55 America/New_York · 更新者：Claude（会话 session_017nqPj8MzXKK8YfLau84Y55，合并了 session_01DR5LFdGneALqpA1WLAEDZS 的课程提交）
+最后更新：2026-10-14 19:55 America/New_York · 更新者：Claude（会话 session_017CU4NcQfTghfgs5thFLD9Y）
 
 ---
 
@@ -24,7 +24,7 @@
 | 构建 | Framework preset: None；Build command `npm run build`；Output `dist`；Node 22 |
 | 部署触发 | push 到 `main` 自动构建部署，约 1–2 分钟 |
 | DNS | `door4ai.com` zone 内一条 CNAME：`lab` → `door4ai-lab.pages.dev`（Proxied）。**其余记录（admin/api/app/grafana/pay-api/@ 等）属于 door4ai.com 上正在运行的其他业务，绝对不要动。** |
-| 登录/访问控制 | Cloudflare Access（Zero Trust）应用 **Door4AI Lab**：保护 `lab.door4ai.com/ai`、`/resources`、`/posts`、`/labs` 四个路径；策略 **Door4AI Lab students**（Allow，按邮箱白名单，目前只有本人邮箱）；会话 1 个月；登录方式为邮箱一次性验证码（One-time PIN）。首页 `/` 公开。**加学员 = 在该策略的 Emails 列表里加邮箱**（Zero Trust → Access controls → Policies）。不要改 grafana / AI Gateway Admin 那两个应用和「Only me」策略。 |
+| 登录/访问控制 | Cloudflare Access（Zero Trust）应用 **Door4AI Lab**：保护 `lab.door4ai.com/ai`、`/resources`、`/posts`、`/labs` 四个路径；策略 **Door4AI Lab students**（Allow，按邮箱白名单，目前只有本人邮箱）；会话 1 个月；登录方式为邮箱一次性验证码（One-time PIN）。首页 `/` 公开。**`*.pages.dev`（生产与预览）不走 Access，由 `functions/_middleware.ts` 把所有请求 301 跳到 `lab.door4ai.com` 同路径**，所以内容只能经登录访问；手动同步请用 `https://lab.door4ai.com/sync-dl?...`。**加学员 = 在该策略的 Emails 列表里加邮箱**（Zero Trust → Access controls → Policies）。不要改 grafana / AI Gateway Admin 那两个应用和「Only me」策略。 |
 | 安装包镜像 | R2 桶 `door4ai-lab-dl`（APAC 位置提示，私有），绑定到 Pages 项目为 `DL`；Pages 环境变量 `SYNC_KEY`（手动同步口令，值只在 Cloudflare 设置里）。下载走 `/dl/<app>/<platform>`（在 Access 保护内），状态看 `/dl/manifest.json`；手动同步 `GET /sync-dl?key=<SYNC_KEY>[&app=flclash\|claude\|codex][&force=1]`（/sync-dl 不在 Access 内，靠口令保护）。下载时若某项超过 24h 未同步会在后台自动刷新。 |
 | GitHub App | Cloudflare Workers and Pages 已授权仓库：`door4ai-lab`、`door4ai-site`（后者是别的项目，不要动） |
 | 本机副本 | `~/Documents/Agents/door4ai-lab`（Mac），是 GitHub 仓库的 clone |
@@ -81,6 +81,7 @@ door4ai-lab/
 
 ## 4. 已做的关键决定（不要反复讨论）
 
+- `door4ai-lab.pages.dev` 及预览地址一律跳转到 `lab.door4ai.com`（代码里的中间件实现，不在控制台配置），避免绕过登录。
 - 术语「token」直接用英文，不译成「词」「词元」。
 - 课程顺序：硬件入门讲（computer-anatomy，order 2）放在注意力（order 5）之前，作为零基础第一课。
 - 生成型实验页（由脚本产出的 HTML）把生成脚本放在 `labs-src/<slug>/`，产物仍放 `public/labs/<slug>/index.html`。
@@ -111,6 +112,8 @@ door4ai-lab/
 - [ ] 没有评论、订阅、付费墙——课程售卖形态未定，先积累内容
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-14 · Claude** — 发现 `door4ai-lab.pages.dev` 不经过 Access、课程内容可匿名访问。新增 `functions/_middleware.ts`：hostname 以 `.pages.dev` 结尾的请求 301 到 `lab.door4ai.com` 同路径（含查询参数）。tsc 与 build 通过，上线后验证。
 
 - **2026-10-14 · Claude** — 按本人要求：「token」一词不翻译。computer-anatomy 实验页与文章里的「词/秒」「生成每个词」改为「token/秒」「生成每个 token」（`labs-src/computer-anatomy/sec23.mjs` 重新生成）。
 
