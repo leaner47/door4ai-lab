@@ -2,20 +2,46 @@
 import Base from '../layouts/Base.astro';
 import { resources } from '../data/resources';
 ---
-<Base title="Resource · Door4AI Lab" description="常用工具的下载入口，按平台分列。">
+<Base title="Resource · Door4AI Lab" description="常用工具的下载入口，由本站镜像最新安装包。">
   <div class="eyebrow">Resource</div>
   <h1>Resource</h1>
+  <p class="prose" style="color:var(--muted)">安装包由本站镜像并每天同步官方最新版本，点击即下载。</p>
   <ul class="reslist">
     {resources.map((r) => (
       <li>
         <span class="rt">{r.title}</span>
         <span class="d">{r.note}</span>
         <div class="plat">
-          {r.links.map((l) => (
-            <a href={l.url} target="_blank" rel="noopener" title={l.hint}>{l.label}{l.hint && <small>{l.hint}</small>}</a>
-          ))}
+          {r.links.map((l) =>
+            l.dl ? (
+              <a href={`/dl/${l.dl}`} data-dl={l.dl}>{l.label}<small>检查镜像状态…</small></a>
+            ) : (
+              <a href={l.url} target="_blank" rel="noopener">{l.label}{l.hint && <small>{l.hint}</small>}</a>
+            )
+          )}
         </div>
       </li>
     ))}
   </ul>
+  <script>
+    // 读镜像清单，把版本号 / 大小 / 同步时间填到按钮里
+    (async () => {
+      const fmt = (n) => (n >= 1e9 ? (n / 1e9).toFixed(2) + ' GB' : n >= 1e6 ? (n / 1e6).toFixed(1) + ' MB' : Math.round(n / 1e3) + ' KB');
+      try {
+        const r = await fetch('/dl/manifest.json', { credentials: 'include' });
+        if (!r.ok) throw new Error(String(r.status));
+        const m = await r.json();
+        document.querySelectorAll('a[data-dl]').forEach((a) => {
+          const it = m.items[a.dataset.dl];
+          const s = a.querySelector('small');
+          if (!it || it.missing) { s.textContent = '镜像尚未同步'; a.classList.add('off'); return; }
+          const d = it.syncedAt ? new Date(it.syncedAt).toLocaleDateString('zh-CN') : '';
+          s.textContent = `${it.version} · ${fmt(it.size)} · ${d} 同步`;
+          if (it.sha256) a.title = 'SHA256 ' + it.sha256;
+        });
+      } catch (e) {
+        document.querySelectorAll('a[data-dl] small').forEach((s) => (s.textContent = '登录后可下载'));
+      }
+    })();
+  </script>
 </Base>

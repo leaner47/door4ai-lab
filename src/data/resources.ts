@@ -1,35 +1,39 @@
 // Resource 页条目。只放本人指定的内容，不要自行添加。
-// 每条：title, note, links[]（按平台分列；没有该平台版本就不写）。
-export type Link = { label: string; url: string; hint?: string };
+// 每条：title, note, links[]。link.dl = 镜像 id（走 /dl/<id>，由本站 R2 镜像提供，仅登录用户可下）；link.url = 外部链接。
+export type Link = { label: string; dl?: string; url?: string; hint?: string };
 export type Resource = { title: string; note: string; links: Link[] };
 
 export const resources: Resource[] = [
   {
     title: 'FlClash',
-    note: '开源跨平台代理客户端（Clash 内核）。下载页按版本列出所有安装包，按平台挑对应文件。',
+    note: '开源跨平台代理客户端（Clash 内核）。安装包由本站镜像，每天自动同步 GitHub 最新版本。',
     links: [
-      { label: 'macOS', url: 'https://github.com/chen08209/FlClash/releases/latest', hint: 'Apple 芯片选 macos-arm64.dmg，Intel 选 macos-amd64.dmg' },
-      { label: 'Windows', url: 'https://github.com/chen08209/FlClash/releases/latest', hint: '选 windows-amd64-setup.exe' },
-      { label: 'Linux', url: 'https://github.com/chen08209/FlClash/releases/latest', hint: 'AppImage / .deb / .rpm 三选一' },
-      { label: 'Android', url: 'https://github.com/chen08209/FlClash/releases/latest', hint: '多数手机选 android-arm64-v8a.apk' },
+      { label: 'macOS · Apple 芯片', dl: 'flclash/macos-arm64' },
+      { label: 'macOS · Intel', dl: 'flclash/macos-amd64' },
+      { label: 'Windows', dl: 'flclash/windows' },
+      { label: 'Linux · .deb', dl: 'flclash/linux-deb' },
+      { label: 'Linux · AppImage', dl: 'flclash/linux-appimage' },
+      { label: 'Android', dl: 'flclash/android' },
     ],
   },
   {
     title: 'Codex',
-    note: 'OpenAI 的编程智能体。macOS 和 Windows 有桌面应用；Linux 用命令行版。',
+    note: 'OpenAI 的编程智能体。桌面版现已并入新版 ChatGPT 桌面应用，macOS 由本站镜像；Windows 只通过 Microsoft Store 分发；Linux 用命令行版。',
     links: [
-      { label: 'macOS', url: 'https://chatgpt.com/codex?app-landing-page=true', hint: '桌面应用' },
-      { label: 'Windows', url: 'https://chatgpt.com/codex?app-landing-page=true', hint: '桌面应用' },
-      { label: 'Linux', url: 'https://github.com/openai/codex', hint: '命令行：npm install -g @openai/codex' },
+      { label: 'macOS', dl: 'codex/macos' },
+      { label: 'Windows', url: 'https://apps.microsoft.com/detail/9NT1R1C2HH7J', hint: 'Microsoft Store' },
+      { label: 'Linux', url: 'https://github.com/openai/codex', hint: 'npm install -g @openai/codex' },
     ],
   },
   {
     title: 'Claude',
-    note: 'Anthropic 的 Claude 桌面应用。Linux 版为 beta，支持 Ubuntu / Debian。',
+    note: 'Anthropic 的 Claude 桌面应用，由本站镜像官方最新版。Linux 版为 beta，支持 Ubuntu / Debian。',
     links: [
-      { label: 'macOS', url: 'https://claude.ai/api/desktop/darwin/universal/dmg/latest/redirect', hint: '通用版 dmg' },
-      { label: 'Windows', url: 'https://claude.ai/api/desktop/win32/x64/setup/latest/redirect', hint: 'x64；ARM 机器用 https://claude.ai/api/desktop/win32/arm64/setup/latest/redirect' },
-      { label: 'Linux', url: 'https://code.claude.com/docs/en/desktop-linux', hint: 'beta，按文档安装' },
+      { label: 'macOS', dl: 'claude/macos' },
+      { label: 'Windows · x64', dl: 'claude/windows-x64' },
+      { label: 'Windows · ARM64', dl: 'claude/windows-arm64' },
+      { label: 'Linux · .deb (x64)', dl: 'claude/linux-amd64' },
+      { label: 'Linux · .deb (ARM64)', dl: 'claude/linux-arm64' },
     ],
   },
   {
