@@ -8,8 +8,9 @@ interface Props {
   title: string;        // platform label, e.g. "macOS · Apple 芯片"
   kicker?: string;      // app name
   foot?: string;        // bottom line, e.g. 点击下载
-  logo?: string;        // file under public/logos/, e.g. "claude.svg"
-  logoScale?: number;   // 0..1 of card width (default 0.5)
+  logo?: string;        // app logo (small, top), file under public/logos/
+  platformLogo?: string;// platform glyph (large, middle), file under public/logos/
+  logoScale?: number;   // platform logo size, 0..1 of card width (default 0.5)
   preset?: 'bursts' | 'stars' | 'shards' | 'cosmos' | 'rainbow' | 'swirl' | 'glitter' | 'gold';
   foil?: string;        // foil tint — pass the brand color
   width?: number;
@@ -18,22 +19,25 @@ interface Props {
   external?: boolean;
   dl?: string;
 }
-const { title, kicker = '', foot = '点击下载', logo, logoScale = 0.5, preset = 'glitter', foil = '#e2e6ec', width = 150, accent = '#6f9cf0', href, external = false, dl } = Astro.props;
+const { title, kicker = '', foot = '点击下载', logo, platformLogo, logoScale = 0.5, preset = 'glitter', foil = '#e2e6ec', width = 150, accent = '#6f9cf0', href, external = false, dl } = Astro.props;
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-// embed the logo as a data URI so the whole card art is one self-contained image (WebGL texture)
-let logoHref = '';
-if (logo) {
-  const file = path.join(process.cwd(), 'public', 'logos', logo);
-  const buf = fs.readFileSync(file);
-  if (logo.endsWith('.svg')) {
-    const txt = buf.toString('utf8').replace(/currentColor/g, '#ffffff');
-    logoHref = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(txt);
-  } else {
-    logoHref = `data:image/${logo.endsWith('.png') ? 'png' : 'jpeg'};base64,` + buf.toString('base64');
+// embed logos as data URIs so the whole card art is one self-contained image (WebGL texture)
+const dataUri = (name: string | undefined, color = '#ffffff') => {
+  if (!name) return '';
+  const buf = fs.readFileSync(path.join(process.cwd(), 'public', 'logos', name));
+  if (name.endsWith('.svg')) {
+    let txt = buf.toString('utf8').replace(/currentColor/g, color);
+    // glyph-only SVGs (Font Awesome) carry no fill: paint them in the given color
+    if (!/fill=/.test(txt.replace(/fill="none"/g, ''))) txt = txt.replace('<svg', `<svg fill="${color}"`);
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(txt);
   }
-}
+  return `data:image/${name.endsWith('.png') ? 'png' : 'jpeg'};base64,` + buf.toString('base64');
+};
+const logoHref = dataUri(logo);
+const platHref = dataUri(platformLogo, '#f4f1ea');
 const L = Math.round(630 * logoScale);
+const S = 96; // small app logo
 const parts = title.split(' · ');
 const t1 = parts[0], t2 = parts.slice(1).join(' · ');
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="630" height="880" viewBox="0 0 630 880">
@@ -44,10 +48,11 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="630" height="880" vi
 <rect width="630" height="880" fill="url(#bg)"/>
 <rect width="630" height="880" fill="url(#glow)"/>
 <rect x="28" y="28" width="574" height="824" rx="22" fill="none" stroke="${accent}" stroke-opacity="0.55" stroke-width="3"/>
-<text x="315" y="120" text-anchor="middle" font-family="Times New Roman, Times, serif" font-size="44" letter-spacing="2" fill="${accent}">${esc(kicker)}</text>
-${logoHref ? `<image href="${logoHref}" x="${315 - L / 2}" y="${400 - L / 2}" width="${L}" height="${L}" preserveAspectRatio="xMidYMid meet"/>` : ''}
-<text x="315" y="${400 + L / 2 + 86}" text-anchor="middle" font-family="Times New Roman, Times, PingFang SC, Heiti SC, sans-serif" font-size="58" font-weight="700" fill="#f4f1ea">${esc(t1)}</text>
-${t2 ? `<text x="315" y="${400 + L / 2 + 140}" text-anchor="middle" font-family="Times New Roman, Times, PingFang SC, Heiti SC, sans-serif" font-size="38" fill="#d5d9e0">${esc(t2)}</text>` : ''}
+${logoHref ? `<image href="${logoHref}" x="${315 - S / 2}" y="70" width="${S}" height="${S}" preserveAspectRatio="xMidYMid meet"/>` : ''}
+<text x="315" y="${logoHref ? 215 : 130}" text-anchor="middle" font-family="Times New Roman, Times, serif" font-size="40" letter-spacing="2" fill="${accent}">${esc(kicker)}</text>
+${platHref ? `<image href="${platHref}" x="${315 - L / 2}" y="${430 - L / 2}" width="${L}" height="${L}" preserveAspectRatio="xMidYMid meet"/>` : (logoHref ? `<image href="${logoHref}" x="${315 - L / 2}" y="${430 - L / 2}" width="${L}" height="${L}" preserveAspectRatio="xMidYMid meet"/>` : '')}
+<text x="315" y="${430 + L / 2 + 80}" text-anchor="middle" font-family="Times New Roman, Times, PingFang SC, Heiti SC, sans-serif" font-size="58" font-weight="700" fill="#f4f1ea">${esc(t1)}</text>
+${t2 ? `<text x="315" y="${430 + L / 2 + 132}" text-anchor="middle" font-family="Times New Roman, Times, PingFang SC, Heiti SC, sans-serif" font-size="38" fill="#d5d9e0">${esc(t2)}</text>` : ''}
 <text x="315" y="800" text-anchor="middle" font-family="Times New Roman, Times, PingFang SC, Heiti SC, sans-serif" font-size="32" fill="#9aa1ab">${esc(foot)}</text>
 </svg>`;
 const image = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);

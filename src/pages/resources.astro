@@ -10,6 +10,8 @@ const look: Record<string, { logo: string; preset: any; accent: string; foil: st
   'door4ai.com': { logo: 'door4ai.svg', preset: 'gold', accent: '#1f5fd1', foil: '#9fc0ff', scale: 0.44 },
 };
 const CARD_W = 170;
+// 平台 → 卡面主图标（Font Awesome Free 品牌图标，CC BY 4.0）
+const platformLogo = (label: string) => /mac/i.test(label) ? 'apple.svg' : /windows/i.test(label) ? 'windows.svg' : /linux/i.test(label) ? 'linux.svg' : /android/i.test(label) ? 'android.svg' : undefined;
 ---
 <Base title="Resource · Door4AI Lab" description="常用工具的下载入口，由本站镜像最新安装包。" full>
   <div class="reshead">
@@ -27,7 +29,7 @@ const CARD_W = 170;
         <div class="ccar__ring">
           {r.links.map((l) => (
             <figure class="ccar__tile cardwrap">
-              <HoloCard title={l.label} kicker={r.title} foot={l.dl ? '点击下载' : (l.hint || '打开')} logo={k.logo || undefined} logoScale={k.scale} preset={k.preset} accent={k.accent} foil={k.foil} width={CARD_W}
+              <HoloCard title={l.label} kicker={r.title} foot={l.dl ? '点击下载' : (l.hint || '打开')} logo={k.logo || undefined} platformLogo={platformLogo(l.label)} logoScale={platformLogo(l.label) ? 0.4 : k.scale} preset={k.preset} accent={k.accent} foil={k.foil} width={CARD_W}
                 href={l.dl ? `/dl/${l.dl}` : l.url} external={!l.dl} dl={l.dl} />
               <figcaption data-cap={l.dl}>{l.dl ? '检查镜像状态…' : (l.hint || '')}</figcaption>
             </figure>
