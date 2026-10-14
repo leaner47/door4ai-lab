@@ -55,7 +55,8 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     .lab-frame iframe{display:block;width:100%;height:min(85vh,900px);border:0}
     .lab-frame .bar{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted)}
     .hero{padding:48px 0 24px}
-    .hero h1{font-size:clamp(34px,6vw,56px);margin:10px 0 14px}
+    .hero h1{font-size:clamp(34px,6vw,56px);margin:0 0 10px}
+    .hero .motto{margin:0;font-size:20px;font-style:italic;color:var(--muted);letter-spacing:.01em}
     .entries{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin:28px 0 8px}
     .entry{display:block;text-decoration:none;color:var(--fg);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:24px 22px 20px;transition:border-color .15s,transform .15s}
     .entry:hover{border-color:var(--accent);transform:translateY(-2px)}
