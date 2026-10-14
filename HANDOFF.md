@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 18:20 America/New_York · 更新者：Claude（会话 session_017nqPj8MzXKK8YfLau84Y55）
+最后更新：2026-10-14 18:20 America/New_York · 更新者：Claude（会话 session_01DR5LFdGneALqpA1WLAEDZS）
 
 ---
 
@@ -93,6 +93,7 @@ door4ai-lab/
 - Resource 页顺序固定：**Codex → Claude → FlClash → door4ai.com**（`src/data/resources.ts` 的数组顺序）。每个软件的卡片在一行里以 3D 转盘（`.ccar`）排列：拖动旋转、惯性、松手吸附、点击侧边卡转到正面、正面卡点击即下载、键盘左右键可切换。**初始正面是该软件的第一张 macOS 卡**（`data-start`），超过 ±80° 的卡隐藏。
 - Resource 页：每个软件一个分组（标题 + 说明），**每个平台的下载按钮本身是一张 HoloCard 全息卡**：卡面布局：顶部小号软件 logo + 软件名，中间**大号平台图标**（macOS 苹果 / Windows 田字 / Linux 企鹅 / Android 机器人，`public/logos/apple|windows|linux|android.svg`，取自 Font Awesome Free 6，CC BY 4.0），图标下平台名，底部「点击下载」。软件 logo：flclash.png 来自 FlClash 仓库，openai.svg / claude.svg 来自 @lobehub/icons-static-svg（MIT），door4ai.svg 即本站 favicon。平台→图标的映射在 `resources.astro` 的 `platformLogo()`；没有匹配平台（如 door4ai 的「打开」）时中间放软件 logo。箔纹颜色跟随品牌色：`look` 表里每个软件配 logo / preset / accent（光晕、边框）/ foil（箔片色），着色器新增 `uTint`（data-tint，默认 0.65）把彩虹箔向品牌色拉。卡下小字显示版本 · 大小 · 同步日期。
 - 安装包由本站 R2 镜像、仅登录用户可下（/dl 在 Access 内）。Codex 桌面版已并入新版 ChatGPT 桌面应用：macOS 镜像 `codex-app-prod/ChatGPT.dmg`，Windows 只有 Microsoft Store（不镜像，外链），Linux 为 CLI（外链）。新增镜像目标 = 在 `functions/_lib/sources.ts` 加一个 target，并在 `src/data/resources.ts` 加 `dl:` 按钮。
+- 课程顺序：注意力 QKV（order 5）在前，KV Cache（order 10）在后，因为 KV cache 建立在 Q/K/V 概念上。课程目录的「第 N 讲」由 order 排序自动生成。
 
 ## 5. 当前状态
 
@@ -100,12 +101,15 @@ door4ai-lab/
 - [x] 本机 `~/Documents/Agents/door4ai-lab` 已与 GitHub 同步
 - [x] 首页改为入口模块布局；新增 /ai/ 课程目录与 /resources/ 资源库（2026-10-13）
 - [x] 安装包镜像上线并验证：12 个文件（FlClash v0.9.0 ×6、Claude 2.37337.1 ×5、Codex/ChatGPT.dmg ×1），登录后点击即下，支持断点续传（2026-10-14）
-- [ ] 第 2 讲：题目未定
+- [x] 新增《注意力里的 Q、K、V 到底在干什么》+「注意力实验室」六个实验，排为第 1 讲（order 5），KV Cache 顺延为第 2 讲（2026-10-14）
+- [ ] 下一讲：题目未定（候选见第 7 节）
 - [ ] 关于页只有两句话，待充实
 - [ ] 没有统计/分析（可考虑 Cloudflare Web Analytics，免费，一行脚本）
 - [ ] 没有评论、订阅、付费墙——课程售卖形态未定，先积累内容
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-14 · Claude** — 新文章《注意力里的 Q、K、V 到底在干什么》（`src/content/blog/attention-qkv.md`，series ai-mastery，order 5）+ 实验页 `public/labs/attention-qkv/index.html`：00 箭头直觉 / 01 Q·K 二维对齐 + 因果遮罩 / 02 softmax 与 √d（真实随机高斯向量）/ 03 加权求和 V 与残差 / 04 多头弧线 / 05 头合并 + GPT-3、Llama-3-70B、Llama-3-8B 参数构成计算 / 06 MLP 与「迈克尔·乔丹」与门。按 3Blue1Brown 讲法。本地 build 通过，Playwright 检查桌面与 400px 无横向滚动、深浅色正常。因本人 Mac 中途断开，从云端会话直接推送；Mac 本地副本里有这两个文件的未跟踪副本（内容相同），pull 前删掉即可。
 
 - **2026-10-14 · Claude** — 转盘初始居中到 macOS 卡；修复拖动失灵（卡片是 <a>+<img>，原生拖拽会取消指针事件，现在 dragstart 已阻止）；侧后方卡片隐藏、弧度放宽（min-slots 16）。针对 Safari 全息层只画在左上角小块的问题：画布尺寸改为从卡片元素本身量取并在加载后多次重测（待本人在 Safari 复核）。
 
@@ -140,7 +144,7 @@ door4ai-lab/
 
 ## 7. 下一步建议（接手者可直接挑一个做）
 
-1. 第二篇实验文章。候选：Attention 可视化（q·k 点积 → softmax → 加权和，逐步动画）；Tokenizer 实验（BPE 合并过程逐步演示）；LoRA 低秩微调为什么省参数（和 MLA 的低秩思想一脉相承）。
+1. 下一篇实验文章。Attention 已完成。候选：Tokenizer 实验（BPE 合并过程逐步演示）；LoRA 低秩微调为什么省参数（和 MLA 的低秩思想一脉相承）。
 2. 给文章列表加按 tag 过滤。
 3. 加 Cloudflare Web Analytics。
 
