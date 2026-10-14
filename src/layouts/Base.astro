@@ -68,12 +68,11 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     .reshead{max-width:900px;margin:0 auto;padding:0 clamp(16px,3vw,40px);box-sizing:border-box}
     main.full .reshead:first-child{padding-top:40px}
     .resgroup{margin-top:36px;padding-top:28px;border-top:1px solid var(--line)}
-    .resgroup .rt{font-size:24px;margin:0 0 4px}
-    .resgroup .d{margin:0;color:var(--muted);font-size:15px;max-width:68ch}
+    .resgroup .rt{font-size:24px;margin:0}
     .cardwrap{margin:0;display:flex;flex-direction:column;align-items:center;gap:10px}
     .cardwrap figcaption{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center;line-height:1.4;font-variant-numeric:tabular-nums;white-space:nowrap}
     /* flat card row: horizontal scroll with snap, centered when it fits */
-    .cardrow{display:flex;gap:26px;padding:28px clamp(16px,3vw,40px) 16px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-behavior:smooth;scroll-padding-inline:clamp(16px,3vw,40px);-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+    .cardrow{display:flex;gap:26px;padding:22px clamp(16px,3vw,40px) 18px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-behavior:smooth;scroll-padding-inline:clamp(16px,3vw,40px);-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
     .cardrow::-webkit-scrollbar{height:6px}
     .cardrow::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
     .cardrow > .cardwrap{flex:0 0 auto;scroll-snap-align:center}
