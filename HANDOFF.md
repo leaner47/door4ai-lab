@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 19:50 America/New_York · 更新者：Claude（会话 session_017nqPj8MzXKK8YfLau84Y55，合并了 session_01DR5LFdGneALqpA1WLAEDZS 的课程提交）
+最后更新：2026-10-14 19:50 America/New_York · 更新者：Claude（会话 session_017CU4NcQfTghfgs5thFLD9Y）
 
 ---
 
@@ -81,6 +81,7 @@ door4ai-lab/
 
 ## 4. 已做的关键决定（不要反复讨论）
 
+- 术语「token」直接用英文，不译成「词」「词元」。
 - 课程顺序：硬件入门讲（computer-anatomy，order 2）放在注意力（order 5）之前，作为零基础第一课。
 - 生成型实验页（由脚本产出的 HTML）把生成脚本放在 `labs-src/<slug>/`，产物仍放 `public/labs/<slug>/index.html`。
 - 域名用子域名 `lab.door4ai.com`（door4ai.com 根域名有正在运行的业务；matrix-tech-inyz.com 留给公司）。
@@ -111,6 +112,7 @@ door4ai-lab/
 
 ## 6. 工作日志（倒序，每次工作追加一条）
 
+- **2026-10-14 · Claude** — 按本人要求：「token」一词不翻译。computer-anatomy 实验页与文章里的「词/秒」「生成每个词」改为「token/秒」「生成每个 token」（`labs-src/computer-anatomy/sec23.mjs` 重新生成）。
 
 - **2026-10-14 · Claude** — 新文章《电脑里到底有什么：CPU、GPU、内存、显存与 Docker》（`src/content/blog/computer-anatomy.md`，series ai-mastery，**order 2**，排在注意力之前，作为零基础入门讲）+ 实验页 `public/labs/computer-anatomy/index.html`：五张可交互等距实物图（Anatomy skill 风格）——Fig1 CPU/GPU 芯片并行 vs 串行赛跑；Fig2 主板+显卡，模型大小滑块填充显存/内存颗粒并给出带宽上限 token/s；Fig3 M4 Max 式统一内存封装（与 Fig2 共用滑块对比）；Fig4 Docker 集装箱船+龙门吊装卸；Fig5 机柜服务器 vs 书桌个人电脑+对比表。数字取公开规格（4090 82.6 TFLOPS / 1008 GB/s，DDR5 双通道 89.6 GB/s，M4 Max 546 GB/s）。生成脚本放 `labs-src/computer-anatomy/`（kit 不入库，见其 README）。本地 build 通过；headless Chromium 检查桌面、390px 无横向滚动、深浅色、线端检查 0。从云端会话推送。
 - **2026-10-14 · Claude** — 按本人要求撤掉 3D 转盘，卡片改为一排平铺 + 横向平滑滚动（CSS scroll-snap，无 JS）；删除 `circular-carousel.js`。去掉 3D 容器后 Safari 的画布尺寸问题应随之消失（待本人确认）。

@@ -21,10 +21,10 @@ export function html2() {
 ${control("f2-size")}
 ${fig2()}
 <div class="readrow">
-  <div><div class="big" id="f2-tps">—</div><div class="small">每秒最多生成多少个词（token），独显电脑</div></div>
+  <div><div class="big" id="f2-tps">—</div><div class="small">每秒最多生成多少个 token，独显电脑</div></div>
   <div><div class="big" id="f2-where" style="font-size:20px">—</div><div class="small">模型放在哪里</div></div>
 </div>
-<p class="small">估算方法：大模型每生成一个词，都要把全部参数从内存里读一遍，所以速度上限 ≈ 内存带宽 ÷ 模型大小。放在显存里的部分按 1008 GB/s 算，溢出到内存的部分由 CPU 按约 90 GB/s 算，再放不下就只能从 SSD（约 7 GB/s）读。真实速度会再低一些。</p>
+<p class="small">估算方法：大模型每生成一个 token，都要把全部参数从内存里读一遍，所以速度上限 ≈ 内存带宽 ÷ 模型大小。放在显存里的部分按 1008 GB/s 算，溢出到内存的部分由 CPU 按约 90 GB/s 算，再放不下就只能从 SSD（约 7 GB/s）读。真实速度会再低一些。</p>
 <div class="note"><b>注意看：</b>把滑块从 20 GB 拖到 30 GB——只多了一点点，速度却断崖式下跌。因为多出来的那 6 GB 掉到了慢十倍的内存里，整体被它拖慢。</div>`;
 }
 
@@ -35,7 +35,7 @@ export function html3() {
 ${control("f3-size")}
 ${fig3()}
 <div class="readrow">
-  <div><div class="big" id="f3-tps">—</div><div class="small">每秒最多生成多少个词，统一内存</div></div>
+  <div><div class="big" id="f3-tps">—</div><div class="small">每秒最多生成多少个 token，统一内存</div></div>
   <div><div class="big" id="f2b-tps" style="opacity:.55">—</div><div class="small">同一个模型，独显电脑（对比）</div></div>
 </div>
 <div class="note" id="f3-note"><b>注意看：</b>模型小时，独显电脑更快（显存带宽更高）；模型一旦超出 24 GB 显存一截（约 27 GB 以上），统一内存反超——它不用把模型拆到慢速内存里。这就是很多人买大内存 Mac 跑本地大模型的原因。</div>
@@ -72,9 +72,9 @@ export const LIVE = `
     r2.textContent = "显存 " + p.v.toFixed(0) + "/24 · 内存 " + p.r.toFixed(0) + "/64" + (p.d > 0 ? " · 溢出到硬盘 " + p.d.toFixed(0) : "") + " GB";
     r3.textContent = "统一内存 " + m.m.toFixed(0) + "/128 GB" + (m.d > 0 ? " · 溢出到硬盘 " + m.d.toFixed(0) : "");
     const t2 = document.getElementById("f2-tps"), t3 = document.getElementById("f3-tps"), tb = document.getElementById("f2b-tps");
-    t2.textContent = "≈ " + fmt(p.tps) + " 词/秒"; t2.classList.toggle("warn", p.tps < 5);
-    t3.textContent = "≈ " + fmt(m.tps) + " 词/秒"; t3.classList.toggle("warn", m.tps < 5);
-    tb.textContent = "≈ " + fmt(p.tps) + " 词/秒";
+    t2.textContent = "≈ " + fmt(p.tps) + " token/秒"; t2.classList.toggle("warn", p.tps < 5);
+    t3.textContent = "≈ " + fmt(m.tps) + " token/秒"; t3.classList.toggle("warn", m.tps < 5);
+    tb.textContent = "≈ " + fmt(p.tps) + " token/秒";
     document.getElementById("f2-where").textContent = p.d > 0 ? "显存 + 内存 + 硬盘（几乎不可用）" : p.r > 0 ? "显存放不下，拆一部分到内存" : "整个放进显存 ✓";
   }
   document.querySelectorAll("[data-size]").forEach(i => i.addEventListener("input", () => set(i.value)));
