@@ -14,10 +14,6 @@ const CARD_W = 170;
 const platformLogo = (label: string) => /mac/i.test(label) ? 'apple.svg' : /windows/i.test(label) ? 'windows.svg' : /linux/i.test(label) ? 'linux.svg' : /android/i.test(label) ? 'android.svg' : undefined;
 ---
 <Base title="Resource · Door4AI Lab" description="常用工具的下载入口，由本站镜像最新安装包。" full>
-  <div class="reshead">
-    <div class="eyebrow">Resource</div>
-    <h1>Resource</h1>
-  </div>
   {resources.map((r) => { const k = look[r.title] || { logo: '', preset: 'bursts', accent: '#6f9cf0', foil: '#e2e6ec' }; return (
     <section class="resgroup" style={`--brand:${k.accent}`}>
       <div class="reshead">
@@ -34,6 +30,16 @@ const platformLogo = (label: string) => /mac/i.test(label) ? 'apple.svg' : /wind
     </section>
   ); })}
   <script>
+    // ?debug=1：在页面顶部打印第一张卡的尺寸信息（排查 Safari 画布问题用）
+    if (location.search.includes('debug')) {
+      setTimeout(() => {
+        const c = document.querySelector('.holo-card'); const cv = c.querySelector('canvas'); const r = c.getBoundingClientRect(); const cr = cv.getBoundingClientRect();
+        const gl = cv.getContext('webgl2');
+        const d = document.createElement('pre'); d.style.cssText = 'position:fixed;top:0;left:0;z-index:9999;background:#000;color:#0f0;font:12px monospace;padding:8px;white-space:pre-wrap';
+        d.textContent = JSON.stringify({ ua: navigator.userAgent.slice(0, 80), dpr: devicePixelRatio, card: [r.width, r.height], canvasCss: [cr.width, cr.height], canvasStyle: cv.style.cssText, buffer: [cv.width, cv.height], drawingBuffer: gl ? [gl.drawingBufferWidth, gl.drawingBufferHeight] : null, computed: getComputedStyle(cv).width + ' ' + getComputedStyle(cv).height, ready: c.dataset.ready !== undefined }, null, 1);
+        document.body.appendChild(d);
+      }, 2500);
+    }
     // 读镜像清单：缺失的卡片置灰；版本 / 大小 / 校验值放到悬停提示里
     (async () => {
       const fmt = (n) => (n >= 1e9 ? (n / 1e9).toFixed(2) + ' GB' : n >= 1e6 ? (n / 1e6).toFixed(1) + ' MB' : Math.round(n / 1e3) + ' KB');
