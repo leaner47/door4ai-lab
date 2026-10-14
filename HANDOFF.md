@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 10:05 America/New_York · 更新者：Claude（会话 session_017nqPj8MzXKK8YfLau84Y55）
+最后更新：2026-10-14 17:00 America/New_York · 更新者：Claude（会话 session_017nqPj8MzXKK8YfLau84Y55）
 
 ---
 
@@ -94,12 +94,15 @@ door4ai-lab/
 - [x] 仓库、Pages、域名、首篇文章全部上线（2026-10-13）
 - [x] 本机 `~/Documents/Agents/door4ai-lab` 已与 GitHub 同步
 - [x] 首页改为入口模块布局；新增 /ai/ 课程目录与 /resources/ 资源库（2026-10-13）
+- [x] 安装包镜像上线并验证：12 个文件（FlClash v0.9.0 ×6、Claude 2.37337.1 ×5、Codex/ChatGPT.dmg ×1），登录后点击即下，支持断点续传（2026-10-14）
 - [ ] 第 2 讲：题目未定
 - [ ] 关于页只有两句话，待充实
 - [ ] 没有统计/分析（可考虑 Cloudflare Web Analytics，免费，一行脚本）
 - [ ] 没有评论、订阅、付费墙——课程售卖形态未定，先积累内容
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-14 · Claude** — 镜像首次全量同步完成并在登录态下验证下载（206 Range、正确文件名）。途中修复：GitHub 匿名 API 在 Cloudflare 出口 IP 上会 403 → FlClash 改由 `/releases/latest` 重定向解析版本、API 仅用于 sha256 且带 10 分钟缓存；claude.ai 的 latest 重定向不接受 HEAD → 改 GET 后立即取消正文。Resource 页对无语义版本号（Codex 只有 ETag）显示「最新」。
 
 - **2026-10-14 · Claude** — 安装包镜像上线：开通 R2、建桶 `door4ai-lab-dl`、绑定 `DL`、设 `SYNC_KEY`；新增 Pages Functions（/dl、/sync-dl）；Resource 按钮改为本站下载并显示版本/大小/同步日期；Access 应用加 `/dl` 路径。Codex 发现已并入 ChatGPT 桌面应用，按此处理。
 

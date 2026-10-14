@@ -36,7 +36,8 @@ import { resources } from '../data/resources';
           const s = a.querySelector('small');
           if (!it || it.missing) { s.textContent = '镜像尚未同步'; a.classList.add('off'); return; }
           const d = it.syncedAt ? new Date(it.syncedAt).toLocaleDateString('zh-CN') : '';
-          s.textContent = `${it.version} · ${fmt(it.size)} · ${d} 同步`;
+          const ver = /^v?\d+(\.\d+)+$/.test(it.version) ? it.version : '最新';
+          s.textContent = `${ver} · ${fmt(it.size)} · ${d} 同步`;
           if (it.sha256) a.title = 'SHA256 ' + it.sha256;
         });
       } catch (e) {
