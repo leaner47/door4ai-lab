@@ -72,17 +72,13 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     .resgroup .d{margin:0;color:var(--muted);font-size:15px;max-width:68ch}
     .cardwrap{margin:0;display:flex;flex-direction:column;align-items:center;gap:10px}
     .cardwrap figcaption{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center;line-height:1.4;font-variant-numeric:tabular-nums;white-space:nowrap}
-    /* circular carousel */
-    .ccar{position:relative;height:360px;margin-top:8px;perspective:1400px;perspective-origin:50% 45%;overflow:hidden;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:pan-y;outline:none}
-    .ccar.is-dragging{cursor:grabbing}
-    .ccar:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}
-    .ccar__ring{position:absolute;left:50%;top:40px;width:0;height:0;transform-style:preserve-3d;will-change:transform}
-    .ccar__tile{position:absolute;left:0;top:0;width:var(--w,170px);margin-left:calc(var(--w,170px) / -2);transform:rotateY(var(--cc-a)) translateZ(var(--cc-r));transform-style:preserve-3d;transition:opacity .2s,filter .2s}
-    .ccar__tile.is-front{filter:none}
-    .ccar::before,.ccar::after{content:"";position:absolute;top:0;bottom:0;width:18%;pointer-events:none;z-index:300}
-    .ccar::before{left:0;background:linear-gradient(90deg,var(--bg),transparent)}
-    .ccar::after{right:0;background:linear-gradient(270deg,var(--bg),transparent)}
-    @media (max-width:560px){.ccar{height:330px}}
+    /* flat card row: horizontal scroll with snap, centered when it fits */
+    .cardrow{display:flex;gap:26px;padding:28px clamp(16px,3vw,40px) 16px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-behavior:smooth;scroll-padding-inline:clamp(16px,3vw,40px);-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+    .cardrow::-webkit-scrollbar{height:6px}
+    .cardrow::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+    .cardrow > .cardwrap{flex:0 0 auto;scroll-snap-align:center}
+    .cardrow > .cardwrap:first-child{margin-left:auto}
+    .cardrow > .cardwrap:last-child{margin-right:auto}
     .plat{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:8px}
     .plat a{display:block;text-decoration:none;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-weight:700;min-width:0}
     .plat a:hover{border-color:var(--accent)}
