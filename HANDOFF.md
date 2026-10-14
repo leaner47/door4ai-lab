@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-13 20:42 America/New_York · 更新者：Claude（会话 session_017nqPj8MzXKK8YfLau84Y55）
+最后更新：2026-10-13 20:45 America/New_York · 更新者：Claude（会话 session_017nqPj8MzXKK8YfLau84Y55）
 
 ---
 
@@ -43,9 +43,9 @@ door4ai-lab/
 │   ├── content.config.ts   ← 文章 schema：title, description, pubDate, updatedDate?, tags[], lab?, series?, order?
 │   ├── content/blog/*.md   ← 文章正文（markdown）
 │   ├── data/resources.ts   ← Resource 页的条目（每条 title/note/links[]，links 按平台分列）
-│   ├── layouts/Base.astro  ← 全站布局 + 全部 CSS（颜色 token、字体、深浅色、入口卡片）
+│   ├── layouts/Base.astro  ← 全站布局 + 导航 + 全部 CSS（颜色 token、字体、深浅色）
 │   └── pages/
-│       ├── index.astro         ← 首页 = 门厅：项目名 + 入口模块（Course / Resource）
+│       ├── index.astro         ← 首页：只有居中的一句 motto，入口全在导航
 │       ├── ai.astro            ← 「AI 从入门到精通」课程目录：series == 'ai-mastery' 的文章按 order 排序
 │       ├── resources.astro     ← Resource 资源库，数据来自 src/data/resources.ts
 │       ├── posts/[...slug].astro ← 文章页；frontmatter 有 lab 时顶部 iframe 嵌入实验
@@ -79,7 +79,7 @@ door4ai-lab/
 - 用 Astro + Cloudflare Pages，不自建服务器。
 - 实验页用独立 HTML + iframe 嵌入，而不是做成 Astro 组件——便于把同一个 HTML 作为 Claude artifact 预览、也便于全屏分享。
 - **Resource 页只放本人指定的内容**（目前：FlClash、Codex、Claude 的下载入口 + door4ai.com）。下载链接必须同时覆盖 macOS 和 Windows，有 Linux 版的也要列出。不要往里放论文、教程等「推荐阅读」。
-- 首页是「门厅」而不是文章流：只放项目名、一句 motto「Attention is ALL you need」和入口模块，不放介绍文字。目前两个入口：「AI 从入门到精通」（课程，按讲排序）和「Resource」（资源库）。新增板块 = 新增一张入口卡片 + 一个页面。
+- 首页极简：屏幕中央只有一句「Attention is all you need」，没有标题、介绍或卡片。所有入口都在右上角导航（AI从入门到精通 / Resource / 关于）。新增板块 = 新增一个页面 + 导航里加一项（`src/layouts/Base.astro` 的 `<nav>`）。
 
 ## 5. 当前状态
 
@@ -92,6 +92,8 @@ door4ai-lab/
 - [ ] 没有评论、订阅、付费墙——课程售卖形态未定，先积累内容
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-13 · Claude** — 首页再简化：去掉 h1 和两张入口卡片，屏幕中央只剩居中的「Attention is all you need」（all 为斜体强调色）；入口统一走右上角导航。删除 `.hero/.entries/.entry` 样式，新增 `.motto-only/.motto`。
 
 - **2026-10-13 · Claude** — 首页标题下的介绍段和 eyebrow 删除，只保留一句 motto「Attention is ALL you need」（`src/pages/index.astro`，样式 `.hero .motto`）。
 

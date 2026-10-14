@@ -1,25 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
-import { getCollection } from 'astro:content';
-const course = (await getCollection('blog')).filter((p) => p.data.series === 'ai-mastery');
 ---
 <Base title="Door4AI Lab">
-  <section class="hero">
-    <h1>Door4AI Lab</h1>
-    <p class="motto">Attention is ALL you need</p>
-  </section>
-  <div class="entries">
-    <a class="entry" href="/ai/">
-      <span class="k">Course</span>
-      <h2>AI 从入门到精通</h2>
-      <p>按顺序读的系统课程：从模型怎么算，到推理怎么省，每一讲都能亲手验证。</p>
-      <span class="go">{course.length} 讲已发布 →</span>
-    </a>
-    <a class="entry" href="/resources/">
-      <span class="k">Resource</span>
-      <h2>Resource</h2>
-      <p>常用工具的下载入口：FlClash、Codex、Claude，macOS / Windows / Linux 分列，以及 door4ai.com。</p>
-      <span class="go">进入资源库 →</span>
-    </a>
+  <div class="motto-only">
+    <p class="motto">Attention is <em>all</em> you need</p>
   </div>
 </Base>
