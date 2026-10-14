@@ -378,7 +378,12 @@ export function initHoloCard(root) {
   const wake = () => { if (raf) return; calm = 0; last = performance.now(); raf = requestAnimationFrame(tick); };
   const resize = () => {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const w = Math.max(1, Math.round(canvas.clientWidth * dpr)), h = Math.max(1, Math.round(canvas.clientHeight * dpr));
+    // Size from the card element itself (it has an explicit width + aspect-ratio); Safari reports
+    // stale client sizes for a canvas inside a 3D-transformed face, which left a small viewport.
+    let cw = root.clientWidth || canvas.clientWidth, ch = root.clientHeight || canvas.clientHeight;
+    if (!cw) cw = parseFloat(getComputedStyle(root).width) || 0;
+    if (!ch && cw) ch = cw / 0.716;
+    const w = Math.max(1, Math.round(cw * dpr)), h = Math.max(1, Math.round(ch * dpr));
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
     draw(); wake();
   };
@@ -401,7 +406,11 @@ export function initHoloCard(root) {
   const leave = () => { pointer.inside = false; wake(); };
   root.addEventListener('pointerenter', track); root.addEventListener('pointermove', track); root.addEventListener('pointerdown', track);
   root.addEventListener('pointerleave', leave); root.addEventListener('pointercancel', leave);
-  new ResizeObserver(resize).observe(canvas);
+  new ResizeObserver(resize).observe(root);
+  // belt and braces for late layout (fonts, 3D parents): re-measure a few times after load
+  [120, 500, 1500].forEach((ms) => setTimeout(resize, ms));
+  window.addEventListener('load', resize, { once: true });
+  window.addEventListener('pageshow', resize);
   new IntersectionObserver((es) => { visible = es.some((e) => e.isIntersecting); if (visible) wake(); }).observe(root);
   resize();
 }

@@ -25,7 +25,7 @@ const platformLogo = (label: string) => /mac/i.test(label) ? 'apple.svg' : /wind
         <h2 class="rt">{r.title}</h2>
         <p class="d">{r.note}</p>
       </div>
-      <div class="ccar" style={`--w:${CARD_W}px`} data-card-w={CARD_W} data-gap="34" data-tilt="-4" data-min-slots="12" data-drift={r.links.length > 1 ? 5 : 0} aria-roledescription="carousel" aria-label={`${r.title} 下载`}>
+      <div class="ccar" style={`--w:${CARD_W}px`} data-card-w={CARD_W} data-gap="30" data-tilt="-4" data-min-slots="16" data-start={Math.max(0, r.links.findIndex((l) => /mac/i.test(l.label)))} data-drift={r.links.length > 1 ? 5 : 0} aria-roledescription="carousel" aria-label={`${r.title} 下载`}>
         <div class="ccar__ring">
           {r.links.map((l) => (
             <figure class="ccar__tile cardwrap">

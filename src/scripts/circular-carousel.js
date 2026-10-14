@@ -37,11 +37,14 @@ export function initCarousel(root) {
       const a = norm(i * step + st.angle); // 0 = facing viewer
       const c = Math.cos((a * Math.PI) / 180); // 1 front … -1 back
       const k = (c + 1) / 2;
-      t.style.opacity = String(n > 2 ? 0.15 + 0.85 * Math.pow(k, 1 / (1 - depthFade + 0.0001) * 0.6) : 1);
-      t.style.filter = n > 2 ? `brightness(${0.55 + 0.45 * k})` : '';
+      // tiles past the sides (|angle| >= 80°) are hidden; the rest fade with depth
+      const vis = clamp((c - 0.17) / 0.5, 0, 1);
+      t.style.opacity = String(n > 2 ? vis * (0.35 + 0.65 * Math.pow(k, 1.2)) : vis);
+      t.style.filter = n > 2 ? `brightness(${0.6 + 0.4 * k})` : '';
       t.style.zIndex = String(Math.round(100 + c * 50));
       t.classList.toggle('is-front', i === f);
-      t.style.pointerEvents = c < -0.2 ? 'none' : '';
+      t.style.pointerEvents = c < 0.2 ? 'none' : '';
+      t.style.visibility = vis <= 0 ? 'hidden' : '';
     });
     root.dataset.front = String(f); root.dataset.angle = st.angle.toFixed(1);
   };
@@ -67,7 +70,8 @@ export function initCarousel(root) {
   const snap = () => { st.target = clampA(Math.round(st.angle / step) * step); wake(); };
   const goTo = (i) => { if (arc) { st.target = -i * step; } else { const cur = -st.angle / step; let k = Math.round(cur); const d = norm((i - k) * step) / step; st.target = -(k + d) * step; } st.v = 0; wake(); };
 
-  // drag
+  // drag (links and images inside would otherwise start a native drag and cancel the pointer)
+  root.addEventListener('dragstart', (e) => e.preventDefault());
   root.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
     st.press = { id: e.pointerId, x: e.clientX, angle: st.angle, moved: false, samples: [{ t: performance.now(), a: st.angle }] };
@@ -112,7 +116,8 @@ export function initCarousel(root) {
   root.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') { goTo(arc ? Math.max(0, front() - 1) : (front() - 1 + n) % n); pause(4000); } if (e.key === 'ArrowRight') { goTo(arc ? Math.min(n - 1, front() + 1) : (front() + 1) % n); pause(4000); } });
   new IntersectionObserver((es) => { st.visible = es.some((x) => x.isIntersecting); if (st.visible) wake(); }).observe(root);
 
-  if (arc) { st.angle = -Math.floor((n - 1) / 2) * step; }
+  const start = root.dataset.start != null ? clamp(+root.dataset.start, 0, n - 1) : Math.floor((n - 1) / 2);
+  st.angle = -start * step;
   render(); wake();
 }
 export function initCarousels() { document.querySelectorAll('.ccar').forEach(initCarousel); }
