@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 22:54 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
+最后更新：2026-10-14 23:07 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
 
 ---
 
@@ -104,7 +104,7 @@ door4ai-lab/
 - 用 Astro + Cloudflare Pages，不自建服务器。
 - 实验页用独立 HTML + iframe 嵌入，而不是做成 Astro 组件——便于把同一个 HTML 作为 Claude artifact 预览、也便于全屏分享。
 - **Resource 页只放本人指定的内容**（目前：FlClash、Codex、Claude 的下载入口 + door4ai.com）。下载链接必须同时覆盖 macOS 和 Windows，有 Linux 版的也要列出。不要往里放论文、教程等「推荐阅读」。
-- 首页极简：页眉左右贴屏幕两端（全宽），屏幕中央一句「Attention is all you need」撑满剩余高度；没有标题、介绍或卡片。导航：AI从入门到精通 / Resource / 登录（无「关于」页）。新增板块 = 新增一个页面 + 导航里加一项 + 若需登录则在 Access 应用里加该路径。
+- 首页极简：页眉左右贴屏幕两端（全宽），屏幕中央一句「Attention is all you need」撑满剩余高度；没有标题、介绍或卡片。顶部导航只有「AI从入门到精通」；**Resource 入口在右上角头像菜单里**（本人要求，不放顶部导航），登录/退出也在头像菜单里（无「关于」页）。新增板块 = 新增一个页面 + 导航里加一项 + 若需登录则在 Access 应用里加该路径。
 - 课程与资源页必须登录才能看（Cloudflare Access），首页公开。
 - Resource 页顺序固定：**Codex → Claude → FlClash → door4ai.com**（`src/data/resources.ts` 的数组顺序）。**Resource 页没有页面大标题**（去掉了居中的「Resource」h1）；**每个软件名居中显示**；**不写任何介绍文字**：没有页面导语、没有软件说明段、卡片下方没有版本/大小小字（版本与大小只放在卡片 title 悬停提示里）。`resources.ts` 里的 `note` 字段保留但页面不渲染。每个软件的卡片在一行里平铺（`.cardrow`：flex + 横向滚动 + scroll-snap，放得下时居中，放不下时左右平滑滑动）。**不要再做 3D 转盘**，本人已明确否决。
 - Resource 页：每个软件一个分组（标题 + 说明），**每个平台的下载按钮本身是一张 HoloCard 全息卡**：卡面布局：顶部小号软件 logo + 软件名，中间**大号平台图标**（macOS 苹果 / Windows 田字 / Linux 企鹅 / Android 机器人，`public/logos/apple|windows|linux|android.svg`，取自 Font Awesome Free 6，CC BY 4.0），图标下平台名，底部「点击下载」。软件 logo：flclash.png 来自 FlClash 仓库，openai.svg / claude.svg 来自 @lobehub/icons-static-svg（MIT），door4ai.com 的卡片 logo 是文字「AI」（`public/logos/ai-text.svg`，Times New Roman 粗体，本人指定，不用 favicon）。平台→图标的映射在 `resources.astro` 的 `platformLogo()`；没有匹配平台（如 door4ai 的「打开」）时中间放软件 logo。箔纹颜色跟随品牌色：`look` 表里每个软件配 logo / preset / accent（光晕、边框）/ foil（箔片色）/ intensity / tint。**Codex 定稿为黑金**（黑底 + 金色箔纹，accent #9a7a2a，foil #f6d27a，intensity 0.55，tint 0.95），本人明确要求。**箔纹统一用 `shards`（碎片纹）**：本人否决了 glitter 的细碎点阵，Codex / Claude / FlClash 三者纹路必须一致（door4ai.com 用 gold）。着色器新增 `uTint`（data-tint，默认 0.65）把彩虹箔向品牌色拉。卡下小字显示版本 · 大小 · 同步日期。
@@ -112,7 +112,7 @@ door4ai-lab/
 - 安装包由本站 R2 镜像、仅登录用户可下（/dl 在 Access 内）。Codex 桌面版已并入新版 ChatGPT 桌面应用：macOS 镜像 `codex-app-prod/ChatGPT.dmg`，Windows 只有 Microsoft Store（不镜像，外链），Linux 为 CLI（外链）。新增镜像目标 = 在 `functions/_lib/sources.ts` 加一个 target，并在 `src/data/resources.ts` 加 `dl:` 按钮。
 - **WhatsApp 交流群「AI学习」**：入口放在已登录才能看的页面里（课程目录顶部卡片 + 属于课程的文章末尾一行），不放公开首页、不放 Resource 页，因此不需要改 Access。链接用干净的邀请地址（去掉 `?s=cl&p=i…` 分享参数）。入群需管理员审核（WhatsApp 里设置）。**重置群链接后只需改 `src/data/community.ts` 再推送**，二维码会随构建自动更新。
 - 文章页实验 iframe **必须随内容自动长高、不得有内部滚动条**，也不要「全屏打开」条（本人要求）。实验页本身别用 100vh 之类固定高度。
-- **右上角账号区（2026-10-14 本人要求，仿常见 SaaS 样式）**：导航链接之后只有一个圆角方形头像按钮（**不要「支持」入口**，本人已明确去掉）；点开下拉菜单：已登录时顶部显示邮箱，下面「个人资料」（仅自建账号启用时显示，链 /account/）、「外观 ›」（展开为 跟随系统 / 浅色 / 深色）、分隔线、「退出登录」；未登录时首项为「登录」。截图里的 Language / View mode 没做（站点只有中文、无其他视图），需要时再加。Esc 和点外部关闭。
+- **右上角账号区（2026-10-14 本人要求，仿常见 SaaS 样式）**：导航链接之后只有一个圆角方形头像按钮（**不要「支持」入口**，本人已明确去掉）；点开下拉菜单：已登录时顶部显示邮箱，下面「个人资料」（仅自建账号启用时显示，链 /account/）、「Resource」（链 /resources/，登录与否都显示）、「外观 ›」（展开为 跟随系统 / 浅色 / 深色）、分隔线、「退出登录」；未登录时首项为「登录」。截图里的 Language / View mode 没做（站点只有中文、无其他视图），需要时再加。Esc 和点外部关闭。
 - **外观切换**：存 localStorage `d4a-theme`（light / dark，缺省 = 跟随系统），`<head>` 里内联脚本在渲染前设 `<html data-theme>`，避免闪烁。CSS token 写法：`@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){…} }` + `:root[data-theme="dark"]{…}`，**新增的深色样式都要照此两段写**。实验页同源，加载时读同一个键；切换时父页面直接改 iframe 的 `data-theme`（实验页已有 MutationObserver 重绘画布）。
 - 课程目录 /ai：每讲左侧大号编号；**目录里不显示文章 description 小字**（本人要求，只留编号、元信息、标题、标签；description 仍用于文章页与 SEO）；第一讲标「从这里开始」；阅读进度只存本机浏览器 localStorage（键 `d4a-read`，文章页打开即记为已读），有已读时显示进度条、「已读」与「下一讲」标记。不做账号级进度。
 - 课程顺序：注意力 QKV（order 5）在前，KV Cache（order 10）在后，因为 KV cache 建立在 Q/K/V 概念上。课程目录的「第 N 讲」由 order 排序自动生成。
@@ -143,6 +143,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-14 · Claude** — 按本人要求把 Resource 从顶部导航移进头像下拉菜单（个人资料之后、外观之前）。改 `Base.astro`。
 
 - **2026-10-14 · Claude** — 按本人要求整个去掉右上角「支持」入口（`Base.astro` 的链接与样式）。WhatsApp 群卡片的 `#community` 锚点保留。
 
