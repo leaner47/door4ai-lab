@@ -268,8 +268,10 @@ await AD.click('#detail button[data-revoke]');
 await AD.waitForSelector('#detail .tag.off');
 await E.page.goto(BASE + '/posts/attention-qkv/');
 ok('撤销权益后跳购买页', /\/pricing\//.test(E.page.url()));
-await AD.click('#detail button[data-act=logout]');
-await AD.waitForSelector('#detail-msg:not([hidden])');
+await Promise.all([
+  AD.waitForResponse((r) => r.url().includes('/api/admin/logout') && r.request().method() === 'POST'),
+  AD.click('#detail button[data-act=logout]'),
+]);
 await E.page.goto(BASE + '/resources/');
 ok('后台强制下线后需要重新登录', /\/login\//.test(E.page.url()));
 await AD.click('.tabs button[data-tab=audit]');

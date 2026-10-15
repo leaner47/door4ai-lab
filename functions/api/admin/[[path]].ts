@@ -3,6 +3,8 @@
 import { authEnabled, disabled, err, json, normEmail, now, randomCode, readJson, sameOrigin, ulid, type AuthEnv } from '../../_lib/auth/util';
 import { adminEmail } from '../../_lib/auth/admin';
 import { POSTS } from '../../_lib/access-map';
+import { PRODUCT_ID } from '../../_lib/pay/orders';
+import { alipayConfigured, refundTrade, type AlipayEnv } from '../../_lib/pay/alipay';
 
 const DAY = 86400 * 1000;
 
@@ -29,7 +31,7 @@ async function ensureUser(db: D1Database, email: string) {
   return userByEmail(db, email);
 }
 
-export const onRequest: PagesFunction<AuthEnv> = async ({ request, env, params }) => {
+export const onRequest: PagesFunction<AuthEnv & AlipayEnv> = async ({ request, env, params }) => {
   if (!authEnabled(env)) return disabled();
   const actor = await adminEmail(env, request);
   if (!actor) return err(403, 'forbidden', '没有后台权限');
@@ -172,6 +174,7 @@ export const onRequest: PagesFunction<AuthEnv> = async ({ request, env, params }
       const { results } = await db
         .prepare(
           `SELECT c.code, c.name, c.note, c.created_at,
+                  (SELECT amount FROM prices pr WHERE pr.product_id = 'ai-mastery' AND pr.channel_code = c.code AND pr.active = 1) AS price,
                   (SELECT count(*) FROM signup_attribution a WHERE a.ref = c.code AND a.touch = 'first') AS first_touch,
                   (SELECT count(*) FROM signup_attribution a WHERE a.ref = c.code AND a.touch = 'last') AS last_touch,
                   (SELECT count(DISTINCT e.user_id) FROM signup_attribution a JOIN entitlements e ON e.user_id = a.user_id
@@ -191,6 +194,75 @@ export const onRequest: PagesFunction<AuthEnv> = async ({ request, env, params }
       const r = await db.prepare('INSERT INTO channels (code, name, note, created_at) VALUES (?1, ?2, ?3, ?4) ON CONFLICT(code) DO NOTHING').bind(code, name, String(body.note || '').slice(0, 200) || null, now()).run();
       if (!r.meta.changes) return err(400, 'exists', '这个渠道码已存在');
       await audit(db, actor, 'channel', code, { name }).run();
+      return json({ ok: true });
+    }
+
+    // ---------- 订单与价格 ----------
+    case 'GET orders': {
+      const st = url.searchParams.get('status');
+      const { results } = await db
+        .prepare(
+          `SELECT o.order_no, o.amount, o.currency, o.status, o.channel_code, o.pay_mode, o.trade_no, o.created_at, o.paid_at, o.refunded_at, u.email
+             FROM orders o JOIN users u ON u.id = o.user_id
+            WHERE (?1 IS NULL OR o.status = ?1) ORDER BY o.created_at DESC LIMIT 200`,
+        )
+        .bind(st || null)
+        .all();
+      return json({ orders: results, payReady: alipayConfigured(env) });
+    }
+    case 'POST refund': {
+      const orderNo = String(body.orderNo || '');
+      const reason = String(body.reason || '后台退款').slice(0, 100);
+      const o = await db.prepare('SELECT o.id, o.amount, o.status, o.provider, u.email FROM orders o JOIN users u ON u.id = o.user_id WHERE o.order_no = ?1').bind(orderNo).first<any>();
+      if (!o) return err(404, 'not_found', '没有这个订单');
+      if (o.status !== 'paid') return err(400, 'not_paid', '只有已支付的订单可以退款');
+      let refundInfo: unknown = { offline: true };
+      if (o.provider === 'alipay' && alipayConfigured(env) && !body.offline) {
+        const r = await refundTrade(env, orderNo, o.amount, reason);
+        if (r.code !== '10000') return err(502, 'refund_failed', `支付宝退款失败：${r.sub_msg || r.msg}`);
+        refundInfo = r;
+      }
+      const t = now();
+      await db.batch([
+        db.prepare(`UPDATE orders SET status = 'refunded', refunded_at = ?1, refund_amount = amount WHERE id = ?2 AND status = 'paid'`).bind(t, o.id),
+        db.prepare('UPDATE entitlements SET revoked_at = ?1 WHERE order_id = ?2 AND revoked_at IS NULL').bind(t, o.id),
+        audit(db, actor, 'refund', o.email, { orderNo, amount: o.amount, reason, refundInfo }),
+      ]);
+      return json({ ok: true });
+    }
+    case 'GET prices': {
+      const { results } = await db
+        .prepare(
+          `SELECT pr.id, pr.amount, pr.channel_code, pr.active, c.name AS channel_name
+             FROM prices pr LEFT JOIN channels c ON c.code = pr.channel_code
+            WHERE pr.product_id = ?1 ORDER BY pr.channel_code IS NOT NULL, pr.channel_code`,
+        )
+        .bind(PRODUCT_ID)
+        .all();
+      return json({ prices: results });
+    }
+    case 'POST price': {
+      const code = body.channel ? String(body.channel).trim().toLowerCase() : null;
+      const yuanStr = String(body.yuan ?? '').trim();
+      if (!/^\d+(\.\d{1,2})?$/.test(yuanStr) || Number(yuanStr) < 0.01 || Number(yuanStr) > 100000) return err(400, 'bad_amount', '价格应在 0.01 – 100000 元之间');
+      const cents = Math.round(Number(yuanStr) * 100);
+      if (code && !(await db.prepare('SELECT 1 FROM channels WHERE code = ?1').bind(code).first())) return err(400, 'no_channel', '先在「渠道」里建这个渠道码');
+      const id = `${PRODUCT_ID}@${code || 'default'}`;
+      await db.batch([
+        db
+          .prepare(
+            `INSERT INTO prices (id, product_id, amount, currency, active, channel_code) VALUES (?1, ?2, ?3, 'CNY', 1, ?4)
+             ON CONFLICT(id) DO UPDATE SET amount = ?3, active = 1`,
+          )
+          .bind(id, PRODUCT_ID, cents, code),
+        audit(db, actor, 'price', code || 'default', { yuan: yuanStr }),
+      ]);
+      return json({ ok: true });
+    }
+    case 'POST price-remove': {
+      const code = String(body.channel || '').trim().toLowerCase();
+      if (!code) return err(400, 'bad_channel', '默认价不能删除');
+      await db.batch([db.prepare('DELETE FROM prices WHERE id = ?1').bind(`${PRODUCT_ID}@${code}`), audit(db, actor, 'price-remove', code)]);
       return json({ ok: true });
     }
 

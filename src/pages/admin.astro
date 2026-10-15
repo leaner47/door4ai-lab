@@ -6,7 +6,7 @@ import Base from '../layouts/Base.astro';
     <div class="head"><h1>后台</h1><span class="who" id="who"></span></div>
     <p class="msg" id="fatal" hidden></p>
     <nav class="tabs" role="tablist">
-      <button data-tab="stats" class="on">概览</button><button data-tab="users">用户</button><button data-tab="channels">渠道</button><button data-tab="audit">日志</button>
+      <button data-tab="stats" class="on">概览</button><button data-tab="users">用户</button><button data-tab="channels">渠道</button><button data-tab="orders">订单</button><button data-tab="audit">日志</button>
     </nav>
 
     <div data-pane="stats">
@@ -34,12 +34,24 @@ import Base from '../layouts/Base.astro';
 
     <div data-pane="channels" hidden>
       <div class="card">
+        <h3>价格</h3>
+        <p class="hint">学员按注册时<b>首次进站</b>的渠道码定价，注册后固定；没有渠道码或该渠道没设价的，用默认价。</p>
+        <form class="row" id="def-price"><span>默认价</span><input id="def-yuan" class="short" inputmode="decimal" placeholder="元" /><button class="primary">保存</button></form>
+        <p class="msg" id="price-msg" hidden></p>
+      </div>
+      <div class="card">
         <h3>新建渠道码</h3>
         <form class="row" id="ch-form"><input id="ch-code" placeholder="渠道码，如 xhs-01" class="short" /><input id="ch-name" placeholder="名称，如 小红书 10 月笔记" /><input id="ch-note" placeholder="备注（选填）" /><button class="primary">创建</button></form>
         <p class="msg" id="ch-msg" hidden></p>
       </div>
-      <table><thead><tr><th>渠道</th><th>链接</th><th class="n">首次触达注册</th><th class="n">最后触达注册</th><th class="n">付费</th></tr></thead><tbody id="channels"></tbody></table>
+      <table><thead><tr><th>渠道</th><th>链接</th><th class="n">首次触达注册</th><th class="n">最后触达注册</th><th class="n">付费</th><th>专属价（元）</th></tr></thead><tbody id="channels"></tbody></table>
       <div id="qr-box" class="card" hidden></div>
+    </div>
+
+    <div data-pane="orders" hidden>
+      <div class="row"><select id="o-status"><option value="">全部订单</option><option value="paid">已支付</option><option value="pending">待支付</option><option value="refunded">已退款</option><option value="expired">已关闭</option></select><span class="hint" id="pay-ready"></span></div>
+      <table><thead><tr><th>订单</th><th>用户</th><th class="n">金额（元）</th><th>状态</th><th>渠道</th><th></th></tr></thead><tbody id="orders"></tbody></table>
+      <p class="msg" id="orders-msg" hidden></p>
     </div>
 
     <div data-pane="audit" hidden>
@@ -109,7 +121,7 @@ import Base from '../layouts/Base.astro';
     const SITE = 'https://lab.door4ai.com';
 
     // ---------- 标签页 ----------
-    const loaders: Record<string, () => Promise<void>> = { stats: loadStats, users: () => loadUsers(), channels: loadChannels, audit: loadAudit };
+    const loaders: Record<string, () => Promise<void>> = { stats: loadStats, users: () => loadUsers(), channels: loadChannels, orders: loadOrders, audit: loadAudit };
     document.querySelectorAll<HTMLButtonElement>('.tabs button').forEach((b) =>
       b.addEventListener('click', () => {
         document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('on', x === b));
@@ -205,16 +217,29 @@ import Base from '../layouts/Base.astro';
     });
 
     // ---------- 渠道 ----------
+    const yuan = (c: number | null) => (c == null ? '' : (c / 100).toFixed(2).replace(/\.00$/, ''));
     async function loadChannels() {
-      const d = await get('/api/admin/channels');
+      const [d, p] = await Promise.all([get('/api/admin/channels'), get('/api/admin/prices')]);
+      const def = p.prices.find((x: any) => !x.channel_code);
+      $<HTMLInputElement>('def-yuan').value = def ? yuan(def.amount) : '';
       $('channels').innerHTML = d.channels
-        .map((c: any) => { const link = `${SITE}/?ref=${c.code}`; return `<tr><td><b>${esc(c.name)}</b><br><span class="muted">${esc(c.code)}${c.note ? ` · ${esc(c.note)}` : ''}</span></td><td><span class="muted">${esc(link)}</span><div class="acts"><button class="act" data-copy="${esc(link)}">复制</button><button class="act" data-qr="${esc(link)}" data-name="${esc(c.name)}">二维码</button></div></td><td class="n">${c.first_touch}</td><td class="n">${c.last_touch}</td><td class="n">${c.paying}</td></tr>`; })
-        .join('') || '<tr><td colspan="5" class="muted">还没有渠道码</td></tr>';
+        .map((c: any) => { const link = `${SITE}/?ref=${c.code}`; return `<tr><td><b>${esc(c.name)}</b><br><span class="muted">${esc(c.code)}${c.note ? ` · ${esc(c.note)}` : ''}</span></td><td><span class="muted">${esc(link)}</span><div class="acts"><button class="act" data-copy="${esc(link)}">复制</button><button class="act" data-qr="${esc(link)}" data-name="${esc(c.name)}">二维码</button></div></td><td class="n">${c.first_touch}</td><td class="n">${c.last_touch}</td><td class="n">${c.paying}</td><td><div class="acts"><input class="short" data-price-for="${esc(c.code)}" value="${yuan(c.price)}" placeholder="用默认价" inputmode="decimal" /><button class="act" data-setprice="${esc(c.code)}">保存</button>${c.price != null ? `<button class="act" data-rmprice="${esc(c.code)}">清除</button>` : ''}</div></td></tr>`; })
+        .join('') || '<tr><td colspan="6" class="muted">还没有渠道码</td></tr>';
     }
     $('channels').addEventListener('click', async (e) => {
       const b = (e.target as HTMLElement).closest('button') as HTMLButtonElement | null;
       if (!b) return;
       if (b.dataset.copy) { try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = '已复制'; } catch {} }
+      if (b.dataset.setprice || b.dataset.rmprice) {
+        try {
+          if (b.dataset.setprice) {
+            const v = (document.querySelector(`input[data-price-for="${CSS.escape(b.dataset.setprice)}"]`) as HTMLInputElement).value.trim();
+            await api('/api/admin/price', { channel: b.dataset.setprice, yuan: v });
+          } else await api('/api/admin/price-remove', { channel: b.dataset.rmprice });
+          show($('price-msg'), '价格已更新', 'ok');
+          await loadChannels();
+        } catch (er: any) { show($('price-msg'), er.message); }
+      }
       if (b.dataset.qr) {
         const svg = await QRCode.toString(b.dataset.qr, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' });
         const box = $('qr-box');
@@ -222,6 +247,11 @@ import Base from '../layouts/Base.astro';
         box.innerHTML = `<h3>${esc(b.dataset.name)}</h3><div class="qr">${svg}</div><p class="hint">${esc(b.dataset.qr)}　右键或长按二维码可保存图片。</p>`;
         box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
+    });
+    $('def-price').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try { await api('/api/admin/price', { channel: null, yuan: $<HTMLInputElement>('def-yuan').value.trim() }); show($('price-msg'), '默认价已更新', 'ok'); }
+      catch (er: any) { show($('price-msg'), er.message); }
     });
     $('ch-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -233,8 +263,27 @@ import Base from '../layouts/Base.astro';
       } catch (er: any) { show($('ch-msg'), er.message); }
     });
 
+    // ---------- 订单 ----------
+    const STATUS: Record<string, string> = { pending: '待支付', paid: '已支付', refunded: '已退款', expired: '已关闭' };
+    async function loadOrders() {
+      const d = await get(`/api/admin/orders?status=${encodeURIComponent($<HTMLSelectElement>('o-status').value)}`);
+      $('pay-ready').textContent = d.payReady ? '支付宝已接通' : '支付宝未配置（ALIPAY_* 变量）';
+      $('orders').innerHTML = d.orders
+        .map((o: any) => `<tr><td>${esc(o.order_no)}<br><span class="muted">${time(o.created_at)}${o.pay_mode === 'wap' ? ' · 手机' : ' · 电脑'}</span></td><td>${esc(o.email)}</td><td class="n">${yuan(o.amount)}</td><td>${STATUS[o.status] || esc(o.status)}${o.paid_at ? `<br><span class="muted">${time(o.paid_at)}</span>` : ''}</td><td>${esc(o.channel_code || '默认')}</td><td>${o.status === 'paid' ? `<button class="act danger" data-refund="${esc(o.order_no)}">退款</button>` : ''}</td></tr>`)
+        .join('') || '<tr><td colspan="6" class="muted">没有订单</td></tr>';
+    }
+    $('o-status').addEventListener('change', () => loadOrders().catch((er) => show($('fatal'), er.message)));
+    $('orders').addEventListener('click', async (e) => {
+      const b = (e.target as HTMLElement).closest('button[data-refund]') as HTMLButtonElement | null;
+      if (!b) return;
+      if (!confirm(`给订单 ${b.dataset.refund} 全额退款？支付宝会原路退回，并收回这门课程的权限。`)) return;
+      b.disabled = true;
+      try { await api('/api/admin/refund', { orderNo: b.dataset.refund }); show($('orders-msg'), '已退款并收回权限', 'ok'); await loadOrders(); }
+      catch (er: any) { show($('orders-msg'), er.message); b.disabled = false; }
+    });
+
     // ---------- 日志 ----------
-    const ACTION: Record<string, string> = { grant: '开通', revoke: '撤销权益', ban: '停用', unban: '恢复', logout: '强制下线', 'totp-reset': '重置两步验证', channel: '新建渠道码' };
+    const ACTION: Record<string, string> = { grant: '开通', revoke: '撤销权益', ban: '停用', unban: '恢复', logout: '强制下线', 'totp-reset': '重置两步验证', channel: '新建渠道码', refund: '退款', price: '改价', 'price-remove': '清除渠道价' };
     async function loadAudit() {
       const d = await get('/api/admin/audit');
       $('audit').innerHTML = d.audit.map((a: any) => `<tr><td>${time(a.created_at)}</td><td>${esc(a.actor)}</td><td>${esc(ACTION[a.action] || a.action)}</td><td>${esc(a.target)}</td><td class="muted">${esc(a.detail || '')}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">暂无记录</td></tr>';
