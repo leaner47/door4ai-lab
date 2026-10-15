@@ -1,0 +1,46 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+<Base title="支付结果 · Door4AI Lab" description="支付结果">
+  <section class="ret">
+    <h1 id="h">正在确认支付…</h1>
+    <p id="p">支付宝到账通知一般几秒内到达，请稍候。</p>
+    <a class="primary" id="go" href="/ai/" hidden>开始学习</a>
+    <a class="ghost" id="back" href="/pricing/" hidden>返回购买页</a>
+  </section>
+  <style>
+    .ret{max-width:520px;width:100%;margin:0 auto;text-align:center}
+    .ret p{color:var(--muted)}
+    .primary,.ghost{display:inline-block;border-radius:6px;padding:11px 22px;font-weight:700;text-decoration:none;margin:6px}
+    .primary{background:var(--accent);color:#fff}
+    .ghost{border:1px solid var(--line);color:var(--fg)}
+  </style>
+  <script>
+    const $ = (id: string) => document.getElementById(id)!;
+    const o = new URLSearchParams(location.search).get('o') || '';
+    let tries = 0;
+    async function poll() {
+      tries++;
+      const r = await fetch(`/api/pay/order?o=${encodeURIComponent(o)}`, { credentials: 'same-origin' }).then((x) => x.json()).catch(() => null);
+      if (r?.status === 'paid') {
+        $('h').textContent = '支付成功';
+        $('p').textContent = '课程已开通，现在就可以开始学习。';
+        $('go').hidden = false;
+        return;
+      }
+      if (r?.status === 'expired' || r?.status === 'refunded' || !r?.ok) {
+        $('h').textContent = r?.status === 'refunded' ? '订单已退款' : '订单未完成';
+        $('p').textContent = r?.ok ? '这笔订单没有支付成功。如果已经扣款，几分钟内会自动处理；仍有问题请联系我们。' : (r?.message || '没有找到这个订单。');
+        $('back').hidden = false;
+        return;
+      }
+      if (tries >= 60) {
+        $('p').textContent = '还没有收到到账通知。如果已经付款，稍后刷新本页或到「我的账号」查看；扣款未开通的订单会自动补开。';
+        $('back').hidden = false;
+        return;
+      }
+      setTimeout(poll, tries < 10 ? 2000 : 4000);
+    }
+    poll();
+  </script>
+</Base>

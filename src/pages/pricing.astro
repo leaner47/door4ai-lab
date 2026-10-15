@@ -15,7 +15,14 @@ const posts = (await getCollection('blog'))
       <ol>
         {posts.map((p) => <li>{p.data.title}</li>)}
       </ol>
-      <p class="soon">在线购买即将开放。</p>
+      <div class="buy">
+        <div class="price" id="price" hidden><span class="cur">¥</span><span id="amount"></span></div>
+        <a class="primary" id="login" href="/login/?next=%2Fpricing%2F" hidden>登录后购买</a>
+        <button class="primary" id="pay" hidden>支付宝支付</button>
+        <a class="primary" id="owned" href="/ai/" hidden>已拥有，开始学习</a>
+        <p class="soon" id="soon" hidden>在线购买即将开放。</p>
+      </div>
+      <p class="err" id="err" hidden></p>
     </div>
   </section>
   <style>
@@ -24,10 +31,41 @@ const posts = (await getCollection('blog'))
     .title{font-size:20px;font-weight:700}
     .sub{margin:4px 0 12px;color:var(--muted);font-size:15px}
     ol{margin:0;padding-left:1.4em;font-size:15px}
-    .soon{margin:16px 0 0;padding-top:14px;border-top:1px solid var(--line);color:var(--accent);font-weight:700}
+    .buy{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+    .price{font-size:34px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+    .price .cur{font-size:18px;margin-right:2px}
+    .primary{display:inline-block;background:var(--accent);color:#fff;border:0;border-radius:6px;padding:11px 22px;font:inherit;font-weight:700;text-decoration:none;cursor:pointer}
+    .primary:disabled{opacity:.55;cursor:default}
+    .soon{margin:0;color:var(--accent);font-weight:700}
     .msg{margin:0 0 16px;font-size:14px;padding:9px 12px;border-radius:6px;background:var(--accent-soft)}
+    .err{margin:12px 0 0;font-size:14px;color:#c0392b}
   </style>
   <script>
-    if (new URLSearchParams(location.search).get('need')) document.getElementById('need')!.hidden = false;
+    import { api } from '../scripts/auth-client';
+    const $ = (id: string) => document.getElementById(id)!;
+    if (new URLSearchParams(location.search).get('need')) $('need').hidden = false;
+    (async () => {
+      const p = await fetch('/api/pay/price', { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      if (!p || !p.ok) { $('soon').hidden = false; return; }
+      $('amount').textContent = (p.amount / 100).toFixed(2).replace(/\.00$/, '');
+      $('price').hidden = false;
+      if (p.owned) $('owned').hidden = false;
+      else if (!p.payReady) $('soon').hidden = false;
+      else if (!p.loggedIn) $('login').hidden = false;
+      else $('pay').hidden = false;
+    })();
+    $('pay').addEventListener('click', async () => {
+      const b = $('pay') as HTMLButtonElement;
+      b.disabled = true;
+      $('err').hidden = true;
+      try {
+        const r = await api('/api/pay/checkout', {});
+        location.href = r.payUrl;
+      } catch (e: any) {
+        $('err').textContent = e.message;
+        $('err').hidden = false;
+        b.disabled = false;
+      }
+    });
   </script>
 </Base>
