@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 20:08 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7；同时段 session_017nqPj8MzXKK8YfLau84Y55 在改 Resource 卡片配色）
+最后更新：2026-10-14 20:40 America/New_York · 更新者：Claude（会话 session_017mU9qFdHEjTGTDCSBqAGWr，账号与支付系统设计）
 
 ---
 
@@ -112,9 +112,11 @@ door4ai-lab/
 - [ ] 下一讲：题目未定（候选见第 7 节）
 - [ ] 关于页只有两句话，待充实
 - [ ] 没有统计/分析（可考虑 Cloudflare Web Analytics，免费，一行脚本）
-- [ ] 没有评论、订阅、付费墙——课程售卖形态未定，先积累内容
+- [ ] 账号 + 支付系统：设计稿已出（https://claude.ai/code/artifact/9679fc7a-0fe4-4323-86f1-65cbb1cc005f ），未开工。方案：Pages 中间件 + D1 自建邮箱验证码账号与权益，收款复用 door4ai.com 的 pay-api，买断 + 期卡订阅；第 0 期（账号与门禁）可先做，第 1 期起等本人提供 pay-api 接口文档。设计未经本人确认前不要写进第 4 节。
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-14 · Claude** — 按本人要求出了「lab.door4ai.com 账号与支付系统设计」文档（链接见第 5 节）：邮箱验证码登录、D1 十张表、买断/订阅统一为 entitlement、pay-api 适配器 + 回调幂等 + 对账 Worker、中间件替换 Access 的迁移顺序、四期上线计划。pay-api.door4ai.com 从云端和 Mac 出口都访问不到（403），接口细节列为待确认。未改代码。
 
 - **2026-10-14 · Claude** — Safari 左上角小块问题复现（间歇）：第三次修复，画布缓冲区改为标记里固定 2x 尺寸，JS 不再改缓冲区尺寸。
 
