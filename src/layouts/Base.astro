@@ -45,8 +45,6 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     header.site{display:flex;align-items:center;gap:16px 28px;flex-wrap:wrap;padding:16px clamp(16px,3vw,40px);border-bottom:1px solid var(--line)}
     header.site nav{margin-left:auto}
     .acts{display:flex;align-items:center;gap:14px}
-    .support{color:var(--fg);text-decoration:none;font-size:16px;padding:6px 4px}
-    .support:hover{color:var(--accent)}
     .acct{position:relative}
     .acct-btn{display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:10px;background:var(--chip);color:var(--fg);cursor:pointer;padding:0;transition:filter .15s}
     .acct-btn:hover{filter:brightness(.96)}
@@ -140,7 +138,6 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
       <a class="brand" href="/">Door4AI <span>Lab</span></a>
       <nav><a href="/ai/">AI从入门到精通</a><a href="/resources/">Resource</a></nav>
       <div class="acts">
-        <a class="support" href="/ai/#community">支持</a>
         <div class="acct">
           <button class="acct-btn" id="acct-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="acct-menu" aria-label="账号"><svg viewBox="0 0 448 512" aria-hidden="true" fill="currentColor"><path d="M224 256a128 128 0 1 0 0-256 128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3 0 498.7 13.3 512 29.7 512h388.6c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304h-91.4z"/></svg></button>
           <div class="acct-menu" id="acct-menu" role="menu" hidden>
