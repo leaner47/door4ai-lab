@@ -18,7 +18,6 @@ const fmt = (d: Date) => d.toISOString().slice(0, 10);
     {post.data.tags.length > 0 && <div class="tags">{post.data.tags.map((t) => <span class="tag">{t}</span>)}</div>}
     {post.data.lab && (
       <div class="lab-frame">
-        <div class="bar"><span>可交互实验</span><a href={post.data.lab} target="_blank" rel="noopener">全屏打开 ↗</a></div>
         <iframe src={post.data.lab} title={post.data.title} loading="lazy"></iframe>
       </div>
     )}
