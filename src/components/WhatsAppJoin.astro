@@ -11,7 +11,7 @@ const icon = url ? fs.readFileSync(path.join(process.cwd(), 'public/logos/whatsa
 const qr = url && variant === 'card' ? await QRCode.toString(url, { type: 'svg', margin: 0, errorCorrectionLevel: 'M', color: { dark: '#111214', light: '#ffffff' } }) : '';
 ---
 {url && variant === 'card' && (
-  <aside class="wa-card">
+  <aside class="wa-card" id="community">
     <div class="wa-main">
       <div class="wa-kicker"><span class="wa-ic" set:html={icon} />WhatsApp 交流群</div>
       <div class="wa-name">{whatsapp.name}</div>
@@ -50,5 +50,6 @@ const qr = url && variant === 'card' ? await QRCode.toString(url, { type: 'svg',
   .wa-inline{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:48px 0 0;padding:14px 16px;border:1px solid var(--line);border-radius:8px;background:var(--paper);font-size:15.5px;color:var(--muted);max-width:68ch}
   .wa-inline .wa-ic{color:#25d366}
   .wa-inline a{margin-left:auto;font-weight:700;text-decoration:none;color:#1a9e4b}
-  @media (prefers-color-scheme:dark){.wa-inline a{color:#25d366}}
+  @media (prefers-color-scheme:dark){:global(:root:not([data-theme="light"])) .wa-inline a{color:#25d366}}
+  :global(:root[data-theme="dark"]) .wa-inline a{color:#25d366}
 </style>

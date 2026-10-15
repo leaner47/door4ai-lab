@@ -133,7 +133,7 @@ const outro = `<div class="foot">
 
 const live = [F1_LIVE, m23?.LIVE, m4?.LIVE, m5?.LIVE].filter(Boolean).join("\n");
 const html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>电脑里有什么</title><style>${CSS}</style><script>if(window.self!==window.top)document.documentElement.classList.add("embedded")</script><style>html.embedded .lab-intro{display:none}html.embedded .wrap{padding-top:20px}html.embedded main{margin-top:28px}html.embedded .lab-intro+section{margin-top:0}</style></head>
+<title>电脑里有什么</title><style>${CSS}</style><script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script><style>html.embedded .lab-intro{display:none}html.embedded .wrap{padding-top:20px}html.embedded main{margin-top:28px}html.embedded .lab-intro+section{margin-top:0}</style></head>
 <body class="iso"><main>${intro}${kitchen}${s1}${s2}${s3}${s4}${s5}${outro}</main>
 <script type="module">${(kitScript() + "\n" + live).replace(/<\/(script)/gi, "<\\/$1")}</script></body></html>`;
 writeFileSync("index.html", html);
