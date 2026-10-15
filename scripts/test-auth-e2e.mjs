@@ -3,6 +3,12 @@
 import { chromium } from 'playwright';
 import { readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
+import { createHmac } from 'node:crypto';
+
+// 测试端自己算 TOTP（RFC 6238，SHA-1，6 位，30 秒）
+function b32(s) { const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'; let bits = 0, v = 0; const out = []; for (const c of s.replace(/\s/g, '')) { v = (v << 5) | A.indexOf(c); bits += 5; if (bits >= 8) { out.push((v >>> (bits - 8)) & 255); bits -= 8; } } return Buffer.from(out); }
+function totp(secret, step = Math.floor(Date.now() / 30000)) { const msg = Buffer.alloc(8); msg.writeBigUInt64BE(BigInt(step)); const mac = createHmac('sha1', b32(secret)).update(msg).digest(); const o = mac[mac.length - 1] & 15; return String((mac.readUInt32BE(o) & 0x7fffffff) % 1e6).padStart(6, '0'); }
+const nowStep = () => Math.floor(Date.now() / 30000);
 
 const BASE = 'http://localhost:8788';
 const LOG = process.argv[2];
@@ -16,11 +22,15 @@ function lastCode(email) {
   return m.length ? m[m.length - 1][1] : null;
 }
 
+process.on('unhandledRejection', () => {});
+process.on('uncaughtException', async (e) => { console.log(results.join('\n')); console.log('\nERROR', e.message.split('\n')[0]); for (const [i, p] of pages.entries()) await p.screenshot({ path: `${SHOTS}/fail-${i}.png`, fullPage: true }).catch(() => {}); process.exit(1); });
+const pages = [];
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 
 async function newCtx() {
   const ctx = await browser.newContext({ viewport: { width: 1200, height: 900 } });
   const page = await ctx.newPage();
+  pages.push(page);
   page.on('pageerror', (e) => console.log('PAGEERROR', e.message));
   const cdp = await ctx.newCDPSession(page);
   await cdp.send('WebAuthn.enable');
@@ -51,7 +61,7 @@ await emailLogin(A.page, userA);
 ok('新用户邮箱验证码注册后进入欢迎页', /\/account\/\?welcome=new/.test(A.page.url()), A.page.url());
 await A.page.waitForSelector('#main:not([hidden])');
 ok('账号页显示邮箱', (await A.page.textContent('#email')) === userA);
-ok('导航显示已登录邮箱', (await A.page.textContent('#auth')).includes(userA));
+ok('右上角账号菜单显示已登录邮箱', (await A.page.textContent('#acct-email')) === userA);
 await A.page.screenshot({ path: `${SHOTS}/account-welcome.png`, fullPage: true });
 
 const attr = sql(`SELECT a.touch, a.utm_source, a.utm_medium, a.ref, a.landing_path FROM signup_attribution a JOIN users u ON u.id=a.user_id WHERE u.email='${userA}' ORDER BY a.touch`);
@@ -137,6 +147,135 @@ await B.page.click('#logout');
 await B.page.waitForURL(BASE + '/');
 await B.page.goto(BASE + '/posts/attention-qkv/');
 ok('退出后访问课程 → 登录页（无 kicked 提示）', /\/login\//.test(B.page.url()) && !B.page.url().includes('kicked'));
+
+// ---------- 10. 两步验证（TOTP + 恢复码） ----------
+const T = await newCtx();
+const userT = 'carol@example.com';
+await emailLogin(T.page, userT, '/account/');
+await T.page.goto(BASE + '/account/');
+await T.page.waitForSelector('#totp-card:not([hidden])');
+await T.page.click('#totp-start');
+await T.page.waitForSelector('#totp-setup:not([hidden])');
+const secret = (await T.page.textContent('#totp-secret')).replace(/\s/g, '');
+ok('开启两步验证：显示二维码和 otpauth 链接', (await T.page.getAttribute('#totp-apple', 'href')).startsWith('otpauth://totp/Door4AI%20Lab') && !!(await T.page.$('#totp-qr svg')));
+await T.page.screenshot({ path: `${SHOTS}/totp-setup.png`, fullPage: true });
+await T.page.fill('#totp-code', '000000');
+await T.page.click('#totp-enable');
+await T.page.waitForSelector('#err-totp:not([hidden])');
+ok('错误动态码不能开启', (await T.page.textContent('#err-totp')).includes('动态码不对'));
+const enableStep = nowStep();
+await T.page.fill('#totp-code', totp(secret, enableStep));
+await T.page.click('#totp-enable');
+await T.page.waitForSelector('#totp-codes:not([hidden])');
+const recCodes = await T.page.$$eval('#codes li', (els) => els.map((e) => e.textContent));
+ok('开启后显示 10 个恢复码', recCodes.length === 10, recCodes[0]);
+await T.page.screenshot({ path: `${SHOTS}/totp-codes.png`, fullPage: true });
+await T.page.click('#codes-done');
+await T.page.waitForSelector('#totp-on:not([hidden])');
+ok('账号页显示已开启、剩余 10 个', (await T.page.textContent('#rec-left')) === '10');
+
+// 退出，用邮箱验证码重新登录 → 需要第二步
+await T.page.click('#logout');
+await T.page.waitForURL(BASE + '/');
+await sleep(61000); // 验证码发送限流 60 秒
+await T.page.goto(BASE + '/login/?next=%2Faccount%2F');
+await T.page.waitForSelector('#step-email:not([hidden])');
+await T.page.fill('#email', userT);
+await T.page.click('#send');
+await T.page.waitForSelector('#step-code:not([hidden])');
+await sleep(300);
+await T.page.fill('#code', lastCode(userT));
+await T.page.waitForSelector('#step-mfa:not([hidden])');
+ok('开启两步验证后，邮箱验证码登录要求第二步', true);
+const noSession = await T.page.evaluate(() => fetch('/api/me').then((r) => r.json()));
+ok('第二步之前没有会话', noSession.user === null);
+await T.page.fill('#mfa', '000000');
+await T.page.click('#mfa-go');
+await T.page.waitForSelector('#err3:not([hidden])');
+ok('错误动态码不能通过第二步', (await T.page.textContent('#err3')).includes('不对'));
+const usedCode = totp(secret, nowStep());
+await T.page.fill('#mfa', usedCode);
+await T.page.click('#mfa-go');
+await T.page.waitForURL(/\/account\//, { timeout: 10000 });
+ok('输入当前动态码后登录成功', T.page.url().endsWith('/account/'), T.page.url());
+const replay = await T.page.evaluate((c) => fetch('/api/me/totp/recovery', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: c }) }).then((r) => r.status), usedCode);
+ok('刚用过的动态码不能再用（防重放）', replay === 400, String(replay));
+
+// 再退出，用恢复码登录
+await T.page.waitForSelector('#main:not([hidden])');
+await T.page.click('#logout');
+await T.page.waitForURL(BASE + '/');
+await sleep(61000); // 验证码发送限流 60 秒
+await T.page.goto(BASE + '/login/');
+await T.page.waitForSelector('#step-email:not([hidden])');
+await T.page.fill('#email', userT);
+await T.page.click('#send');
+await T.page.waitForSelector('#step-code:not([hidden])');
+await sleep(300);
+await T.page.fill('#code', lastCode(userT));
+await T.page.waitForSelector('#step-mfa:not([hidden])');
+await T.page.fill('#mfa', recCodes[0]);
+await T.page.click('#mfa-go');
+await T.page.waitForURL(/recovery=used/, { timeout: 10000 });
+await T.page.waitForSelector('#totp-on:not([hidden])');
+ok('恢复码可以登录，剩余 9 个', (await T.page.textContent('#rec-left')) === '9');
+
+// ---------- 11. 后台 ----------
+const notAdmin = await T.page.goto(BASE + '/admin/');
+ok('非管理员访问 /admin → 403', notAdmin.status() === 403, String(notAdmin.status()));
+const apiNotAdmin = await T.page.evaluate(() => fetch('/api/admin/stats').then((r) => r.status));
+ok('非管理员调后台接口 → 403', apiNotAdmin === 403);
+
+const AD = D.page; // admin@example.com，已登录
+await AD.goto(BASE + '/admin/');
+await AD.waitForFunction(() => document.getElementById('who')?.textContent === 'admin@example.com');
+await AD.waitForFunction(() => document.querySelectorAll('#kpis div').length === 7);
+const kpiUsers = await AD.textContent('#kpis div:first-child b');
+ok('后台概览：注册总数 = 3（alice、admin、carol；bob 没完成验证不算）', Number(kpiUsers) === 3, kpiUsers);
+ok('后台概览：来源表含 xhs-01', (await AD.textContent('#by-source')).includes('xhs-01'));
+ok('后台概览：问卷含小红书', (await AD.textContent('#by-survey')).includes('小红书'));
+await AD.screenshot({ path: `${SHOTS}/admin-stats.png`, fullPage: true });
+
+// 渠道码
+await AD.click('.tabs button[data-tab=channels]');
+await AD.fill('#ch-code', 'xhs-01');
+await AD.fill('#ch-name', '小红书 10 月笔记');
+await AD.click('#ch-form button');
+await AD.waitForSelector('#channels tr td b');
+const chCells = await AD.$$eval('#channels tr:first-child td', (tds) => tds.map((t) => t.textContent.trim()));
+ok('新建渠道码并统计到首次触达注册 1、付费 0', chCells[0].includes('xhs-01') && chCells[2] === '1' && chCells[4] === '0', chCells.join(' | '));
+await AD.click('#channels button[data-qr]');
+await AD.waitForSelector('#qr-box svg');
+await AD.screenshot({ path: `${SHOTS}/admin-channels.png`, fullPage: true });
+
+// 给还没注册的邮箱开通，然后他登录即可看课
+await AD.click('.tabs button[data-tab=users]');
+await AD.waitForSelector('#g-scope option', { state: 'attached' });
+await AD.fill('#g-email', 'dave@example.com');
+await AD.selectOption('#g-scope', 'series:ai-mastery');
+await AD.click('#grant button');
+await AD.waitForSelector('#detail:not([hidden]) h3');
+ok('后台给新邮箱开通全套', (await AD.textContent('#detail')).includes('AI 从入门到精通'));
+await AD.screenshot({ path: `${SHOTS}/admin-user.png`, fullPage: true });
+const E = await newCtx();
+await emailLogin(E.page, 'dave@example.com');
+await E.page.goto(BASE + '/posts/attention-qkv/');
+ok('被开通的新用户登录后可看课程', E.page.url().endsWith('/posts/attention-qkv/'));
+
+// 撤销 → 失去权限；强制下线 → 回登录页
+AD.once('dialog', (d) => d.accept());
+await AD.click('#detail button[data-revoke]');
+await AD.waitForSelector('#detail .tag.off');
+await E.page.goto(BASE + '/posts/attention-qkv/');
+ok('撤销权益后跳购买页', /\/pricing\//.test(E.page.url()));
+await AD.click('#detail button[data-act=logout]');
+await AD.waitForSelector('#detail-msg:not([hidden])');
+await E.page.goto(BASE + '/resources/');
+ok('后台强制下线后需要重新登录', /\/login\//.test(E.page.url()));
+await AD.click('.tabs button[data-tab=audit]');
+await AD.waitForSelector('#audit tr td');
+const auditText = await AD.textContent('#audit');
+ok('操作日志记录开通/撤销/下线/渠道码', ['开通', '撤销权益', '强制下线', '新建渠道码'].every((w) => auditText.includes(w)));
 
 // ---------- 9. 手机宽度无横向滚动 ----------
 const M = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: 'dark' });

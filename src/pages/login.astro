@@ -30,6 +30,13 @@ import Base from '../layouts/Base.astro';
       </div>
       <p class="msg" id="err2" hidden></p>
     </form>
+    <form id="step-mfa" class="card" novalidate hidden>
+      <p class="sent">这个账号开启了两步验证。打开 Apple 密码（或你用的验证器 App），输入 Door4AI Lab 当前的 6 位动态码；手机不在身边时也可以输入一个 10 位恢复码。</p>
+      <label for="mfa">动态码或恢复码</label>
+      <input id="mfa" name="mfa" autocomplete="one-time-code" maxlength="12" placeholder="123456" required />
+      <button type="submit" class="primary" id="mfa-go">确认</button>
+      <p class="msg" id="err3" hidden></p>
+    </form>
   </section>
 
   <style>
@@ -153,10 +160,28 @@ import Base from '../layouts/Base.astro';
       btn.disabled = true;
       try {
         const r = await api('/api/auth/verify', { email: email.value, code: code.value, next });
+        if (r.mfa) {
+          stepCode.hidden = true; $('step-mfa').hidden = false; $<HTMLInputElement>('mfa').focus();
+          return;
+        }
         await afterLogin(r);
       } catch (e: any) {
         show(err2, e.message);
         btn.disabled = false;
+      }
+    });
+    $('step-mfa').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      show($('err3'), '');
+      const btn = $<HTMLButtonElement>('mfa-go');
+      btn.disabled = true;
+      try {
+        const r = await api('/api/auth/mfa', { code: $<HTMLInputElement>('mfa').value, next });
+        location.href = r.usedRecovery ? '/account/?recovery=used' : r.next || next;
+      } catch (e: any) {
+        show($('err3'), e.message);
+        btn.disabled = false;
+        if (/重新登录/.test(e.message)) setTimeout(() => location.reload(), 1500);
       }
     });
     code.addEventListener('input', () => { code.value = code.value.replace(/\D/g, '').slice(0, 6); if (code.value.length === 6) stepCode.requestSubmit(); });

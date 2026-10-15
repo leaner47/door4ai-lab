@@ -53,6 +53,39 @@ import Base from '../layouts/Base.astro';
         <p class="msg" id="err-pk" hidden></p>
       </div>
 
+      <div class="card" id="totp-card" hidden>
+        <h2>两步验证</h2>
+        <p class="msg" id="rec-used" data-kind="info" hidden>你刚用掉了一个恢复码。剩余数量见下方，用完前记得重新生成。</p>
+        <div id="totp-off" hidden>
+          <p class="hint">开启后，用邮箱验证码登录时还要再输入一个每 30 秒变化的 6 位动态码，邮箱被盗也登不进来。用 Passkey 登录不需要这一步。</p>
+          <button class="ghost" id="totp-start">开启两步验证</button>
+        </div>
+        <div id="totp-setup" hidden>
+          <p class="hint">用手机相机或验证器 App 扫码；在 iPhone / Mac 上可以直接点「添加到 Apple 密码」。</p>
+          <div class="qr-row">
+            <div id="totp-qr" class="qr"></div>
+            <div class="qr-side">
+              <a class="ghost btn" id="totp-apple" href="#">添加到 Apple 密码</a>
+              <label>或手动输入设置密钥</label>
+              <code id="totp-secret" class="secret"></code>
+            </div>
+          </div>
+          <label for="totp-code">输入 App 里显示的 6 位动态码确认</label>
+          <div class="inline"><input id="totp-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" /><button class="primary" id="totp-enable">确认开启</button></div>
+        </div>
+        <div id="totp-codes" hidden>
+          <p class="hint"><b>请保存这 10 个恢复码。</b>手机丢了或换机时，每个码可以代替动态码用一次。离开这个页面后不会再显示。</p>
+          <ol id="codes" class="codes"></ol>
+          <div class="actions"><button class="ghost" id="codes-copy">复制全部</button><button class="ghost" id="codes-done">我已保存</button></div>
+        </div>
+        <div id="totp-on" hidden>
+          <p class="hint">已开启 · 剩余恢复码 <b id="rec-left"></b> 个</p>
+          <div class="actions"><button class="ghost" id="totp-regen">重新生成恢复码</button><button class="ghost" id="totp-disable">关闭两步验证</button></div>
+          <div class="inline" id="totp-confirm" hidden><input id="totp-confirm-code" autocomplete="one-time-code" maxlength="12" placeholder="动态码或恢复码" /><button class="primary" id="totp-confirm-go">确认</button></div>
+        </div>
+        <p class="msg" id="err-totp" hidden></p>
+      </div>
+
       <div class="card">
         <h2>推荐链接</h2>
         <p class="hint">朋友通过这个链接注册，会记在你名下。</p>
@@ -85,6 +118,13 @@ import Base from '../layouts/Base.astro';
     .ghost{background:transparent;color:var(--fg);border:1px solid var(--line);padding:8px 14px;align-self:flex-start}
     .ghost:hover{border-color:var(--accent)}
     .link{color:var(--accent);font-size:15px}
+    .btn{text-decoration:none;display:inline-block}
+    .qr-row{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+    .qr{width:168px;height:168px;background:#fff;padding:8px;border-radius:6px;flex:none}
+    .qr :global(svg){display:block;width:100%;height:100%}
+    .qr-side{display:flex;flex-direction:column;gap:8px;min-width:0;flex:1}
+    .secret{font-family:var(--mono);font-size:13px;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:6px 8px}
+    .codes{columns:2;margin:0;padding-left:1.6em;font-family:var(--mono);font-size:15px;line-height:1.9}
     :global(.del){background:none;border:0;color:var(--muted);font-size:14px;padding:4px}
     :global(.del:hover){color:#c0392b}
     .msg{margin:0;font-size:14px;padding:9px 12px;border-radius:6px;border:1px solid var(--line)}
@@ -95,6 +135,7 @@ import Base from '../layouts/Base.astro';
 
   <script>
     import { startRegistration, browserSupportsWebAuthn } from '@simplewebauthn/browser';
+    import QRCode from 'qrcode';
     import { api, getMe, inWeChat, isCancel, nextParam, show } from '../scripts/auth-client';
 
     const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -148,7 +189,59 @@ import Base from '../layouts/Base.astro';
       if (!browserSupportsWebAuthn() || inWeChat()) $('pk-add').hidden = true;
 
       ($('ref') as HTMLInputElement).value = `${location.origin}/?ref=${me.user.refCode}`;
+
+      if (me.totp?.available) {
+        $('totp-card').hidden = false;
+        const showingCodes = !$('totp-codes').hidden;
+        $('totp-off').hidden = me.totp.enabled || !$('totp-setup').hidden;
+        $('totp-on').hidden = !me.totp.enabled || showingCodes;
+        $('rec-left').textContent = String(me.totp.recoveryLeft);
+        if (params.get('recovery') === 'used') $('rec-used').hidden = false;
+      }
     }
+
+    // ---------- 两步验证 ----------
+    let confirmAction: 'disable' | 'recovery' | null = null;
+    function showCodes(codes: string[]) {
+      $('codes').innerHTML = codes.map((c) => `<li>${c.slice(0, 5)}-${c.slice(5)}</li>`).join('');
+      ($('codes') as HTMLElement).dataset.plain = codes.map((c) => `${c.slice(0, 5)}-${c.slice(5)}`).join('\n');
+      $('totp-setup').hidden = true; $('totp-on').hidden = true; $('totp-off').hidden = true; $('totp-codes').hidden = false;
+    }
+    $('totp-start').addEventListener('click', async () => {
+      show($('err-totp'), '');
+      try {
+        const r = await api('/api/me/totp/setup', {});
+        $('totp-qr').innerHTML = await QRCode.toString(r.uri, { type: 'svg', margin: 0, errorCorrectionLevel: 'M' });
+        ($('totp-apple') as HTMLAnchorElement).href = r.uri;
+        $('totp-secret').textContent = r.secret.replace(/(.{4})/g, '$1 ').trim();
+        $('totp-off').hidden = true; $('totp-setup').hidden = false;
+        ($('totp-code') as HTMLInputElement).focus();
+      } catch (e: any) { show($('err-totp'), e.message); }
+    });
+    $('totp-enable').addEventListener('click', async () => {
+      show($('err-totp'), '');
+      try {
+        const r = await api('/api/me/totp/enable', { code: ($('totp-code') as HTMLInputElement).value });
+        showCodes(r.recoveryCodes);
+      } catch (e: any) { show($('err-totp'), e.message); }
+    });
+    $('codes-copy').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(($('codes') as HTMLElement).dataset.plain || ''); $('codes-copy').textContent = '已复制'; } catch {}
+    });
+    $('codes-done').addEventListener('click', () => { $('totp-codes').hidden = true; render(); });
+    const askConfirm = (a: 'disable' | 'recovery') => { confirmAction = a; $('totp-confirm').hidden = false; ($('totp-confirm-code') as HTMLInputElement).focus(); };
+    $('totp-disable').addEventListener('click', () => askConfirm('disable'));
+    $('totp-regen').addEventListener('click', () => askConfirm('recovery'));
+    $('totp-confirm-go').addEventListener('click', async () => {
+      show($('err-totp'), '');
+      try {
+        const r = await api(`/api/me/totp/${confirmAction}`, { code: ($('totp-confirm-code') as HTMLInputElement).value });
+        ($('totp-confirm-code') as HTMLInputElement).value = '';
+        $('totp-confirm').hidden = true;
+        if (r.recoveryCodes) showCodes(r.recoveryCodes);
+        else { show($('err-totp'), '两步验证已关闭。', 'ok'); render(); }
+      } catch (e: any) { show($('err-totp'), e.message); }
+    });
 
     $('pk-add').addEventListener('click', async () => { if (await addPasskey($('err-pk'))) render(); });
     $('pk-add-welcome').addEventListener('click', async () => {

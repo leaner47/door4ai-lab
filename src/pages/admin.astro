@@ -1,0 +1,251 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="后台 · Door4AI Lab" description="Door4AI Lab 后台">
+  <section class="adm">
+    <div class="head"><h1>后台</h1><span class="who" id="who"></span></div>
+    <p class="msg" id="fatal" hidden></p>
+    <nav class="tabs" role="tablist">
+      <button data-tab="stats" class="on">概览</button><button data-tab="users">用户</button><button data-tab="channels">渠道</button><button data-tab="audit">日志</button>
+    </nav>
+
+    <div data-pane="stats">
+      <div class="kpis" id="kpis"></div>
+      <h2>近 30 天每日注册</h2>
+      <div class="bars" id="daily"></div>
+      <div class="axis" id="daily-axis"></div>
+      <h2>注册来源（首次触达）</h2>
+      <table><thead><tr><th>来源</th><th class="n">注册</th><th class="n">付费</th><th class="n">转化</th></tr></thead><tbody id="by-source"></tbody></table>
+      <h2>问卷：从哪里知道我们</h2>
+      <table><thead><tr><th>回答</th><th class="n">人数</th></tr></thead><tbody id="by-survey"></tbody></table>
+    </div>
+
+    <div data-pane="users" hidden>
+      <form class="row" id="user-search"><input id="q" placeholder="按邮箱搜索（留空列出最新 50 个）" /><button class="ghost">搜索</button></form>
+      <table><thead><tr><th>邮箱</th><th>注册</th><th>来源</th><th>权益</th><th>状态</th></tr></thead><tbody id="users"></tbody></table>
+      <div class="card" id="grant-card">
+        <h3>开通课程</h3>
+        <p class="hint">对方还没注册也可以先开通，他用这个邮箱登录后即可看。</p>
+        <form class="row" id="grant"><input id="g-email" placeholder="邮箱" /><select id="g-scope"></select><input id="g-days" type="number" min="1" placeholder="天数（空=永久）" class="short" /><button class="primary">开通</button></form>
+        <p class="msg" id="grant-msg" hidden></p>
+      </div>
+      <div class="card" id="detail" hidden></div>
+    </div>
+
+    <div data-pane="channels" hidden>
+      <div class="card">
+        <h3>新建渠道码</h3>
+        <form class="row" id="ch-form"><input id="ch-code" placeholder="渠道码，如 xhs-01" class="short" /><input id="ch-name" placeholder="名称，如 小红书 10 月笔记" /><input id="ch-note" placeholder="备注（选填）" /><button class="primary">创建</button></form>
+        <p class="msg" id="ch-msg" hidden></p>
+      </div>
+      <table><thead><tr><th>渠道</th><th>链接</th><th class="n">首次触达注册</th><th class="n">最后触达注册</th><th class="n">付费</th></tr></thead><tbody id="channels"></tbody></table>
+      <div id="qr-box" class="card" hidden></div>
+    </div>
+
+    <div data-pane="audit" hidden>
+      <table><thead><tr><th>时间</th><th>操作人</th><th>操作</th><th>对象</th><th>详情</th></tr></thead><tbody id="audit"></tbody></table>
+    </div>
+  </section>
+
+  <style is:global>
+    .adm{width:100%}
+    .adm .head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .adm .who{color:var(--muted);font-size:14px}
+    .adm h2{font-size:17px;margin:28px 0 8px}
+    .adm h3{font-size:16px;margin:0;line-height:1.4}
+    .adm .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:8px 0 20px;overflow-x:auto}
+    .adm .tabs button{font:inherit;background:none;border:0;border-bottom:2px solid transparent;padding:8px 14px;color:var(--muted);cursor:pointer}
+    .adm .tabs button.on{color:var(--fg);border-bottom-color:var(--accent)}
+    .adm .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+    .adm .kpis div{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+    .adm .kpis b{display:block;font-size:24px;line-height:1.2;font-variant-numeric:tabular-nums}
+    .adm .kpis span{font-size:13px;color:var(--muted)}
+    .adm .bars{display:flex;align-items:flex-end;gap:2px;height:80px;border-bottom:1px solid var(--line)}
+    .adm .bars i{flex:1;background:var(--accent);opacity:.8;border-radius:2px 2px 0 0}
+    .adm .bars i.zero{background:var(--line);opacity:1;height:2px!important}
+    .adm .axis{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:4px}
+    .adm table{width:100%;border-collapse:collapse;font-size:14px;margin-top:6px;line-height:1.5}
+    .adm th,.adm td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+    .adm th{color:var(--muted);font-weight:400;font-size:13px}
+    .adm .n{text-align:right;font-variant-numeric:tabular-nums}
+    .adm tr.click{cursor:pointer}
+    .adm tr.click:hover{background:var(--accent-soft)}
+    .adm .card{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin-top:18px;display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.6}
+    .adm .card p{margin:0}
+    .adm .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .adm .row input{flex:1;min-width:160px}
+    .adm .row .short{flex:0 1 140px;min-width:110px}
+    .adm input,.adm select{font:inherit;font-size:14px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
+    .adm button{font:inherit;font-size:14px;cursor:pointer;border-radius:6px}
+    .adm button:disabled{opacity:.45;cursor:default}
+    .adm .primary{background:var(--accent);color:#fff;border:0;padding:8px 14px;font-weight:700}
+    .adm .ghost,.adm .act{background:transparent;color:var(--fg);border:1px solid var(--line);padding:5px 11px;font-size:13px}
+    .adm .act.danger{color:#c0392b}
+    .adm .acts{display:flex;gap:8px;flex-wrap:wrap}
+    .adm .tag{font-size:12px;border:1px solid var(--line);border-radius:3px;padding:0 6px;margin-right:4px;white-space:nowrap}
+    .adm .tag.off{opacity:.5;text-decoration:line-through}
+    .adm .muted{color:var(--muted)}
+    .adm .sec b{display:block;margin-bottom:2px}
+    .adm .qr{width:200px;background:#fff;padding:10px;border-radius:6px}
+    .adm .qr svg{display:block;width:100%;height:auto}
+    .adm .hint{margin:0;font-size:13px;color:var(--muted)}
+    .adm .msg{margin:0;font-size:14px;padding:8px 12px;border-radius:6px;border:1px solid var(--line)}
+    .adm .msg[data-kind="err"]{border-color:#c0392b;color:#c0392b}
+    .adm .msg[data-kind="ok"]{border-color:var(--accent)}
+    @media (max-width:640px){.adm table{font-size:13px} .adm th,.adm td{padding:6px 4px}}
+  </style>
+
+  <script>
+    import QRCode from 'qrcode';
+    import { api, show } from '../scripts/auth-client';
+
+    const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+    const esc = (v: unknown) => String(v ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+    const day = (t: number | null) => (t ? new Date(t).toLocaleDateString('zh-CN') : '');
+    const time = (t: number | null) => (t ? new Date(t).toLocaleString('zh-CN', { hour12: false }) : '');
+    const get = async (p: string) => { const r = await fetch(p, { credentials: 'same-origin' }); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.message || `请求失败（${r.status}）`); return d; };
+    const SCOPE: Record<string, string> = { all: '全部课程', 'series:ai-mastery': 'AI 从入门到精通（全套）' };
+    const scopeName = (s: string) => SCOPE[s] || s;
+    const SITE = 'https://lab.door4ai.com';
+
+    // ---------- 标签页 ----------
+    const loaders: Record<string, () => Promise<void>> = { stats: loadStats, users: () => loadUsers(), channels: loadChannels, audit: loadAudit };
+    document.querySelectorAll<HTMLButtonElement>('.tabs button').forEach((b) =>
+      b.addEventListener('click', () => {
+        document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('on', x === b));
+        document.querySelectorAll<HTMLElement>('[data-pane]').forEach((p) => (p.hidden = p.dataset.pane !== b.dataset.tab));
+        loaders[b.dataset.tab!]().catch((e) => show($('fatal'), e.message));
+      }),
+    );
+
+    // ---------- 概览 ----------
+    async function loadStats() {
+      const d = await get('/api/admin/stats');
+      const t = d.totals;
+      const k: [string, string | number][] = [['注册总数', t.users], ['近 7 天', t.users7], ['近 30 天', t.users30], ['付费用户', t.paying], ['赠送用户', t.granted], ['收入（元）', (t.revenue / 100).toFixed(2)], ['Passkey', t.passkeys]];
+      $('kpis').innerHTML = k.map(([l, v]) => `<div><b>${esc(v)}</b><span>${l}</span></div>`).join('');
+      const max = Math.max(1, ...d.daily.map((r: any) => r.n));
+      const byDay = new Map(d.daily.map((r: any) => [r.day, r.n]));
+      const days = Array.from({ length: 30 }, (_, i) => new Date(Date.now() - (29 - i) * 86400000).toISOString().slice(0, 10));
+      $('daily').innerHTML = days.map((k) => { const n = (byDay.get(k) as number) || 0; return `<i class="${n ? '' : 'zero'}" style="height:${(n / max) * 100}%" title="${k}：${n}"></i>`; }).join('');
+      $('daily-axis').innerHTML = `<span>${days[0].slice(5)}</span><span>${days[29].slice(5)}</span>`;
+      $('by-source').innerHTML = d.bySource.map((r: any) => `<tr><td>${esc(r.source)}</td><td class="n">${r.signups}</td><td class="n">${r.paying}</td><td class="n">${r.signups ? Math.round((r.paying / r.signups) * 100) : 0}%</td></tr>`).join('') || '<tr><td colspan="4" class="muted">暂无数据</td></tr>';
+      $('by-survey').innerHTML = d.bySurvey.map((r: any) => `<tr><td>${esc(r.answer)}</td><td class="n">${r.n}</td></tr>`).join('') || '<tr><td colspan="2" class="muted">暂无数据</td></tr>';
+      $<HTMLSelectElement>('g-scope').innerHTML = d.scopes.map((s: string) => `<option value="${esc(s)}">${esc(scopeName(s))}</option>`).join('');
+    }
+
+    // ---------- 用户 ----------
+    async function loadUsers(q = $<HTMLInputElement>('q').value) {
+      const d = await get(`/api/admin/users?q=${encodeURIComponent(q)}`);
+      $('users').innerHTML = d.users
+        .map((u: any) => `<tr class="click" data-email="${esc(u.email)}"><td>${esc(u.email)}</td><td>${day(u.created_at)}</td><td>${esc(u.source || '')}</td><td>${(u.scopes || '').split(' ').filter(Boolean).map((s: string) => `<span class="tag">${esc(scopeName(s))}</span>`).join('')}</td><td>${u.status === 'active' ? '正常' : '<b>已停用</b>'}</td></tr>`)
+        .join('') || '<tr><td colspan="5" class="muted">没有匹配的用户</td></tr>';
+    }
+    $('user-search').addEventListener('submit', (e) => { e.preventDefault(); loadUsers().catch((er) => show($('fatal'), er.message)); });
+    $('users').addEventListener('click', (e) => {
+      const tr = (e.target as HTMLElement).closest('tr[data-email]') as HTMLElement | null;
+      if (tr) loadUser(tr.dataset.email!);
+    });
+
+    async function loadUser(email: string) {
+      const d = await get(`/api/admin/user?email=${encodeURIComponent(email)}`);
+      const u = d.user;
+      const first = d.attribution.find((a: any) => a.touch === 'first') || {};
+      const last = d.attribution.find((a: any) => a.touch === 'last') || {};
+      const src = (a: any) => [a.ref && `ref=${a.ref}`, a.utm_source && `utm_source=${a.utm_source}`, a.utm_medium && `utm_medium=${a.utm_medium}`, a.utm_campaign && `utm_campaign=${a.utm_campaign}`, a.referer_host && `来自 ${a.referer_host}`, a.landing_path && `落地 ${a.landing_path}`].filter(Boolean).join(' · ') || '直接访问';
+      const box = $('detail');
+      box.hidden = false;
+      box.innerHTML = `
+        <h3>${esc(u.email)} ${u.status === 'active' ? '' : '<span class="tag">已停用</span>'}</h3>
+        <p class="hint">注册 ${time(u.createdAt)} · 推荐码 ${esc(u.refCode)}${u.referredBy ? ` · 推荐人 ${esc(u.referredBy)}` : ''} · Passkey ${d.passkeys} 个 · 两步验证${d.totpEnabled ? '已开' : '未开'} · 近 24 小时登录 ${d.loginsLast24h} 次${d.loginsLast24h > 5 ? ' <b>（疑似共享）</b>' : ''}</p>
+        <p class="hint">首次触达：${esc(src(first))}<br>最后触达：${esc(src(last))}${first.survey_answer ? `<br>问卷：${esc(first.survey_answer)}` : ''}</p>
+        <div class="sec"><b>权益</b>${d.entitlements.length ? '' : '<span class="muted">（无）</span>'}
+          <table>${d.entitlements.map((e: any) => `<tr><td><span class="tag ${e.revoked_at ? 'off' : ''}">${esc(scopeName(e.scope))}</span></td><td>${e.source === 'order' ? '购买' : '赠送'} ${day(e.starts_at)}${e.expires_at ? ` → ${day(e.expires_at)}` : ''}${e.revoked_at ? ` · 已撤销 ${day(e.revoked_at)}` : ''}</td><td class="n">${e.revoked_at ? '' : `<button class="act danger" data-revoke="${esc(e.id)}">撤销</button>`}</td></tr>`).join('')}</table></div>
+        <div class="sec"><b>最近登录</b><table>${d.sessions.map((s: any) => `<tr><td>${time(s.created_at)}</td><td>${s.auth_method === 'passkey' ? 'Passkey' : '邮箱'}</td><td>${esc(s.city || '')}</td><td class="muted">${s.revoked_at ? ({ replaced: '被新登录顶掉', logout: '已退出', admin: '后台下线' } as any)[s.revoked_reason] || '已失效' : '在线'}</td></tr>`).join('')}</table></div>
+        ${d.orders.length ? `<div class="sec"><b>订单</b><table>${d.orders.map((o: any) => `<tr><td>${esc(o.order_no)}</td><td class="n">${(o.amount / 100).toFixed(2)} ${esc(o.currency)}</td><td>${esc(o.status)}</td><td>${time(o.created_at)}</td></tr>`).join('')}</table></div>` : ''}
+        <div class="acts">
+          <button class="act" data-act="logout">强制下线</button>
+          <button class="act" data-act="totp-reset" ${d.totpEnabled ? '' : 'disabled'}>重置两步验证</button>
+          <button class="act danger" data-act="ban" data-banned="${u.status === 'active' ? '1' : ''}">${u.status === 'active' ? '停用账号' : '恢复账号'}</button>
+        </div>
+        <p class="msg" id="detail-msg" hidden></p>`;
+      box.dataset.email = u.email;
+      $<HTMLInputElement>('g-email').value = u.email;
+      box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    $('detail').addEventListener('click', async (e) => {
+      const b = (e.target as HTMLElement).closest('button') as HTMLButtonElement | null;
+      if (!b) return;
+      const email = $('detail').dataset.email!;
+      try {
+        if (b.dataset.revoke) {
+          if (!confirm('确定撤销这条权益？')) return;
+          await api('/api/admin/revoke', { id: b.dataset.revoke });
+        } else if (b.dataset.act === 'ban') {
+          if (b.dataset.banned && !confirm(`停用 ${email}？他会被立即下线且无法再登录。`)) return;
+          await api('/api/admin/ban', { email, banned: !!b.dataset.banned });
+        } else if (b.dataset.act) {
+          await api(`/api/admin/${b.dataset.act}`, { email });
+        }
+        await loadUser(email);
+        show($('detail-msg'), '已完成', 'ok');
+        loadUsers().catch(() => {});
+      } catch (er: any) { show($('detail-msg'), er.message); }
+    });
+    $('grant').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = $<HTMLInputElement>('g-email').value.trim();
+      const days = $<HTMLInputElement>('g-days').value;
+      try {
+        await api('/api/admin/grant', { email, scope: $<HTMLSelectElement>('g-scope').value, days: days ? Number(days) : null });
+        show($('grant-msg'), `已给 ${email} 开通`, 'ok');
+        await loadUsers(email);
+        await loadUser(email.toLowerCase());
+      } catch (er: any) { show($('grant-msg'), er.message); }
+    });
+
+    // ---------- 渠道 ----------
+    async function loadChannels() {
+      const d = await get('/api/admin/channels');
+      $('channels').innerHTML = d.channels
+        .map((c: any) => { const link = `${SITE}/?ref=${c.code}`; return `<tr><td><b>${esc(c.name)}</b><br><span class="muted">${esc(c.code)}${c.note ? ` · ${esc(c.note)}` : ''}</span></td><td><span class="muted">${esc(link)}</span><div class="acts"><button class="act" data-copy="${esc(link)}">复制</button><button class="act" data-qr="${esc(link)}" data-name="${esc(c.name)}">二维码</button></div></td><td class="n">${c.first_touch}</td><td class="n">${c.last_touch}</td><td class="n">${c.paying}</td></tr>`; })
+        .join('') || '<tr><td colspan="5" class="muted">还没有渠道码</td></tr>';
+    }
+    $('channels').addEventListener('click', async (e) => {
+      const b = (e.target as HTMLElement).closest('button') as HTMLButtonElement | null;
+      if (!b) return;
+      if (b.dataset.copy) { try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = '已复制'; } catch {} }
+      if (b.dataset.qr) {
+        const svg = await QRCode.toString(b.dataset.qr, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' });
+        const box = $('qr-box');
+        box.hidden = false;
+        box.innerHTML = `<h3>${esc(b.dataset.name)}</h3><div class="qr">${svg}</div><p class="hint">${esc(b.dataset.qr)}　右键或长按二维码可保存图片。</p>`;
+        box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    });
+    $('ch-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await api('/api/admin/channel', { code: $<HTMLInputElement>('ch-code').value, name: $<HTMLInputElement>('ch-name').value, note: $<HTMLInputElement>('ch-note').value });
+        show($('ch-msg'), '已创建', 'ok');
+        (e.target as HTMLFormElement).reset();
+        await loadChannels();
+      } catch (er: any) { show($('ch-msg'), er.message); }
+    });
+
+    // ---------- 日志 ----------
+    const ACTION: Record<string, string> = { grant: '开通', revoke: '撤销权益', ban: '停用', unban: '恢复', logout: '强制下线', 'totp-reset': '重置两步验证', channel: '新建渠道码' };
+    async function loadAudit() {
+      const d = await get('/api/admin/audit');
+      $('audit').innerHTML = d.audit.map((a: any) => `<tr><td>${time(a.created_at)}</td><td>${esc(a.actor)}</td><td>${esc(ACTION[a.action] || a.action)}</td><td>${esc(a.target)}</td><td class="muted">${esc(a.detail || '')}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">暂无记录</td></tr>';
+    }
+
+    (async () => {
+      try {
+        const w = await get('/api/admin/whoami');
+        $('who').textContent = w.email;
+        await loadStats();
+      } catch (e: any) { show($('fatal'), e.message); }
+    })();
+  </script>
+</Base>

@@ -6,6 +6,7 @@ import { authEnabled, type AuthEnv } from './_lib/auth/util';
 import { getSession, hasEntitlement, isAdmin } from './_lib/auth/session';
 import { requirementFor } from './_lib/auth/gate';
 import { attributionCookie } from './_lib/auth/attribution';
+import { adminEmail } from './_lib/auth/admin';
 
 const CANONICAL = 'lab.door4ai.com';
 
@@ -26,6 +27,14 @@ export const onRequest: PagesFunction<AuthEnv> = async ({ request, env, next }) 
   if (!authEnabled(env)) return next();
 
   const req = requirementFor(url.pathname);
+  if (req.kind === 'admin') {
+    // 后台：Cloudflare Access（需在 Access 应用里保护 /admin）+ 本站再校验一次 JWT 与 ADMIN_EMAILS
+    if (!(await adminEmail(env, request))) return new Response('没有后台权限', { status: 403, headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } });
+    const res = await next();
+    const out = new Response(res.body, res);
+    out.headers.set('cache-control', 'private, no-store');
+    return out;
+  }
   const srcCookie = isPageRequest(request) ? attributionCookie(request) : null;
 
   if (req.kind !== 'public') {

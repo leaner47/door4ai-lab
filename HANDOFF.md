@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 22:38 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
+最后更新：2026-10-14 22:50 America/New_York · 更新者：Claude（会话 session_017mU9qFdHEjTGTDCSBqAGWr，账号系统：两步验证 + 后台）
 
 ---
 
@@ -27,7 +27,7 @@
 | 登录/访问控制 | Cloudflare Access（Zero Trust）应用 **Door4AI Lab**：保护 `lab.door4ai.com/ai`、`/resources`、`/posts`、`/labs` 四个路径；策略 **Door4AI Lab students**（Allow，按邮箱白名单，目前只有本人邮箱）；会话 1 个月；登录方式为邮箱一次性验证码（One-time PIN）。首页 `/` 公开。**`*.pages.dev`（生产与预览）不走 Access，由 `functions/_middleware.ts` 把所有请求 301 跳到 `lab.door4ai.com` 同路径**，所以内容只能经登录访问；手动同步请用 `https://lab.door4ai.com/sync-dl?...`。**加学员 = 在该策略的 Emails 列表里加邮箱**（Zero Trust → Access controls → Policies）。不要改 grafana / AI Gateway Admin 那两个应用和「Only me」策略。 |
 | 安装包镜像 | R2 桶 `door4ai-lab-dl`（APAC 位置提示，私有），绑定到 Pages 项目为 `DL`；Pages 环境变量 `SYNC_KEY`（手动同步口令，值只在 Cloudflare 设置里）。下载走 `/dl/<app>/<platform>`（在 Access 保护内），状态看 `/dl/manifest.json`；手动同步 `GET /sync-dl?key=<SYNC_KEY>[&app=flclash\|claude\|codex][&force=1]`（/sync-dl 不在 Access 内，靠口令保护）。下载时若某项超过 24h 未同步会在后台自动刷新。 |
 | GitHub App | Cloudflare Workers and Pages 已授权仓库：`door4ai-lab`、`door4ai-site`（后者是别的项目，不要动） |
-| 自建账号（第 0 期，代码已上线、**默认关闭**） | 开关：Pages 环境变量 `AUTH_ENABLED=1` **且** 绑定了 D1（binding 名 `DB`，库名 `door4ai-lab`）才启用；否则中间件什么都不做，仍由上面的 Cloudflare Access 把关。其他变量：`ADMIN_EMAILS`（逗号分隔，这些邮箱视为拥有全部权益）、`RESEND_API_KEY`（Secret）+ `MAIL_FROM`（发验证码邮件，建议在 Resend 验证 `lab.door4ai.com` 子域，避免动根域名记录）、`TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET`（Secret，登录页人机校验）。表结构 `migrations/0001_init.sql`，用 `npx wrangler d1 execute door4ai-lab --remote --file migrations/0001_init.sql` 建表。启用并验证后，再从 Access 应用里移除 `/ai` `/resources` `/posts` `/labs` `/dl`（顺序反了课程会短暂公开）。**仓库里不能放 wrangler.toml**：它会覆盖控制台里的 `DL`、`SYNC_KEY` 等绑定；本地测试脚本只临时生成、退出即删（已加入 .gitignore）。 |
+| 自建账号（第 0 期，代码已上线、**默认关闭**） | 开关：Pages 环境变量 `AUTH_ENABLED=1` **且** 绑定了 D1（binding 名 `DB`，库名 `door4ai-lab`）才启用；否则中间件什么都不做，仍由上面的 Cloudflare Access 把关。其他变量：`ADMIN_EMAILS`（逗号分隔，这些邮箱视为拥有全部权益）、`RESEND_API_KEY`（Secret）+ `MAIL_FROM`（发验证码邮件，建议在 Resend 验证 `lab.door4ai.com` 子域，避免动根域名记录）、`TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET`（Secret，登录页人机校验）、`TOTP_ENC_KEY`（Secret，base64 的 32 字节随机数，加密存储两步验证密钥；不设则不提供两步验证；**设了之后不能换，换了已开启两步验证的用户全部失效**）、`ACCESS_TEAM_DOMAIN`（如 `xxx.cloudflareaccess.com`）+ `ACCESS_AUD`（/admin 所在 Access 应用的 AUD Tag）。**后台 `/admin`**：必须在 Access 应用里保护 `/admin` 路径（只放行本人），中间件再验 Access JWT 并核对 `ADMIN_EMAILS`，两层都过才进。表结构 `migrations/0001_init.sql`，用 `npx wrangler d1 execute door4ai-lab --remote --file migrations/0001_init.sql` 建表。启用并验证后，再从 Access 应用里移除 `/ai` `/resources` `/posts` `/labs` `/dl`（顺序反了课程会短暂公开）。**仓库里不能放 wrangler.toml**：它会覆盖控制台里的 `DL`、`SYNC_KEY` 等绑定；本地测试脚本只临时生成、退出即删（已加入 .gitignore）。 |
 | 本机副本 | `~/Documents/Agents/door4ai-lab`（Mac），是 GitHub 仓库的 clone |
 
 账号登录：Cloudflare 和 GitHub 都由本人登录；AI 不持有、不输入任何密码。需要 sudo/passkey 验证时交给本人操作。
@@ -44,7 +44,7 @@ door4ai-lab/
 ├── astro.config.mjs        ← site: https://lab.door4ai.com, sitemap（排除 /login/ /account/）
 ├── migrations/0001_init.sql ← D1 全部表（账号、Passkey、会话、来源、商品、订单、支付、权益、审计）
 ├── scripts/gen-access-map.mjs ← 构建前运行：从文章 frontmatter 生成 functions/_lib/access-map.ts（门禁用）
-├── scripts/test-auth.sh + test-auth-e2e.mjs ← 账号系统本地端到端测试（22 项，含虚拟验证器 Passkey、单会话踢下线）
+├── scripts/test-auth.sh + test-auth-e2e.mjs + test-admin-jwt.mjs ← 账号系统本地测试：端到端 43 项（Passkey 虚拟验证器、单会话踢下线、两步验证与防重放、恢复码、后台开通/撤销/下线/渠道码）+ Access JWT 校验 9 项。运行：`CHROMIUM_PATH=… bash scripts/test-auth.sh`
 ├── src/
 │   ├── content.config.ts   ← 文章 schema：title, description, pubDate, updatedDate?, tags[], lab?, series?, order?, access?（free = 登录即可看；不写则课程文章需购买）
 │   ├── content/blog/*.md   ← 文章正文（markdown）
@@ -58,7 +58,8 @@ door4ai-lab/
 │       ├── index.astro         ← 首页：只有居中的一句 motto，入口全在导航
 │       ├── ai.astro            ← 「AI 从入门到精通」课程目录：series == 'ai-mastery' 的文章按 order 排序
 │       ├── resources.astro     ← Resource 资源库，数据来自 src/data/resources.ts
-│       ├── login.astro / account.astro / pricing.astro ← 登录（邮箱验证码 + Passkey）/ 我的账号（Passkey 管理、已购课程、推荐链接、来源问卷）/ 购买页（支付未开放，占位）
+│       ├── admin.astro         ← 后台：概览（注册数、来源与转化、问卷、每日注册）/ 用户（搜索、详情、开通/撤销、强制下线、停用、重置两步验证）/ 渠道码（链接 + 二维码 + 注册/付费统计）/ 操作日志
+│       ├── login.astro / account.astro / pricing.astro ← 登录（邮箱验证码 + Passkey + 两步验证）/ 我的账号（两步验证开关、恢复码、Passkey 管理、已购课程、推荐链接、来源问卷）/ 购买页（支付未开放，占位）
 │       ├── posts/[...slug].astro ← 文章页；frontmatter 有 lab 时顶部 iframe 嵌入实验
 │       └── rss.xml.js
 ├── functions/              ← Cloudflare Pages Functions（随仓库自动部署）
@@ -67,9 +68,9 @@ door4ai-lab/
 │   ├── dl/[[path]].ts      ← /dl/manifest.json 与 /dl/<app>/<platform> 下载（支持 Range 断点续传）
 │   ├── sync-dl.ts          ← 手动同步入口
 │   ├── _middleware.ts      ← pages.dev 跳转 + 自建账号门禁（AUTH_ENABLED 时）+ 注册来源 Cookie
-│   ├── _lib/auth/          ← util（ID/哈希/Cookie/限流）、session（单会话、用户、权益）、attribution、gate（路径→要求）、webauthn、mail（Resend）、turnstile
+│   ├── _lib/auth/          ← totp（RFC 6238 + AES-GCM 加密存储 + 恢复码）、mfa（邮箱验证码后的第二步票据）、admin（Access JWT 校验）、util（ID/哈希/Cookie/限流）、session（单会话、用户、权益）、attribution、gate（路径→要求）、webauthn、mail（Resend）、turnstile
 │   ├── _lib/access-map.ts  ← 自动生成，勿手改
-│   └── api/auth/*、api/me/* ← otp / verify / logout / config / passkey 四个端点；me、me/passkeys/[id]、me/survey
+│   └── api/auth/*、api/me/*、api/admin/* ← otp / verify / mfa / logout / config / passkey 四个端点；me、me/passkeys/[id]、me/survey、me/totp/[setup|enable|disable|recovery]；admin/[stats|users|user|grant|revoke|ban|logout|totp-reset|channels|channel|audit|whoami]
 └── public/
     ├── favicon.svg
     └── labs/<name>/index.html  ← 独立实验页，完整 HTML，自带全部 CSS/JS
@@ -117,7 +118,9 @@ door4ai-lab/
 - 课程顺序：注意力 QKV（order 5）在前，KV Cache（order 10）在后，因为 KV cache 建立在 Q/K/V 概念上。课程目录的「第 N 讲」由 order 排序自动生成。
 
 - **账号与计费（2026-10-14 本人确认）**：自建账号，D1 不用 PG；不设密码，Passkey 为主、邮箱验证码注册与兜底、TOTP 可选（未做）；每账号同一时间只允许 1 个会话，新登录踢掉旧会话；只做买断，不做订阅；买全套包含以后新增的讲；收款复用 door4ai.com 的 pay-api（接口文档待本人提供）；记录注册来源（首次/最后触达 UTM、ref 渠道码、来源问卷）。设计文档：https://claude.ai/code/artifact/9679fc7a-0fe4-4323-86f1-65cbb1cc005f
-- 门禁规则：`/` `/ai/` `/login/` `/pricing/` 公开；`/resources/` `/dl/` `/account/` 需登录；`/posts/<slug>/` 与对应 `/labs/<name>/` 按文章：`access: free` 登录即可，属于 series 的需要 `series:<name>` 或 `post:<slug>` 权益（或 `all`，或 ADMIN_EMAILS）。
+- 两步验证只在「邮箱验证码登录」时要求；Passkey 登录不需要（Passkey 本身就是强认证）。新注册的第一次登录不要求（还没开）。
+- 后台不做自建管理员账号：身份来自 Cloudflare Access + `ADMIN_EMAILS`，所有写操作记 `audit_log`。
+- 门禁规则：`/admin/` 走后台校验；`/` `/ai/` `/login/` `/pricing/` 公开；`/resources/` `/dl/` `/account/` 需登录；`/posts/<slug>/` 与对应 `/labs/<name>/` 按文章：`access: free` 登录即可，属于 series 的需要 `series:<name>` 或 `post:<slug>` 权益（或 `all`，或 ADMIN_EMAILS）。
 
 ## 5. 当前状态
 
@@ -132,12 +135,16 @@ door4ai-lab/
 - [ ] 没有统计/分析（可考虑 Cloudflare Web Analytics，免费，一行脚本）
 - [x] 账号系统第 0 期代码完成并推送（默认关闭，线上行为不变）：邮箱验证码注册/登录、Passkey、单会话、注册来源、门禁、登录/账号/购买占位页；本地端到端 22/22 通过（2026-10-14）
 - [ ] **启用第 0 期（需本人在 Cloudflare 操作）**：建 D1 `door4ai-lab`（位置选亚太）→ 跑 migrations → Pages 绑定 `DB` → Turnstile 建站点 → Resend 验证 `lab.door4ai.com` 并建 API key → 设环境变量（`ADMIN_EMAILS`、`RESEND_API_KEY`、`MAIL_FROM`、`TURNSTILE_*`，最后 `AUTH_ENABLED=1`）→ 重新部署 → 自测 → 从 Access 移除课程路径
-- [ ] 加学员（支付上线前）：学员先自行注册，再执行 `npx wrangler d1 execute door4ai-lab --remote --command "INSERT INTO entitlements (id,user_id,scope,source,starts_at) SELECT lower(hex(randomblob(13))), id, 'series:ai-mastery', 'grant', unixepoch()*1000 FROM users WHERE email='学员邮箱'"`
-- [ ] 第 0 期剩余：TOTP 两步验证 + 恢复码；/admin 后台（第 3 期）
+- [ ] 加学员（支付上线前）：启用后台后直接在 /admin「用户 → 开通课程」里填邮箱（对方没注册也行）；未启用后台时执行 `npx wrangler d1 execute door4ai-lab --remote --command "INSERT INTO entitlements (id,user_id,scope,source,starts_at) SELECT lower(hex(randomblob(13))), id, 'series:ai-mastery', 'grant', unixepoch()*1000 FROM users WHERE email='学员邮箱'"`
+- [x] 两步验证（TOTP，Apple 密码可直接添加）+ 10 个恢复码 + 防重放；后台 /admin（概览、用户、渠道码、日志）。本地 43/43 + 9/9 通过（2026-10-14）
+- [ ] 启用后台：Access 应用加 `/admin` 路径；Pages 设 `ACCESS_TEAM_DOMAIN`、`ACCESS_AUD`；两步验证需设 `TOTP_ENC_KEY`（`openssl rand -base64 32` 生成）
+- [ ] 后台还没有：订单列表、退款（第 1 期支付上线时一起做）
 - [ ] 第 1 期 买断支付：等本人提供 pay-api 接口文档（签名算法、回调格式、查单/退款接口）
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-14 · Claude** — 账号系统：两步验证 + 后台。新增 `functions/_lib/auth/{totp,mfa,admin}.ts`、`functions/api/auth/mfa.ts`、`functions/api/me/totp/[action].ts`、`functions/api/admin/[[path]].ts`、`src/pages/admin.astro`；login / account 页加两步验证界面（二维码、「添加到 Apple 密码」otpauth 链接、恢复码）；中间件 `/admin` 走 Access JWT + ADMIN_EMAILS。无需新表（复用 0001 的 totp_factors、recovery_codes、channels、audit_log；第二步票据存 webauthn_challenges kind='mfa'）。测试扩到端到端 43 项 + JWT 9 项，全过；合并了另一会话的新版页眉（账号菜单已接 /api/me），测试改查 `#acct-email`。线上仍为关闭状态。
 
 - **2026-10-14 · Claude** — 按本人要求去掉右上角「支持」前的问号图标，只留文字（手机上也显示文字）。改 `Base.astro`。
 

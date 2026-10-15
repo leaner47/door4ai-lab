@@ -1,6 +1,8 @@
 // POST /api/auth/verify  { email, code, next }  → 校验验证码，登录（不存在则注册），建立唯一会话
 import { authEnabled, clientIp, disabled, err, json, normEmail, now, rateLimit, readJson, safeEqual, safeNext, sameOrigin, sha256, type AuthEnv } from '../../_lib/auth/util';
 import { createSession, findOrCreateUser } from '../../_lib/auth/session';
+import { totpEnabled } from '../../_lib/auth/totp';
+import { issueMfaTicket } from '../../_lib/auth/mfa';
 
 const MAX_ATTEMPTS = 5;
 
@@ -28,6 +30,10 @@ export const onRequestPost: PagesFunction<AuthEnv> = async ({ request, env }) =>
 
   const [user, isNew] = await findOrCreateUser(db, request, email);
   if (user.status !== 'active') return err(403, 'banned', '这个账号已被停用');
+  // 开了两步验证：邮箱验证码只算第一步，还要 TOTP 或恢复码
+  if (!isNew && (await totpEnabled(db, user.id))) {
+    return json({ ok: true, mfa: true, next: safeNext(body?.next) }, 200, { 'set-cookie': await issueMfaTicket(db, request, user.id) });
+  }
   const cookie = await createSession(db, request, user.id, 'email');
   const pk = await db.prepare('SELECT 1 FROM passkeys WHERE user_id = ?1 LIMIT 1').bind(user.id).first();
 

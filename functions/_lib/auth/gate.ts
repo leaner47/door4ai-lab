@@ -1,7 +1,7 @@
 // 路径 → 访问要求。
 import { LABS, POSTS } from '../access-map';
 
-export type Requirement = { kind: 'public' } | { kind: 'login' } | { kind: 'paid'; needs: string[]; label: string };
+export type Requirement = { kind: 'public' } | { kind: 'login' } | { kind: 'admin' } | { kind: 'paid'; needs: string[]; label: string };
 
 const PUBLIC: Requirement = { kind: 'public' };
 const LOGIN: Requirement = { kind: 'login' };
@@ -26,6 +26,8 @@ export function requirementFor(pathname: string): Requirement {
       const slug = seg[1] ? LABS[`labs/${seg[1]}`] : undefined;
       return slug ? forPost(slug) : LOGIN;
     }
+    case 'admin':
+      return { kind: 'admin' };
     case 'resources':
     case 'dl':
     case 'account':

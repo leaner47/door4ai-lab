@@ -9,6 +9,10 @@ export type AuthEnv = {
   TURNSTILE_SECRET?: string;
   ADMIN_EMAILS?: string;        // 逗号分隔；这些邮箱视为拥有全部权益
   DEV_MAIL_LOG?: string;        // '1' 时验证码打印到日志而不发邮件（仅本地开发）
+  TOTP_ENC_KEY?: string;        // base64 的 32 字节；用来加密存储 TOTP 密钥。未设置则不提供两步验证
+  ACCESS_TEAM_DOMAIN?: string;  // 例：xxx.cloudflareaccess.com（/admin 校验 Access JWT 用）
+  ACCESS_AUD?: string;          // /admin 所在 Access 应用的 Application Audience (AUD) Tag
+  DEV_ADMIN_EMAIL?: string;     // 仅 localhost 生效：本地开发时跳过 Access，直接当作这个管理员
 };
 
 export const authEnabled = (env: AuthEnv): env is AuthEnv & { DB: D1Database } =>
