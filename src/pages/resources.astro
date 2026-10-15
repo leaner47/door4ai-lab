@@ -3,8 +3,8 @@ import Base from '../layouts/Base.astro';
 import HoloCard from '../components/HoloCard.astro';
 import { resources } from '../data/resources';
 // 每个软件的 logo、品牌色（同时用作箔片色与光晕色）和箔纹
-const look: Record<string, { logo: string; preset: any; accent: string; foil: string; scale?: number }> = {
-  'Codex': { logo: 'openai.svg', preset: 'cosmos', accent: '#9fb3c8', foil: '#e6ebf0', scale: 0.44 },
+const look: Record<string, { logo: string; preset: any; accent: string; foil: string; scale?: number; intensity?: number; tint?: number }> = {
+  'Codex': { logo: 'openai.svg', preset: 'glitter', accent: '#9a7a2a', foil: '#f6d27a', scale: 0.44, intensity: 0.55, tint: 0.95 }, // 黑金：黑底 + 金色亮片
   'Claude': { logo: 'claude.svg', preset: 'glitter', accent: '#d97757', foil: '#e8a07f', scale: 0.46 },
   'FlClash': { logo: 'flclash.png', preset: 'shards', accent: '#5b7cf5', foil: '#6e8cff', scale: 0.5 },
   'door4ai.com': { logo: 'door4ai.svg', preset: 'gold', accent: '#1f5fd1', foil: '#9fc0ff', scale: 0.44 },
@@ -22,7 +22,7 @@ const platformLogo = (label: string) => /mac/i.test(label) ? 'apple.svg' : /wind
       <div class="cardrow" aria-label={`${r.title} 下载`}>
         {r.links.map((l) => (
           <figure class="cardwrap">
-            <HoloCard title={l.label} kicker={r.title} foot={l.dl ? '点击下载' : (l.hint || '打开')} logo={k.logo || undefined} platformLogo={platformLogo(l.label)} logoScale={platformLogo(l.label) ? 0.4 : k.scale} preset={k.preset} accent={k.accent} foil={k.foil} width={CARD_W}
+            <HoloCard title={l.label} kicker={r.title} foot={l.dl ? '点击下载' : (l.hint || '打开')} logo={k.logo || undefined} platformLogo={platformLogo(l.label)} logoScale={platformLogo(l.label) ? 0.4 : k.scale} preset={k.preset} accent={k.accent} foil={k.foil} intensity={k.intensity} tint={k.tint} width={CARD_W}
               href={l.dl ? `/dl/${l.dl}` : l.url} external={!l.dl} dl={l.dl} />
           </figure>
         ))}

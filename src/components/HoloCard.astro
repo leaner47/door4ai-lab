@@ -13,13 +13,15 @@ interface Props {
   logoScale?: number;   // platform logo size, 0..1 of card width (default 0.5)
   preset?: 'bursts' | 'stars' | 'shards' | 'cosmos' | 'rainbow' | 'swirl' | 'glitter' | 'gold';
   foil?: string;        // foil tint — pass the brand color
+  intensity?: number;   // foil strength 0..1 (default 0.6)
+  tint?: number;        // how far the rainbow is pulled toward the foil colour 0..1 (default 0.65)
   width?: number;
   accent?: string;      // glow/border color — brand color
   href?: string;
   external?: boolean;
   dl?: string;
 }
-const { title, kicker = '', foot = '点击下载', logo, platformLogo, logoScale = 0.5, preset = 'glitter', foil = '#e2e6ec', width = 150, accent = '#6f9cf0', href, external = false, dl } = Astro.props;
+const { title, kicker = '', foot = '点击下载', logo, platformLogo, logoScale = 0.5, preset = 'glitter', foil = '#e2e6ec', intensity = 0.6, tint = 0.65, width = 150, accent = '#6f9cf0', href, external = false, dl } = Astro.props;
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 // embed logos as data URIs so the whole card art is one self-contained image (WebGL texture)
@@ -58,7 +60,7 @@ ${t2 ? `<text x="315" y="${430 + L / 2 + 132}" text-anchor="middle" font-family=
 const image = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 const Tag = href ? 'a' : 'div';
 ---
-<Tag class="holo-card" aria-label={`${kicker} ${title}`} data-image={image} data-preset={preset} data-foil={foil} data-intensity="0.6" data-edge="0.8" data-tint="0.65" data-tilt="16" data-hover="1.06" data-dl={dl} href={href} target={external ? '_blank' : undefined} rel={external ? 'noopener' : undefined} style={`--hc-w:${width}px`}>
+<Tag class="holo-card" aria-label={`${kicker} ${title}`} data-image={image} data-preset={preset} data-foil={foil} data-intensity={intensity} data-edge="0.8" data-tint={tint} data-tilt="16" data-hover="1.06" data-dl={dl} href={href} target={external ? '_blank' : undefined} rel={external ? 'noopener' : undefined} style={`--hc-w:${width}px`}>
   <span class="holo-card__shadow" aria-hidden="true"></span>
   <div class="holo-card__rotor">
     <div class="holo-card__face holo-card__face--front">
