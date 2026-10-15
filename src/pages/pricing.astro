@@ -1,0 +1,33 @@
+---
+import Base from '../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+const posts = (await getCollection('blog'))
+  .filter((p) => p.data.series === 'ai-mastery')
+  .sort((a, b) => (a.data.order ?? 999) - (b.data.order ?? 999));
+---
+<Base title="购买课程 · Door4AI Lab" description="AI 从入门到精通：一次购买，永久可看，包含以后新增的每一讲。">
+  <section class="pricing">
+    <h1>AI 从入门到精通</h1>
+    <p class="msg" id="need" hidden>这一讲属于《AI 从入门到精通》，购买全套后即可观看。</p>
+    <div class="card">
+      <div class="title">全套课程 · 一次购买，永久可看</div>
+      <p class="sub">包含以后新增的每一讲。每一讲都配可交互实验。</p>
+      <ol>
+        {posts.map((p) => <li>{p.data.title}</li>)}
+      </ol>
+      <p class="soon">在线购买即将开放。</p>
+    </div>
+  </section>
+  <style>
+    .pricing{max-width:620px;width:100%;margin:0 auto}
+    .card{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:22px}
+    .title{font-size:20px;font-weight:700}
+    .sub{margin:4px 0 12px;color:var(--muted);font-size:15px}
+    ol{margin:0;padding-left:1.4em;font-size:15px}
+    .soon{margin:16px 0 0;padding-top:14px;border-top:1px solid var(--line);color:var(--accent);font-weight:700}
+    .msg{margin:0 0 16px;font-size:14px;padding:9px 12px;border-radius:6px;background:var(--accent-soft)}
+  </style>
+  <script>
+    if (new URLSearchParams(location.search).get('need')) document.getElementById('need')!.hidden = false;
+  </script>
+</Base>

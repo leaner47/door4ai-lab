@@ -1,0 +1,184 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="我的账号 · Door4AI Lab" description="Door4AI Lab 账号">
+  <section class="acct">
+    <h1>我的账号</h1>
+    <p class="msg" id="off" data-kind="info" hidden>账号系统还没有开放。</p>
+
+    <div id="welcome" class="card accent" hidden>
+      <h2 id="welcome-title">欢迎来到 Door4AI Lab</h2>
+      <p>设置一个 Passkey，以后在这台设备上刷脸或指纹就能登录，不用再收邮箱验证码。Passkey 保存在 Apple 密码 / iCloud 钥匙串、Google 密码管理器或 1Password 里，会同步到你的其他设备。</p>
+      <div class="actions">
+        <button class="primary" id="pk-add-welcome">设置 Passkey</button>
+        <a class="link" id="skip" href="/ai/">以后再说</a>
+      </div>
+      <form id="survey" hidden>
+        <label for="src">你是从哪里知道我们的？（选填）</label>
+        <div class="inline">
+          <select id="src">
+            <option value="">请选择</option>
+            <option>小红书</option><option>B站</option><option>微信公众号</option><option>朋友 / 微信群推荐</option>
+            <option>知乎</option><option>抖音</option><option>X / Twitter</option><option>搜索引擎</option><option value="__other">其他</option>
+          </select>
+          <input id="src-other" placeholder="请填写" maxlength="60" hidden />
+          <button class="ghost" type="submit">提交</button>
+        </div>
+      </form>
+      <p class="msg" id="err-w" hidden></p>
+    </div>
+
+    <div id="main" hidden>
+      <div class="card">
+        <h2>账号</h2>
+        <dl>
+          <dt>邮箱</dt><dd id="email"></dd>
+          <dt>注册时间</dt><dd id="since"></dd>
+        </dl>
+        <p class="hint">同一时间只能在一台设备上登录；在新设备登录后，旧设备会自动退出。</p>
+        <button class="ghost" id="logout">退出登录</button>
+      </div>
+
+      <div class="card">
+        <h2>已购课程</h2>
+        <ul id="ents" class="list"></ul>
+        <p class="hint" id="no-ents" hidden>还没有购买课程。<a href="/pricing/">查看课程</a></p>
+      </div>
+
+      <div class="card">
+        <h2>Passkey</h2>
+        <ul id="pks" class="list"></ul>
+        <p class="hint" id="no-pks" hidden>还没有设置 Passkey，目前只能用邮箱验证码登录。</p>
+        <button class="ghost" id="pk-add">添加 Passkey</button>
+        <p class="msg" id="err-pk" hidden></p>
+      </div>
+
+      <div class="card">
+        <h2>推荐链接</h2>
+        <p class="hint">朋友通过这个链接注册，会记在你名下。</p>
+        <div class="inline"><input id="ref" readonly /><button class="ghost" id="copy">复制</button></div>
+      </div>
+    </div>
+  </section>
+
+  <style>
+    .acct,#main{max-width:620px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+    .acct h1{margin-bottom:4px}
+    .card{display:flex;flex-direction:column;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:20px 22px}
+    .card.accent{border-color:var(--accent)}
+    .card h2{font-size:18px;margin:0}
+    .card p{margin:0;line-height:1.7}
+    dl{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;margin:0;font-size:15px}
+    dt{color:var(--muted)} dd{margin:0;word-break:break-all}
+    .list{list-style:none;margin:0;padding:0}
+    .list :global(li){display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:15px}
+    .list :global(li:first-child){border-top:0;padding-top:0}
+    .list :global(small){display:block;color:var(--muted);font-size:13px}
+    .hint{font-size:14px;color:var(--muted)}
+    .actions,.inline{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .inline input,.inline select{flex:1;min-width:0}
+    input,select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
+    label{font-size:14px;color:var(--muted)}
+    button{font:inherit;cursor:pointer;border-radius:6px}
+    button:disabled{opacity:.55;cursor:default}
+    .primary{background:var(--accent);color:#fff;border:0;padding:10px 16px;font-weight:700}
+    .ghost{background:transparent;color:var(--fg);border:1px solid var(--line);padding:8px 14px;align-self:flex-start}
+    .ghost:hover{border-color:var(--accent)}
+    .link{color:var(--accent);font-size:15px}
+    :global(.del){background:none;border:0;color:var(--muted);font-size:14px;padding:4px}
+    :global(.del:hover){color:#c0392b}
+    .msg{margin:0;font-size:14px;padding:9px 12px;border-radius:6px;border:1px solid var(--line)}
+    .msg[data-kind="err"]{border-color:#c0392b;color:#c0392b}
+    .msg[data-kind="info"]{background:var(--accent-soft)}
+    .msg[data-kind="ok"]{border-color:var(--accent)}
+  </style>
+
+  <script>
+    import { startRegistration, browserSupportsWebAuthn } from '@simplewebauthn/browser';
+    import { api, getMe, inWeChat, isCancel, nextParam, show } from '../scripts/auth-client';
+
+    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+    const params = new URLSearchParams(location.search);
+    const next = nextParam();
+    const fmt = (t: number) => new Date(t).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+    const SCOPE_LABEL: Record<string, string> = { all: '全部课程', 'series:ai-mastery': 'AI 从入门到精通（全套，含以后新增的讲）' };
+    const scopeLabel = (s: string) => SCOPE_LABEL[s] || (s.startsWith('post:') ? `单讲：${s.slice(5)}` : s);
+    const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+
+    async function addPasskey(errEl: HTMLElement) {
+      show(errEl, '');
+      try {
+        const optionsJSON = await api('/api/auth/passkey/register-options', {});
+        const response = await startRegistration({ optionsJSON });
+        await api('/api/auth/passkey/register-verify', { response });
+        return true;
+      } catch (e: any) {
+        if (e?.name === 'InvalidStateError') show(errEl, '这台设备上已经有本站的 Passkey 了。', 'info');
+        else if (!isCancel(e)) show(errEl, e.message || String(e));
+        return false;
+      }
+    }
+
+    async function render() {
+      const me = await getMe();
+      if (!me.enabled) { $('off').hidden = false; return; }
+      if (!me.user) { location.href = `/login/?next=${encodeURIComponent(location.pathname + location.search)}`; return; }
+
+      const welcome = params.get('welcome');
+      if (welcome) {
+        $('welcome').hidden = false;
+        $('welcome-title').textContent = welcome === 'new' ? '注册成功，欢迎来到 Door4AI Lab' : '设置 Passkey，下次登录更快';
+        ($('skip') as HTMLAnchorElement).href = next;
+        if (!browserSupportsWebAuthn() || inWeChat() || me.passkeys.length) $('pk-add-welcome').hidden = true;
+        if (!me.surveyAnswered) $('survey').hidden = false;
+      }
+
+      $('main').hidden = false;
+      $('email').textContent = me.user.email;
+      $('since').textContent = fmt(me.user.createdAt);
+
+      const ents = me.admin ? [{ scope: 'all', source: 'admin' }] : me.entitlements;
+      $('ents').innerHTML = ents.map((e: any) => `<li><span>${esc(scopeLabel(e.scope))}${e.expires_at ? `<small>有效期至 ${fmt(e.expires_at)}</small>` : ''}</span></li>`).join('');
+      $('no-ents').hidden = ents.length > 0;
+
+      $('pks').innerHTML = me.passkeys
+        .map((p: any) => `<li><span>${esc(p.device_name || 'Passkey')}${p.backed_up ? ' · 已同步' : ''}<small>添加于 ${fmt(p.created_at)}${p.last_used_at ? ` · 最近使用 ${fmt(p.last_used_at)}` : ''}</small></span><button class="del" data-id="${esc(p.id)}">移除</button></li>`)
+        .join('');
+      $('no-pks').hidden = me.passkeys.length > 0;
+      if (!browserSupportsWebAuthn() || inWeChat()) $('pk-add').hidden = true;
+
+      ($('ref') as HTMLInputElement).value = `${location.origin}/?ref=${me.user.refCode}`;
+    }
+
+    $('pk-add').addEventListener('click', async () => { if (await addPasskey($('err-pk'))) render(); });
+    $('pk-add-welcome').addEventListener('click', async () => {
+      if (await addPasskey($('err-w'))) {
+        show($('err-w'), 'Passkey 已设置好。', 'ok');
+        $('pk-add-welcome').hidden = true;
+        render();
+      }
+    });
+    $('pks').addEventListener('click', async (e) => {
+      const b = (e.target as HTMLElement).closest('button.del') as HTMLButtonElement | null;
+      if (!b) return;
+      b.disabled = true;
+      try { await api(`/api/me/passkeys/${encodeURIComponent(b.dataset.id!)}`, undefined, 'DELETE'); render(); }
+      catch (err: any) { show($('err-pk'), err.message); b.disabled = false; }
+    });
+    $('src').addEventListener('change', () => { $('src-other').hidden = ($('src') as HTMLSelectElement).value !== '__other'; });
+    $('survey').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const sel = ($('src') as HTMLSelectElement).value;
+      const answer = sel === '__other' ? `其他：${($('src-other') as HTMLInputElement).value}` : sel;
+      if (!sel) return;
+      try { await api('/api/me/survey', { answer }); $('survey').hidden = true; show($('err-w'), '谢谢！', 'ok'); }
+      catch (err: any) { show($('err-w'), err.message); }
+    });
+    $('logout').addEventListener('click', async () => { await api('/api/auth/logout', {}).catch(() => {}); location.href = '/'; });
+    $('copy').addEventListener('click', async () => {
+      const v = ($('ref') as HTMLInputElement).value;
+      try { await navigator.clipboard.writeText(v); $('copy').textContent = '已复制'; } catch { ($('ref') as HTMLInputElement).select(); }
+    });
+    render();
+  </script>
+</Base>

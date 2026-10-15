@@ -27,6 +27,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
       --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#2a2d31;
       --accent:#6f9cf0; --accent-soft:#23334f; color-scheme:dark } }
     *{box-sizing:border-box}
+    [hidden]{display:none !important}
     html,body{margin:0}
     body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8}
     a{color:var(--accent)}
@@ -111,10 +112,26 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     </header>
     <main class:list={[{ full }]}><slot /></main>
     <script>
-      // Cloudflare Access: show email + logout when a session exists, otherwise a login link.
+      // 导航右侧登录状态。自建账号系统启用时（/api/me 返回 enabled:true）用它；
+      // 否则沿用 Cloudflare Access：有会话显示邮箱 + 退出，没有就显示登录链接。
       (async () => {
         const el = document.getElementById('auth'); if (!el) return;
+        const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
         try {
+          const me = await fetch('/api/me', { credentials: 'same-origin' }).then((r) => r.ok ? r.json() : null).catch(() => null);
+          if (me && me.enabled) {
+            if (me.user) {
+              el.innerHTML = `<a href="/account/" style="font-size:13px">${esc(me.user.email)}</a><a href="#" id="nav-logout">退出</a>`;
+              document.getElementById('nav-logout').addEventListener('click', async (e) => {
+                e.preventDefault();
+                await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+                location.href = '/';
+              });
+            } else if (!location.pathname.startsWith('/login')) {
+              el.innerHTML = `<a href="/login/?next=${encodeURIComponent(location.pathname + location.search)}">登录</a>`;
+            } else el.innerHTML = '';
+            return;
+          }
           const r = await fetch('/cdn-cgi/access/get-identity', { credentials: 'include' });
           if (!r.ok) return;
           const id = await r.json();

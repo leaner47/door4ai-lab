@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 21:20 America/New_York · 更新者：Claude（会话 session_017mU9qFdHEjTGTDCSBqAGWr，账号与支付系统设计）
+最后更新：2026-10-14 21:50 America/New_York · 更新者：Claude（会话 session_017mU9qFdHEjTGTDCSBqAGWr，账号系统第 0 期）
 
 ---
 
@@ -27,6 +27,7 @@
 | 登录/访问控制 | Cloudflare Access（Zero Trust）应用 **Door4AI Lab**：保护 `lab.door4ai.com/ai`、`/resources`、`/posts`、`/labs` 四个路径；策略 **Door4AI Lab students**（Allow，按邮箱白名单，目前只有本人邮箱）；会话 1 个月；登录方式为邮箱一次性验证码（One-time PIN）。首页 `/` 公开。**`*.pages.dev`（生产与预览）不走 Access，由 `functions/_middleware.ts` 把所有请求 301 跳到 `lab.door4ai.com` 同路径**，所以内容只能经登录访问；手动同步请用 `https://lab.door4ai.com/sync-dl?...`。**加学员 = 在该策略的 Emails 列表里加邮箱**（Zero Trust → Access controls → Policies）。不要改 grafana / AI Gateway Admin 那两个应用和「Only me」策略。 |
 | 安装包镜像 | R2 桶 `door4ai-lab-dl`（APAC 位置提示，私有），绑定到 Pages 项目为 `DL`；Pages 环境变量 `SYNC_KEY`（手动同步口令，值只在 Cloudflare 设置里）。下载走 `/dl/<app>/<platform>`（在 Access 保护内），状态看 `/dl/manifest.json`；手动同步 `GET /sync-dl?key=<SYNC_KEY>[&app=flclash\|claude\|codex][&force=1]`（/sync-dl 不在 Access 内，靠口令保护）。下载时若某项超过 24h 未同步会在后台自动刷新。 |
 | GitHub App | Cloudflare Workers and Pages 已授权仓库：`door4ai-lab`、`door4ai-site`（后者是别的项目，不要动） |
+| 自建账号（第 0 期，代码已上线、**默认关闭**） | 开关：Pages 环境变量 `AUTH_ENABLED=1` **且** 绑定了 D1（binding 名 `DB`，库名 `door4ai-lab`）才启用；否则中间件什么都不做，仍由上面的 Cloudflare Access 把关。其他变量：`ADMIN_EMAILS`（逗号分隔，这些邮箱视为拥有全部权益）、`RESEND_API_KEY`（Secret）+ `MAIL_FROM`（发验证码邮件，建议在 Resend 验证 `lab.door4ai.com` 子域，避免动根域名记录）、`TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET`（Secret，登录页人机校验）。表结构 `migrations/0001_init.sql`，用 `npx wrangler d1 execute door4ai-lab --remote --file migrations/0001_init.sql` 建表。启用并验证后，再从 Access 应用里移除 `/ai` `/resources` `/posts` `/labs` `/dl`（顺序反了课程会短暂公开）。**仓库里不能放 wrangler.toml**：它会覆盖控制台里的 `DL`、`SYNC_KEY` 等绑定；本地测试脚本只临时生成、退出即删（已加入 .gitignore）。 |
 | 本机副本 | `~/Documents/Agents/door4ai-lab`（Mac），是 GitHub 仓库的 clone |
 
 账号登录：Cloudflare 和 GitHub 都由本人登录；AI 不持有、不输入任何密码。需要 sudo/passkey 验证时交给本人操作。
@@ -40,27 +41,35 @@ door4ai-lab/
 ├── HANDOFF.md              ← 本文件
 ├── CLAUDE.md / AGENTS.md   ← 指向本文件的强制说明（给各家 AI 工具读）
 ├── README.md               ← 面向人的简短说明
-├── astro.config.mjs        ← site: https://lab.door4ai.com, sitemap
+├── astro.config.mjs        ← site: https://lab.door4ai.com, sitemap（排除 /login/ /account/）
+├── migrations/0001_init.sql ← D1 全部表（账号、Passkey、会话、来源、商品、订单、支付、权益、审计）
+├── scripts/gen-access-map.mjs ← 构建前运行：从文章 frontmatter 生成 functions/_lib/access-map.ts（门禁用）
+├── scripts/test-auth.sh + test-auth-e2e.mjs ← 账号系统本地端到端测试（22 项，含虚拟验证器 Passkey、单会话踢下线）
 ├── src/
-│   ├── content.config.ts   ← 文章 schema：title, description, pubDate, updatedDate?, tags[], lab?, series?, order?
+│   ├── content.config.ts   ← 文章 schema：title, description, pubDate, updatedDate?, tags[], lab?, series?, order?, access?（free = 登录即可看；不写则课程文章需购买）
 │   ├── content/blog/*.md   ← 文章正文（markdown）
 │   ├── components/HoloCard.astro ← 全息卡片（移植自 React Bits HoloCard，MIT + Commons Clause）；卡面是由 props 生成的 SVG
 │   ├── scripts/holo-card.js / .css ← HoloCard 的 WebGL 着色器与交互（原版去 React 化）
 │   ├── data/community.ts   ← WhatsApp 交流群名称与邀请链接（url 置空 = 全站隐藏入口）
 │   ├── components/WhatsAppJoin.astro ← 群入口：card（课程目录顶部，电脑端带二维码）/ inline（课程文章末尾一行）
 │   ├── data/resources.ts   ← Resource 页的条目（link.dl = 镜像 id 走 /dl/，link.url = 外链）
-│   ├── layouts/Base.astro  ← 全站布局 + 导航 + 全部 CSS；导航右侧「登录/退出」由脚本调 /cdn-cgi/access/get-identity 判断；prop `full` 让 main 占满宽度（首页用）
+│   ├── layouts/Base.astro  ← 全站布局 + 导航 + 全部 CSS；导航右侧「登录/退出」先调 /api/me（自建账号启用时用它），否则回退到 /cdn-cgi/access/get-identity；全局 `[hidden]{display:none!important}`；prop `full` 让 main 占满宽度（首页用）
 │   └── pages/
 │       ├── index.astro         ← 首页：只有居中的一句 motto，入口全在导航
 │       ├── ai.astro            ← 「AI 从入门到精通」课程目录：series == 'ai-mastery' 的文章按 order 排序
 │       ├── resources.astro     ← Resource 资源库，数据来自 src/data/resources.ts
+│       ├── login.astro / account.astro / pricing.astro ← 登录（邮箱验证码 + Passkey）/ 我的账号（Passkey 管理、已购课程、推荐链接、来源问卷）/ 购买页（支付未开放，占位）
 │       ├── posts/[...slug].astro ← 文章页；frontmatter 有 lab 时顶部 iframe 嵌入实验
 │       └── rss.xml.js
 ├── functions/              ← Cloudflare Pages Functions（随仓库自动部署）
 │   ├── _lib/sources.ts     ← 镜像源：每个 target 的 resolve()（FlClash=GitHub latest；Claude=官方 latest 重定向 + apt 索引；Codex=codex-app-prod/ChatGPT.dmg）
 │   ├── _lib/mirror.ts      ← 同步逻辑：解析→下载→流式写入 R2→更新 manifest.json
 │   ├── dl/[[path]].ts      ← /dl/manifest.json 与 /dl/<app>/<platform> 下载（支持 Range 断点续传）
-│   └── sync-dl.ts          ← 手动同步入口
+│   ├── sync-dl.ts          ← 手动同步入口
+│   ├── _middleware.ts      ← pages.dev 跳转 + 自建账号门禁（AUTH_ENABLED 时）+ 注册来源 Cookie
+│   ├── _lib/auth/          ← util（ID/哈希/Cookie/限流）、session（单会话、用户、权益）、attribution、gate（路径→要求）、webauthn、mail（Resend）、turnstile
+│   ├── _lib/access-map.ts  ← 自动生成，勿手改
+│   └── api/auth/*、api/me/* ← otp / verify / logout / config / passkey 四个端点；me、me/passkeys/[id]、me/survey
 └── public/
     ├── favicon.svg
     └── labs/<name>/index.html  ← 独立实验页，完整 HTML，自带全部 CSS/JS
@@ -105,6 +114,9 @@ door4ai-lab/
 - 课程目录 /ai：每讲左侧大号编号；**目录里不显示文章 description 小字**（本人要求，只留编号、元信息、标题、标签；description 仍用于文章页与 SEO）；第一讲标「从这里开始」；阅读进度只存本机浏览器 localStorage（键 `d4a-read`，文章页打开即记为已读），有已读时显示进度条、「已读」与「下一讲」标记。不做账号级进度。
 - 课程顺序：注意力 QKV（order 5）在前，KV Cache（order 10）在后，因为 KV cache 建立在 Q/K/V 概念上。课程目录的「第 N 讲」由 order 排序自动生成。
 
+- **账号与计费（2026-10-14 本人确认）**：自建账号，D1 不用 PG；不设密码，Passkey 为主、邮箱验证码注册与兜底、TOTP 可选（未做）；每账号同一时间只允许 1 个会话，新登录踢掉旧会话；只做买断，不做订阅；买全套包含以后新增的讲；收款复用 door4ai.com 的 pay-api（接口文档待本人提供）；记录注册来源（首次/最后触达 UTM、ref 渠道码、来源问卷）。设计文档：https://claude.ai/code/artifact/9679fc7a-0fe4-4323-86f1-65cbb1cc005f
+- 门禁规则：`/` `/ai/` `/login/` `/pricing/` 公开；`/resources/` `/dl/` `/account/` 需登录；`/posts/<slug>/` 与对应 `/labs/<name>/` 按文章：`access: free` 登录即可，属于 series 的需要 `series:<name>` 或 `post:<slug>` 权益（或 `all`，或 ADMIN_EMAILS）。
+
 ## 5. 当前状态
 
 - [x] 仓库、Pages、域名、首篇文章全部上线（2026-10-13）
@@ -116,9 +128,16 @@ door4ai-lab/
 - [ ] 下一讲：题目未定（候选见第 7 节）
 - [ ] 关于页只有两句话，待充实
 - [ ] 没有统计/分析（可考虑 Cloudflare Web Analytics，免费，一行脚本）
-- [ ] 账号 + 支付系统：设计稿已出（https://claude.ai/code/artifact/9679fc7a-0fe4-4323-86f1-65cbb1cc005f ），未开工。方案：Pages 中间件 + D1（不用 PG）自建账号与权益，Passkey 为主、邮箱验证码兜底、TOTP 可选，记录注册来源（UTM / ref 渠道码），收款复用 door4ai.com 的 pay-api，只做买断（不做订阅），每账号同时只允许 1 个会话；第 0 期（账号与门禁）可先做，第 1 期起等本人提供 pay-api 接口文档。设计未经本人确认前不要写进第 4 节。
+- [x] 账号系统第 0 期代码完成并推送（默认关闭，线上行为不变）：邮箱验证码注册/登录、Passkey、单会话、注册来源、门禁、登录/账号/购买占位页；本地端到端 22/22 通过（2026-10-14）
+- [ ] **启用第 0 期（需本人在 Cloudflare 操作）**：建 D1 `door4ai-lab`（位置选亚太）→ 跑 migrations → Pages 绑定 `DB` → Turnstile 建站点 → Resend 验证 `lab.door4ai.com` 并建 API key → 设环境变量（`ADMIN_EMAILS`、`RESEND_API_KEY`、`MAIL_FROM`、`TURNSTILE_*`，最后 `AUTH_ENABLED=1`）→ 重新部署 → 自测 → 从 Access 移除课程路径
+- [ ] 加学员（支付上线前）：学员先自行注册，再执行 `npx wrangler d1 execute door4ai-lab --remote --command "INSERT INTO entitlements (id,user_id,scope,source,starts_at) SELECT lower(hex(randomblob(13))), id, 'series:ai-mastery', 'grant', unixepoch()*1000 FROM users WHERE email='学员邮箱'"`
+- [ ] 第 0 期剩余：TOTP 两步验证 + 恢复码；/admin 后台（第 3 期）
+- [ ] 第 1 期 买断支付：等本人提供 pay-api 接口文档（签名算法、回调格式、查单/退款接口）
+- [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-14 · Claude** — 账号系统第 0 期：新增 `migrations/0001_init.sql`（15 张表 + 限流、挑战值表）、`functions/_lib/auth/*`、`functions/api/auth/*`、`functions/api/me/*`、中间件门禁与来源 Cookie、构建前生成 `access-map.ts`、`/login/` `/account/` `/pricing/` 三页、导航改调 /api/me；依赖加 `@simplewebauthn/server|browser@13`。全部由 `AUTH_ENABLED=1` + D1 绑定开启，未开启时线上行为与之前一致（本地验证：课程页直通、API 返回 503、pages.dev 跳转正常）。本地 `scripts/test-auth.sh` 端到端 22/22 通过；修了一个全局问题：页面 CSS 的 display 会覆盖 `hidden` 属性，Base.astro 加 `[hidden]{display:none!important}`。
 
 - **2026-10-14 · Claude** — 按本人要求：文章页里的实验 iframe 不再是固定高度的内部滚动区，改为随内容自动长高（同源，`posts/[...slug].astro` 里的 `data-autosize` 脚本量 contentDocument.scrollHeight + ResizeObserver；`scrolling="no"`），整页只有一个滚动条。
 

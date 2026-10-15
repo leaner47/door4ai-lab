@@ -1,0 +1,165 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="登录 · Door4AI Lab" description="登录 Door4AI Lab">
+  <section class="auth">
+    <h1>登录</h1>
+    <p class="msg" id="kicked" data-kind="info" hidden>你的账号已在其他设备登录，这台设备已自动退出。同一时间只能在一台设备上学习。</p>
+    <p class="msg" id="wechat" data-kind="info" hidden>微信里无法使用 Passkey。可以点右上角「···」选择在浏览器中打开，或直接用邮箱验证码登录。</p>
+    <p class="msg" id="off" data-kind="info" hidden>账号系统还没有开放。<a href="/ai/">点这里</a>用原来的方式登录。</p>
+
+    <form id="step-email" class="card" novalidate hidden>
+      <label for="email">邮箱</label>
+      <input id="email" name="email" type="email" inputmode="email" autocomplete="username webauthn" placeholder="you@example.com" required />
+      <div id="ts" class="ts"></div>
+      <button type="submit" class="primary" id="send">发送验证码</button>
+      <div class="or"><span>或</span></div>
+      <button type="button" id="pk-login" class="ghost">用 Passkey 登录</button>
+      <p class="hint">没有账号会自动注册。登录后可以设置 Passkey，以后刷脸或指纹即可登录，不用再收验证码。</p>
+      <p class="msg" id="err1" hidden></p>
+    </form>
+
+    <form id="step-code" class="card" novalidate hidden>
+      <p class="sent">验证码已发到 <b id="sent-to"></b>，10 分钟内有效。</p>
+      <label for="code">6 位验证码</label>
+      <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="······" required />
+      <button type="submit" class="primary" id="verify">登录</button>
+      <div class="row">
+        <button type="button" class="link" id="back">换个邮箱</button>
+        <button type="button" class="link" id="resend" disabled>重新发送</button>
+      </div>
+      <p class="msg" id="err2" hidden></p>
+    </form>
+  </section>
+
+  <style>
+    .auth{max-width:420px;width:100%;margin:0 auto}
+    .auth h1{margin-bottom:20px}
+    .card{display:flex;flex-direction:column;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:22px}
+    label{font-size:14px;color:var(--muted)}
+    input{font:inherit;font-size:17px;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);width:100%}
+    input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+    #code{font-size:26px;letter-spacing:.5em;text-align:center;font-variant-numeric:tabular-nums}
+    button{font:inherit;cursor:pointer;border-radius:6px}
+    button:disabled{opacity:.55;cursor:default}
+    .primary{background:var(--accent);color:#fff;border:0;padding:11px 14px;font-weight:700}
+    .ghost{background:transparent;color:var(--fg);border:1px solid var(--line);padding:10px 14px}
+    .ghost:hover{border-color:var(--accent)}
+    .link{background:none;border:0;color:var(--accent);padding:0;font-size:15px}
+    .row{display:flex;justify-content:space-between}
+    .or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px}
+    .or::before,.or::after{content:"";flex:1;border-top:1px solid var(--line)}
+    .hint,.sent{margin:0;font-size:14px;color:var(--muted);line-height:1.6}
+    .sent b{color:var(--fg);font-weight:600;word-break:break-all}
+    .ts:empty{display:none}
+    .msg{margin:0 0 14px;font-size:14px;line-height:1.6;padding:9px 12px;border-radius:6px;border:1px solid var(--line)}
+    .card .msg{margin:0}
+    .msg[data-kind="err"]{border-color:#c0392b;color:#c0392b}
+    .msg[data-kind="info"]{background:var(--accent-soft)}
+    .msg[data-kind="ok"]{border-color:var(--accent)}
+  </style>
+
+  <script>
+    import { startAuthentication, browserSupportsWebAuthn, browserSupportsWebAuthnAutofill } from '@simplewebauthn/browser';
+    import { api, inWeChat, isCancel, nextParam, show } from '../scripts/auth-client';
+
+    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+    const stepEmail = $('step-email'), stepCode = $('step-code');
+    const email = $<HTMLInputElement>('email'), code = $<HTMLInputElement>('code');
+    const err1 = $('err1'), err2 = $('err2');
+    const params = new URLSearchParams(location.search);
+    const next = nextParam();
+    let tsWidget: string | undefined;
+    let resendTimer: number | undefined;
+
+    async function afterLogin(r: { isNew?: boolean; hasPasskey?: boolean; next?: string }) {
+      const target = r.next || next;
+      if (r.hasPasskey === false && browserSupportsWebAuthn() && !inWeChat()) {
+        location.href = `/account/?welcome=${r.isNew ? 'new' : 'pk'}&next=${encodeURIComponent(target)}`;
+      } else location.href = target;
+    }
+
+    async function passkeyLogin(autofill: boolean) {
+      try {
+        const optionsJSON = await api('/api/auth/passkey/login-options', {});
+        const response = await startAuthentication({ optionsJSON, useBrowserAutofill: autofill });
+        const r = await api('/api/auth/passkey/login-verify', { response, next });
+        location.href = r.next || next;
+      } catch (e: any) {
+        if (!isCancel(e)) show(err1, e.message || String(e));
+      }
+    }
+
+    function startResendCountdown() {
+      const b = $<HTMLButtonElement>('resend');
+      let left = 60;
+      b.disabled = true;
+      clearInterval(resendTimer);
+      const tick = () => { b.textContent = left > 0 ? `重新发送（${left}s）` : '重新发送'; b.disabled = left > 0; left--; if (left < -1) clearInterval(resendTimer); };
+      tick();
+      resendTimer = window.setInterval(tick, 1000);
+    }
+
+    async function sendCode() {
+      show(err1, '');
+      const btn = $<HTMLButtonElement>('send');
+      btn.disabled = true;
+      try {
+        const w = (window as any).turnstile;
+        const turnstile = w && tsWidget !== undefined ? w.getResponse(tsWidget) : undefined;
+        await api('/api/auth/otp', { email: email.value, turnstile });
+        $('sent-to').textContent = email.value.trim();
+        stepEmail.hidden = true; stepCode.hidden = false;
+        code.value = ''; code.focus();
+        startResendCountdown();
+      } catch (e: any) {
+        show(stepCode.hidden ? err1 : err2, e.message);
+      } finally {
+        btn.disabled = false;
+        const w = (window as any).turnstile;
+        if (w && tsWidget !== undefined) w.reset(tsWidget);
+      }
+    }
+
+    async function init() {
+      if (params.get('kicked')) $('kicked').hidden = false;
+      const cfg = await fetch('/api/auth/config').then((r) => r.json()).catch(() => ({ enabled: false }));
+      if (!cfg.enabled) { $('off').hidden = false; return; }
+      stepEmail.hidden = false;
+      if (inWeChat() || !browserSupportsWebAuthn()) {
+        $('pk-login').hidden = true;
+        document.querySelector('.or')?.setAttribute('hidden', '');
+        if (inWeChat()) $('wechat').hidden = false;
+      }
+      if (cfg.turnstileSiteKey) {
+        const s = document.createElement('script');
+        s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        s.async = true;
+        s.onload = () => { tsWidget = (window as any).turnstile.render('#ts', { sitekey: cfg.turnstileSiteKey, language: 'zh-cn' }); };
+        document.head.appendChild(s);
+      }
+      // Passkey 自动填充：点邮箱输入框时，浏览器直接列出本站的 Passkey
+      if (!inWeChat() && (await browserSupportsWebAuthnAutofill())) passkeyLogin(true);
+    }
+
+    stepEmail.addEventListener('submit', (e) => { e.preventDefault(); sendCode(); });
+    $('pk-login').addEventListener('click', () => passkeyLogin(false));
+    $('back').addEventListener('click', () => { stepCode.hidden = true; stepEmail.hidden = false; show(err2, ''); email.focus(); });
+    $('resend').addEventListener('click', () => { stepCode.hidden = true; stepEmail.hidden = false; sendCode(); });
+    stepCode.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      show(err2, '');
+      const btn = $<HTMLButtonElement>('verify');
+      btn.disabled = true;
+      try {
+        const r = await api('/api/auth/verify', { email: email.value, code: code.value, next });
+        await afterLogin(r);
+      } catch (e: any) {
+        show(err2, e.message);
+        btn.disabled = false;
+      }
+    });
+    code.addEventListener('input', () => { code.value = code.value.replace(/\D/g, '').slice(0, 6); if (code.value.length === 6) stepCode.requestSubmit(); });
+    init();
+  </script>
+</Base>
