@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 23:40 America/New_York · 更新者：Claude（会话 session_017mU9qFdHEjTGTDCSBqAGWr，启用账号系统）
+最后更新：2026-10-14 23:45 America/New_York · 更新者：Claude（会话 session_017mU9qFdHEjTGTDCSBqAGWr，账号系统上线、旧 Access 应用删除）
 
 ---
 
@@ -24,7 +24,7 @@
 | 构建 | Framework preset: None；Build command `npm run build`；Output `dist`；Node 22 |
 | 部署触发 | push 到 `main` 自动构建部署，约 1–2 分钟 |
 | DNS | `door4ai.com` zone 内一条 CNAME：`lab` → `door4ai-lab.pages.dev`（Proxied）。**其余记录（admin/api/app/grafana/pay-api/@ 等）属于 door4ai.com 上正在运行的其他业务，绝对不要动。** |
-| 登录/访问控制 | Cloudflare Access（Zero Trust）应用 **Door4AI Lab**：保护 `lab.door4ai.com/ai`、`/resources`、`/posts`、`/labs` 四个路径；策略 **Door4AI Lab students**（Allow，按邮箱白名单，目前只有本人邮箱）；会话 1 个月；登录方式为邮箱一次性验证码（One-time PIN）。首页 `/` 公开。**`*.pages.dev`（生产与预览）不走 Access，由 `functions/_middleware.ts` 把所有请求 301 跳到 `lab.door4ai.com` 同路径**，所以内容只能经登录访问；手动同步请用 `https://lab.door4ai.com/sync-dl?...`。**加学员 = 在该策略的 Emails 列表里加邮箱**（Zero Trust → Access controls → Policies）。不要改 grafana / AI Gateway Admin 那两个应用和「Only me」策略。 |
+| 登录/访问控制 | **自建账号系统（2026-10-14 起生效）**：邮箱验证码 / Passkey / 可选两步验证，每账号 1 个会话，门禁规则见第 4 节。旧 Access 应用「Door4AI Lab」及其学员白名单已删除。**加学员 = 后台 /admin →「用户 → 开通课程」**。Cloudflare Access 只保留应用 **Door4AI Lab Admin**（`lab.door4ai.com/admin` + `/api/admin`，策略 Only me）。`*.pages.dev` 仍由 `functions/_middleware.ts` 301 到 `lab.door4ai.com`。不要改 grafana / AI Gateway Admin 两个应用和「Only me」策略。 |
 | 安装包镜像 | R2 桶 `door4ai-lab-dl`（APAC 位置提示，私有），绑定到 Pages 项目为 `DL`；Pages 环境变量 `SYNC_KEY`（手动同步口令，值只在 Cloudflare 设置里）。下载走 `/dl/<app>/<platform>`（在 Access 保护内），状态看 `/dl/manifest.json`；手动同步 `GET /sync-dl?key=<SYNC_KEY>[&app=flclash\|claude\|codex][&force=1]`（/sync-dl 不在 Access 内，靠口令保护）。下载时若某项超过 24h 未同步会在后台自动刷新。 |
 | GitHub App | Cloudflare Workers and Pages 已授权仓库：`door4ai-lab`、`door4ai-site`（后者是别的项目，不要动） |
 | 自建账号（第 0 期，代码已上线、**默认关闭**） | 开关：Pages 环境变量 `AUTH_ENABLED=1` **且** 绑定了 D1（binding 名 `DB`，库名 `door4ai-lab`）才启用；否则中间件什么都不做，仍由上面的 Cloudflare Access 把关。其他变量：`ADMIN_EMAILS`（逗号分隔，这些邮箱视为拥有全部权益）、`RESEND_API_KEY`（Secret）+ `MAIL_FROM`（发验证码邮件，建议在 Resend 验证 `lab.door4ai.com` 子域，避免动根域名记录）、`TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET`（Secret，登录页人机校验）、`TOTP_ENC_KEY`（Secret，base64 的 32 字节随机数，加密存储两步验证密钥；不设则不提供两步验证；**设了之后不能换，换了已开启两步验证的用户全部失效**）、`ACCESS_TEAM_DOMAIN`（如 `xxx.cloudflareaccess.com`）+ `ACCESS_AUD`（/admin 所在 Access 应用的 AUD Tag）。**后台 `/admin`**：必须在 Access 应用里保护 `/admin` 路径（只放行本人），中间件再验 Access JWT 并核对 `ADMIN_EMAILS`，两层都过才进。表结构 `migrations/0001_init.sql`，用 `npx wrangler d1 execute door4ai-lab --remote --file migrations/0001_init.sql` 建表。启用并验证后，再从 Access 应用里移除 `/ai` `/resources` `/posts` `/labs` `/dl`（顺序反了课程会短暂公开）。**仓库里不能放 wrangler.toml**：它会覆盖控制台里的 `DL`、`SYNC_KEY` 等绑定；本地测试脚本只临时生成、退出即删（已加入 .gitignore）。 |
@@ -142,7 +142,7 @@ door4ai-lab/
 - [ ] 没有统计/分析（可考虑 Cloudflare Web Analytics，免费，一行脚本）
 - [x] 账号系统第 0 期代码完成并推送（默认关闭，线上行为不变）：邮箱验证码注册/登录、Passkey、单会话、注册来源、门禁、登录/账号/购买占位页；本地端到端 22/22 通过（2026-10-14）
 - [x] **启用账号系统**（2026-10-14，Claude 在内置浏览器操作，登录由本人完成）：D1 `door4ai-lab`（APAC，id 34ef8e2c-d102-4a24-9acd-7f209f4ce41e）建表 17 张并绑定 `DB`；Turnstile 小组件「Door4AI Lab login」（主机名 door4ai.com，含子域）；Access 新应用「Door4AI Lab Admin」保护 `lab.door4ai.com/admin` 与 `/api/admin`，策略 Only me；Resend 用已验证的 door4ai.com 发信（发件人 login@door4ai.com，API key「door4ai-lab login codes」仅发送权限、仅 door4ai.com）；Pages 变量：AUTH_ENABLED=1、ADMIN_EMAILS、MAIL_FROM、TURNSTILE_SITE_KEY、ACCESS_TEAM_DOMAIN、ACCESS_AUD 为文本，RESEND_API_KEY、TURNSTILE_SECRET、TOTP_ENC_KEY 为 Secret。Cloudflare Email Sending 需 Workers 付费版，未开。
-- [ ] 验证线上登录后，从「Door4AI Lab」Access 应用移除 `/ai` `/resources` `/posts` `/labs` `/dl`
+- [x] 本人线上登录验证通过（邮箱验证码，注册 + 欢迎页 + 问卷），随后经本人同意删除旧 Access 应用「Door4AI Lab」；匿名访问课程 / 实验页已确认跳转本站登录页，课程目录公开（2026-10-14）
 - [ ] 建议：`SYNC_KEY` 目前是明文变量，改成 Secret
 - [ ] 加学员（支付上线前）：启用后台后直接在 /admin「用户 → 开通课程」里填邮箱（对方没注册也行）；未启用后台时执行 `npx wrangler d1 execute door4ai-lab --remote --command "INSERT INTO entitlements (id,user_id,scope,source,starts_at) SELECT lower(hex(randomblob(13))), id, 'series:ai-mastery', 'grant', unixepoch()*1000 FROM users WHERE email='学员邮箱'"`
 - [x] 两步验证（TOTP，Apple 密码可直接添加）+ 10 个恢复码 + 防重放；后台 /admin（概览、用户、渠道码、日志）。本地 43/43 + 9/9 通过（2026-10-14）
@@ -152,6 +152,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-14 · Claude** — 本人在 Safari 完成线上注册登录（验证码邮件由 Resend 从 login@door4ai.com 发出）。经本人确认删除 Access 应用「Door4AI Lab」（含 Door4AI Lab students 白名单）；外部检查：/posts、/labs 未登录跳 /login/，/ai/ 公开，/admin 仍在 Access 后。
 
 - **2026-10-14 · Claude** — 在 Cloudflare / Resend 控制台启用账号系统（见第 5 节）。D1 表通过控制台 Console 执行 0001 的 SQL 建立。推这条提交以触发带新环境变量的部署。
 
