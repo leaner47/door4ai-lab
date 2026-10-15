@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 20:55 America/New_York · 更新者：Claude（会话 session_017mU9qFdHEjTGTDCSBqAGWr，账号与支付系统设计）
+最后更新：2026-10-14 20:58 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7，WhatsApp 交流群入口）
 
 ---
 
@@ -33,7 +33,7 @@
 
 ## 3. 技术栈与目录结构
 
-Astro 5 静态站，无 UI 框架，无 Tailwind。依赖只有 `astro`、`@astrojs/rss`、`@astrojs/sitemap`。
+Astro 5 静态站，无 UI 框架，无 Tailwind。依赖只有 `astro`、`@astrojs/rss`、`@astrojs/sitemap`、`qrcode`（构建时生成 WhatsApp 群二维码 SVG）。
 
 ```
 door4ai-lab/
@@ -46,6 +46,8 @@ door4ai-lab/
 │   ├── content/blog/*.md   ← 文章正文（markdown）
 │   ├── components/HoloCard.astro ← 全息卡片（移植自 React Bits HoloCard，MIT + Commons Clause）；卡面是由 props 生成的 SVG
 │   ├── scripts/holo-card.js / .css ← HoloCard 的 WebGL 着色器与交互（原版去 React 化）
+│   ├── data/community.ts   ← WhatsApp 交流群名称与邀请链接（url 置空 = 全站隐藏入口）
+│   ├── components/WhatsAppJoin.astro ← 群入口：card（课程目录顶部，电脑端带二维码）/ inline（课程文章末尾一行）
 │   ├── data/resources.ts   ← Resource 页的条目（link.dl = 镜像 id 走 /dl/，link.url = 外链）
 │   ├── layouts/Base.astro  ← 全站布局 + 导航 + 全部 CSS；导航右侧「登录/退出」由脚本调 /cdn-cgi/access/get-identity 判断；prop `full` 让 main 占满宽度（首页用）
 │   └── pages/
@@ -98,6 +100,7 @@ door4ai-lab/
 - Resource 页：每个软件一个分组（标题 + 说明），**每个平台的下载按钮本身是一张 HoloCard 全息卡**：卡面布局：顶部小号软件 logo + 软件名，中间**大号平台图标**（macOS 苹果 / Windows 田字 / Linux 企鹅 / Android 机器人，`public/logos/apple|windows|linux|android.svg`，取自 Font Awesome Free 6，CC BY 4.0），图标下平台名，底部「点击下载」。软件 logo：flclash.png 来自 FlClash 仓库，openai.svg / claude.svg 来自 @lobehub/icons-static-svg（MIT），door4ai.svg 即本站 favicon。平台→图标的映射在 `resources.astro` 的 `platformLogo()`；没有匹配平台（如 door4ai 的「打开」）时中间放软件 logo。箔纹颜色跟随品牌色：`look` 表里每个软件配 logo / preset / accent（光晕、边框）/ foil（箔片色）/ intensity / tint。**Codex 定稿为黑金**（黑底 + 金色箔纹，accent #9a7a2a，foil #f6d27a，intensity 0.55，tint 0.95），本人明确要求。**箔纹统一用 `shards`（碎片纹）**：本人否决了 glitter 的细碎点阵，Codex / Claude / FlClash 三者纹路必须一致（door4ai.com 用 gold）。着色器新增 `uTint`（data-tint，默认 0.65）把彩虹箔向品牌色拉。卡下小字显示版本 · 大小 · 同步日期。
 - **Safari / iOS 注意（全息层只画在卡片左上角一小块）**：真正的原因是 WebKit 的 `texImage2D()` 从 SVG `<img>` 上传纹理时，用的是该 SVG 在页面上**显示尺寸**（170px 海报图）的栅格缓存，而不是 SVG 固有尺寸 630×880，于是整张卡面被塞进纹理左上角约 27%（=170/630）的区域。iPhone `#debug` 数据证明 CSS 盒、drawingBuffer、viewport 全部正确，所以**不是尺寸问题，别再在 CSS/resize 上找**。修法在 `holo-card.js` 的 `img.onload`：先把 SVG `drawImage()` 到一张 630×880 的 2D canvas，再把这张 canvas 交给 `texImage2D`（drawImage 对 SVG 总是按目标尺寸重新渲染）。保留的防御措施：画布缓冲区在标记里固定为 CSS 尺寸 2 倍（`<canvas width height>`），JS 不在首次绘制后改 canvas.width/height。Safari 对 HTML 缓存很顽固，看不到新版本先 ⌘⇧R / iPhone 清站点数据。
 - 安装包由本站 R2 镜像、仅登录用户可下（/dl 在 Access 内）。Codex 桌面版已并入新版 ChatGPT 桌面应用：macOS 镜像 `codex-app-prod/ChatGPT.dmg`，Windows 只有 Microsoft Store（不镜像，外链），Linux 为 CLI（外链）。新增镜像目标 = 在 `functions/_lib/sources.ts` 加一个 target，并在 `src/data/resources.ts` 加 `dl:` 按钮。
+- **WhatsApp 交流群「AI学习」**：入口放在已登录才能看的页面里（课程目录顶部卡片 + 属于课程的文章末尾一行），不放公开首页、不放 Resource 页，因此不需要改 Access。链接用干净的邀请地址（去掉 `?s=cl&p=i…` 分享参数）。入群需管理员审核（WhatsApp 里设置）。**重置群链接后只需改 `src/data/community.ts` 再推送**，二维码会随构建自动更新。
 - 课程目录 /ai：每讲左侧大号编号；第一讲标「从这里开始」；阅读进度只存本机浏览器 localStorage（键 `d4a-read`，文章页打开即记为已读），有已读时显示进度条、「已读」与「下一讲」标记。不做账号级进度。
 - 课程顺序：注意力 QKV（order 5）在前，KV Cache（order 10）在后，因为 KV cache 建立在 Q/K/V 概念上。课程目录的「第 N 讲」由 order 排序自动生成。
 
@@ -115,6 +118,8 @@ door4ai-lab/
 - [ ] 账号 + 支付系统：设计稿已出（https://claude.ai/code/artifact/9679fc7a-0fe4-4323-86f1-65cbb1cc005f ），未开工。方案：Pages 中间件 + D1（不用 PG）自建账号与权益，Passkey 为主、邮箱验证码兜底、TOTP 可选，记录注册来源（UTM / ref 渠道码），收款复用 door4ai.com 的 pay-api，买断 + 期卡订阅；第 0 期（账号与门禁）可先做，第 1 期起等本人提供 pay-api 接口文档。设计未经本人确认前不要写进第 4 节。
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-14 · Claude** — 加 WhatsApp 交流群入口：`src/data/community.ts`、`src/components/WhatsAppJoin.astro`（WhatsApp 绿按钮 + 构建时生成的二维码，手机宽度隐藏二维码、按钮通栏直接唤起 App）、`public/logos/whatsapp.svg`（Font Awesome Free，CC BY 4.0）；`ai.astro` 顶部卡片、`posts/[...slug].astro` 课程文章末尾一行；新增依赖 `qrcode`。本地 build 通过，深浅色 + 390px 无横向滚动检查通过。
 
 - **2026-10-14 · Claude** — 按本人要求修订设计文档：不设密码，改为 Passkey（WebAuthn）主登录 + 邮箱验证码兜底 + 可选 TOTP（Apple 密码 App 可存）；新增注册来源归因（首次/最后触达、UTM、ref 渠道码）；说明数据库选 D1 而非 PG 的理由。未改代码。
 

@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { getCollection, render } from 'astro:content';
+import WhatsAppJoin from '../../components/WhatsAppJoin.astro';
 export async function getStaticPaths() {
   const posts = await getCollection('blog');
   return posts.map((post) => ({ params: { slug: post.id }, props: post }));
@@ -22,6 +23,7 @@ const fmt = (d: Date) => d.toISOString().slice(0, 10);
       </div>
     )}
     <div class="prose"><Content /></div>
+    {post.data.series && <WhatsAppJoin variant="inline" />}
   </article>
   <script is:inline define:vars={{ slug: post.id }}>
     try { const k = 'd4a-read', r = JSON.parse(localStorage.getItem(k) || '[]'); if (!r.includes(slug)) { r.push(slug); localStorage.setItem(k, JSON.stringify(r)); } } catch (e) {}
