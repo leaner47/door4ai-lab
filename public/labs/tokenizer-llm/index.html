@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>Token 实验室</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{max-width:860px;margin:0 auto;padding-inline:16px;padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);max-width:68ch;margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{max-width:68ch;margin:12px 0}
+p code,li code{font-size:.88em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+ul,ol{max-width:68ch;padding-left:1.2em}
+.aside{border-left:3px solid var(--accent);padding:4px 0 4px 16px;margin:16px 0;max-width:68ch;font-size:15.5px}
+.aside b{display:block;margin-bottom:2px}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0;min-width:0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl input[type=range]{width:160px;accent-color:var(--accent)}
+.ctrl output{font-variant-numeric:tabular-nums;min-width:3ch;font-weight:600}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;color:var(--muted)}
+.toggle input{accent-color:var(--accent)}
+textarea,input[type=text]{width:100%;box-sizing:border-box;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:8px 10px;font:inherit;font-size:15px;line-height:1.6}
+textarea{resize:vertical}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px;min-width:0}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn b{color:var(--warn)} .ro.ok b{color:var(--ok)} .ro.acc b{color:var(--accent)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.lbl{font-size:13px;color:var(--muted);margin:14px 0 6px}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.num{text-align:right}
+.toks{line-height:2.1;word-break:break-all;min-height:2em}
+.tk{display:inline-block;padding:0 3px;margin:1px 1px;border-radius:3px;border:1px solid;white-space:pre;font-size:16px;line-height:1.55;cursor:default}
+.tk.part{border-style:dashed;font-family:var(--mono);font-size:11.5px;line-height:2.05}
+.tk sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:2px;vertical-align:baseline}
+.tk.new{background:var(--warn-soft)!important;border-color:var(--warn)!important;color:var(--warn)}
+.tk.big{background:var(--accent-soft);border-color:var(--line)}
+.tk.plain{background:none;border-color:var(--line)}
+.grid2{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:22px}
+@media (max-width:640px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.wrow{display:flex;gap:10px;align-items:baseline;margin:4px 0;flex-wrap:wrap}
+.wrow .w{font-size:13px;color:var(--muted);min-width:84px;font-variant-numeric:tabular-nums}
+.prow{display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:2px 8px;border-radius:3px;font-variant-numeric:tabular-nums}
+.prow.top{background:var(--warn-soft);color:var(--warn);font-weight:600}
+.rules{font-size:14px;font-variant-numeric:tabular-nums;max-height:220px;overflow:auto;border-top:1px solid var(--line);padding-top:6px}
+.rules div{padding:1px 0}
+.rules .hit{color:var(--warn);font-weight:600}
+.steps{font-size:14px}
+.steps .st{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:4px 0;border-bottom:1px dashed var(--line)}
+.steps .st .r{color:var(--muted);min-width:150px;font-size:13px}
+.detail{font-size:15px;line-height:1.85;margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+.detail .shape{font-family:var(--mono);font-size:14px;background:var(--accent-soft);padding:1px 6px;border-radius:3px}
+.out5{font-size:20px;line-height:1.9;min-height:2em;word-break:break-all}
+.out5 .g{color:var(--warn);border-bottom:2px solid var(--warn)}
+.status{font-size:13px;color:var(--muted)}
+.key{margin-top:40px;border-top:1px solid var(--line);padding-top:20px}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script><style>html.embedded .lab-intro{display:none}html.embedded .wrap{padding-top:20px}html.embedded main{margin-top:28px}html.embedded .lab-intro+section{margin-top:0}</style></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">token · BPE · embedding · logits · sampling</div>
+  <h1>Token 实验室：一句话是怎么进出大模型的</h1>
+  <p class="lede">模型看不见文字，只看得见一串整数。这六个实验先用真实的分词器切你的句子，再亲手训练一个 BPE，最后跟着这串整数走完模型内部的流水线，看它怎么变回下一个 token。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>先看结果：真实分词器怎么切你的句子</h2>
+  <p>下面加载的是 OpenAI 公开的两套分词规则：GPT-2 用的 <code>gpt2</code>（5 万个 token，2019 年）和 GPT-4o 用的 <code>o200k_base</code>（20 万个 token）。在框里随便打字，每个色块就是一个 token，鼠标停在上面能看到它的编号和底层字节。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>分词器</label><div class="seg" id="seg0"><button data-v="o200k" aria-pressed="true">GPT-4o（o200k）</button><button data-v="gpt2" aria-pressed="false">GPT-2</button></div></div>
+      <label class="toggle"><input type="checkbox" id="ids0"> 显示编号</label>
+    </div>
+    <div class="ctrls" id="pre0" style="gap:8px"></div>
+    <textarea id="in0" rows="3">我们今天学习大语言模型的分词。Tokenization is the first step!</textarea>
+    <div class="lbl" id="st0">正在加载分词器（约 1.4 MB）…</div>
+    <div class="toks" id="out0"></div>
+    <div class="readout">
+      <div class="ro"><b id="r0c">—</b><span>字符数</span></div>
+      <div class="ro"><b id="r0b">—</b><span>UTF-8 字节数</span></div>
+      <div class="ro acc"><b id="r0t">—</b><span>当前分词器 token 数</span></div>
+      <div class="ro warn"><b id="r0o">—</b><span id="r0ol">另一个分词器 token 数</span></div>
+    </div>
+    <p class="note">切换到 GPT-2 再看中文：同一句话的 token 数会翻好几倍，很多汉字被拆成虚线框里的字节碎片（一个汉字在 UTF-8 里是 3 个字节）。GPT-4o 的词表大了 4 倍，而且训练语料里中文多得多，常用字和常用词都已经合并成了整块。英文两边差别不大。</p>
+  </div>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>亲手训练一个 BPE：每一步合并最常见的一对</h2>
+  <p>上面那 20 万个 token 是怎么来的？BPE（Byte Pair Encoding）的训练只有一个动作，重复几十万次：</p>
+  <ol>
+    <li>把语料里每个词拆成最小单位（这里用字母，真实分词器用字节）。</li>
+    <li>统计所有<b>相邻片段对</b>出现的次数，按词频加权。</li>
+    <li>把次数最多的那一对合并成一个新 token，记下这条规则，回到第 2 步。</li>
+  </ol>
+  <p>左边的语料可以改，格式是每行「词 频次」。点「下一步」看合并怎么发生。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <button class="btn pri" id="next1">下一步</button>
+      <button class="btn" id="prev1">上一步</button>
+      <button class="btn" id="play1">自动播放</button>
+      <button class="btn" id="reset1">重置</button>
+      <span class="status" id="st1"></span>
+    </div>
+    <div class="grid2">
+      <div>
+        <div class="lbl" style="margin-top:0">当前切分（黄色 = 刚合并出来的 token）</div>
+        <div id="words1"></div>
+        <div class="lbl">语料（每行「词 频次」，改完会自动重来）</div>
+        <textarea id="corp1" rows="4"></textarea>
+      </div>
+      <div>
+        <div class="lbl" style="margin-top:0">相邻片段对 · 加权次数</div>
+        <div id="pairs1"></div>
+        <div class="lbl">学到的合并规则（按顺序）</div>
+        <div class="rules" id="rules1"></div>
+      </div>
+    </div>
+    <div class="lbl">词表</div>
+    <div class="toks" id="vocab1"></div>
+    <div class="readout">
+      <div class="ro"><b id="r1m">—</b><span>已合并次数</span></div>
+      <div class="ro acc"><b id="r1v">—</b><span>词表大小</span></div>
+      <div class="ro warn"><b id="r1t">—</b><span>语料总 token 数（含频次）</span></div>
+    </div>
+    <p class="note">第一步合并的是 e + s（newest 6 次 + widest 3 次 = 9），接着 es + t → est。每合并一次，词表多一个 token，语料的总 token 数变少：<b>词表越大，同样的文字用的 token 越少</b>。一直合并下去，每个词最终都变成一个整块，这时 BPE 就退化成"整词词表"，见到新词就没办法了。所以真实训练会在词表达到预定大小时停下。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>用学到的规则切一个新词</h2>
+  <p>训练只产出一张<b>有序的合并规则表</b>。遇到新文本时，从最小单位开始，按规则的先后顺序一条条套用，能合并就合并。下面用的就是实验 01 当前学到的规则（在上面多点几步，这里会跟着变）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl" style="flex:1;min-width:200px"><label>新词</label><input type="text" id="in2" value="lowest" style="max-width:260px"></div>
+      <div class="ctrl"><label>试试</label><div class="seg" id="pre2"></div></div>
+    </div>
+    <div class="steps" id="steps2"></div>
+    <div class="readout">
+      <div class="ro"><b id="r2c">—</b><span>字母数</span></div>
+      <div class="ro acc"><b id="r2t">—</b><span>最终 token 数</span></div>
+      <div class="ro warn"><b id="r2u">—</b><span>用到的规则数</span></div>
+    </div>
+    <p class="note">lowest 在语料里从没出现过，但规则里有 low 和 est，于是它被切成 low + est 两块。这就是 BPE 的好处：没见过的词也能拆成见过的零件。如果输入了语料里没有的字母（比如 x），它只能单独成块；真实分词器从 256 个字节起步，任何文字都能表示，所以永远不会遇到"不认识的字符"。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>中文为什么费 token：字节级 BPE</h2>
+  <p>真实分词器不从"字"起步，而是从 <b>UTF-8 字节</b>起步：初始词表正好 256 个，任何语言、任何 emoji 都能表示。代价是一个汉字占 3 个字节，在合并出它之前要用 3 个 token。</p>
+  <p>下面用实验 06 那段约 500 字的中文语料，在你的浏览器里真的训练一个字节级 BPE。拖动滑块决定合并多少次，看测试句被切成什么样。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>合并次数</label><input type="range" id="m3" min="0" max="400" step="1" value="0"><output id="m3o">0</output></div>
+    </div>
+    <input type="text" id="in3" value="小猫坐在垫子上，我们学习大语言模型的分词。">
+    <div class="lbl">切分结果（虚线框 = 还不是完整汉字的字节碎片，十六进制显示）</div>
+    <div class="toks" id="out3"></div>
+    <svg id="svg3" viewBox="0 0 800 220" role="img" aria-label="合并次数与每个汉字平均 token 数的关系曲线"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r3c">—</b><span>字符数</span></div>
+      <div class="ro acc"><b id="r3t">—</b><span>token 数</span></div>
+      <div class="ro warn"><b id="r3r">—</b><span>每字符 token 数</span></div>
+      <div class="ro"><b id="r3v">—</b><span>词表大小 256 + 合并数</span></div>
+    </div>
+    <p class="note">合并 0 次时每个汉字是 3 个字节 token。最先合并的是标点和很多汉字共用的开头字节，接着出现完整的常用字（的、们、上），三五十次后开始出现整词（小猫、坐在、我们、模型），合并到最后「大语言模型」整个成了一个 token。途中还会冒出跨越两个汉字的奇怪碎片：BPE 只看频率，不懂汉字边界。语料里只出现一次的「分词」始终是碎片，根本没出现过的「垫」更不会被合并。所以中文在训练语料里占多少，直接决定中文用户要多花多少 token。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>一串整数进了模型以后</h2>
+  <p>分词只是入口。拿到 token 编号后，模型做的事情可以分成五站。选一个真实模型，点每一站看它的输入输出形状和参数量；数字全部按公开架构参数计算（忽略偏置和 Norm 这类很小的参数）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>模型</label><div class="seg" id="seg4"><button data-v="gpt2" aria-pressed="true">GPT-2 small</button><button data-v="l8" aria-pressed="false">Llama-3-8B</button><button data-v="l70" aria-pressed="false">Llama-3-70B</button></div></div>
+    </div>
+    <input type="text" id="in4" value="小猫坐在">
+    <div class="lbl" id="tok4">输入被切成 — 个 token</div>
+    <svg id="svg4" viewBox="0 0 800 440" role="img" aria-label="LLM 推理的五个阶段及每个阶段的参数占比"></svg>
+    <div class="detail" id="det4"></div>
+    <div class="readout">
+      <div class="ro acc"><b id="r4p">—</b><span>总参数</span></div>
+      <div class="ro"><b id="r4l">—</b><span>Transformer 层数 L</span></div>
+      <div class="ro"><b id="r4d">—</b><span>隐藏维度 d</span></div>
+      <div class="ro warn"><b id="r4f">—</b><span>每个 token 约需浮点运算</span></div>
+    </div>
+    <p class="note">切到 Llama-3-70B 看每一站的参数条：参数几乎全在 FFN 和注意力里，Embedding 只占 1.5%。GPT-2 的输出投影和 Embedding 共用一个矩阵（权重共享），所以那一站参数为 0。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>自回归：一次只生成一个 token</h2>
+  <p>模型每跑一遍只得到<b>一个</b>新 token。把它接到输入末尾，再跑一遍，才有下一个。第一遍要把整段输入一次性算完（Prefill），之后每遍只算新来的那一个（Decode），前面 token 的 K、V 存在 KV Cache 里直接复用。点「播放」看这个过程。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <button class="btn pri" id="play5">播放</button>
+      <button class="btn" id="step5">单步</button>
+      <button class="btn" id="reset5">重置</button>
+      <div class="ctrl"><label>要生成</label><input type="range" id="n5" min="4" max="40" step="1" value="16"><output id="n5o">16</output><label>个 token</label></div>
+    </div>
+    <div class="status" id="st5">模型和输入沿用实验 04</div>
+    <svg id="svg5" viewBox="0 0 800 210" role="img" aria-label="每一步计算的 token 与 KV Cache 增长"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r5s">—</b><span>当前阶段</span></div>
+      <div class="ro acc"><b id="r5n">—</b><span>这一遍要算的 token 数</span></div>
+      <div class="ro warn"><b id="r5k">—</b><span>KV Cache 大小（FP16）</span></div>
+      <div class="ro"><b id="r5f">—</b><span>这一遍约需浮点运算</span></div>
+    </div>
+    <p class="note">Prefill 那一遍并行算了全部输入，计算量最大；之后每遍只算 1 个 token，但 KV Cache 每步都在长。Llama-3-70B 每个 token 的 KV Cache 是 320 KB，一段 10 万 token 的对话就要约 31 GB 显存，这就是长上下文贵的原因。</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2><span class="n">06</span>从概率到下一个 token：温度和 top-p</h2>
+  <p>最后一站，模型给词表里每个 token 打一个分数（logit），softmax 把分数变成概率，再从概率里<b>抽</b>一个。抽法有两个旋钮：</p>
+  <ul>
+    <li><b>温度 T</b>：先把 logit 除以 T 再 softmax。T &lt; 1 让高分更高、分布更尖；T &gt; 1 把分布摊平，更随机。</li>
+    <li><b>top-p</b>：按概率从高到低累加，只保留累计到 p 为止的候选，其余直接排除。</li>
+  </ul>
+  <p>真实 LLM 的 logits 来自 Transformer。这里用一个在下面这段语料上数出来的字级 3-gram 模型代替它（输入只看最后两个字），但从 logits 到采样这一段，计算和真模型完全一样。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>温度 T</label><input type="range" id="t6" min="0.1" max="2" step="0.05" value="1"><output id="t6o">1.00</output></div>
+      <div class="ctrl"><label>top-p</label><input type="range" id="p6" min="0.1" max="1" step="0.05" value="0.9"><output id="p6o">0.90</output></div>
+    </div>
+    <div class="ctrls">
+      <button class="btn pri" id="samp6">抽一个</button>
+      <button class="btn" id="gen6">连续抽 20 个</button>
+      <button class="btn" id="clr6">恢复开头</button>
+      <div class="ctrl"><label>开头</label><input type="text" id="in6" value="小猫坐在" style="width:160px"></div>
+    </div>
+    <div class="out5" id="out6"></div>
+    <svg id="svg6" viewBox="0 0 800 330" role="img" aria-label="候选 token 的概率分布，以及被 top-p 截掉的部分"></svg>
+    <div class="readout">
+      <div class="ro acc"><b id="r6k">—</b><span>top-p 留下的候选数</span></div>
+      <div class="ro"><b id="r6m">—</b><span>最高概率</span></div>
+      <div class="ro warn"><b id="r6h">—</b><span>熵（越大越随机）</span></div>
+    </div>
+    <p class="note">温度拉到 0.1：最高的那根几乎占满，每次抽到同一个字，生成的文字会反复绕圈。温度拉到 2：长尾候选都冒出来，句子开始不通顺。top-p 设成 0.5，只有最前面几个候选能被抽中。聊天产品常用的组合是 T≈0.7、top-p≈0.9。</p>
+    <details style="margin-top:12px"><summary class="status" style="cursor:pointer">这个 3-gram 模型的训练语料</summary><p class="note" id="corp6"></p></details>
+  </div>
+</section>
+
+<div class="key">
+  <h2 style="font-size:18px">串起来</h2>
+  <p>文本 → 分词器按合并规则切成 token 编号 → Embedding 查表变成向量 → L 层 Transformer（注意力让 token 互相交换信息，FFN 让每个 token 各自变换）→ 最后一个位置的向量投影成词表大小的 logits → 温度和 top-p 之后抽出一个 token → 接回输入，循环，直到抽到结束 token。</p>
+  <p>训练时走的是同一条路，只是不抽样：每个位置都去预测"下一个 token"，和真实答案比交叉熵，再反向传播更新所有参数。</p>
+</div>
+</div>
+
+<script src="./tiktoken.js" defer></script>
+<script>
+const $=id=>document.getElementById(id);
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const NS='http://www.w3.org/2000/svg';
+function E(tag,attrs,parent,text){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;if(parent)parent.appendChild(e);return e;}
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=n=>n.toLocaleString('en-US');
+function human(n){if(n>=1e12)return (n/1e12).toFixed(n>=1e13?0:1)+' T';if(n>=1e9)return (n/1e9).toFixed(n>=1e10?1:2)+' B';if(n>=1e6)return (n/1e6).toFixed(n>=1e7?0:1)+' M';if(n>=1e3)return (n/1e3).toFixed(n>=1e4?0:1)+' K';return String(Math.round(n));}
+function flopsH(n){if(n>=1e12)return (n/1e12).toFixed(1)+' 万亿次';if(n>=1e8)return fmt(Math.round(n/1e8))+' 亿次';return fmt(Math.round(n/1e4))+' 万次';}
+function bytesH(b){if(b>=2**30)return (b/2**30).toFixed(2)+' GB';if(b>=2**20)return (b/2**20).toFixed(1)+' MB';if(b>=1024)return (b/1024).toFixed(0)+' KB';return b+' B';}
+function vw(svg,h){const W=Math.round(Math.min(800,Math.max(320,svg.getBoundingClientRect().width||800)));svg.setAttribute('viewBox',`0 0 ${W} ${h}`);return W;}
+function segInit(id,cb){const s=$(id);s.querySelectorAll('button').forEach(b=>b.onclick=()=>{s.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));cb(b.dataset.v);});}
+const HUES=[212,28,145,280,48,340,185];
+const tint=i=>{const h=HUES[i%HUES.length];return `background:hsla(${h},75%,55%,.17);border-color:hsla(${h},60%,48%,.5)`;};
+const dec=new TextDecoder('utf-8',{fatal:true});
+function bytesToLabel(b){try{return {t:dec.decode(b),ok:true};}catch(e){return {t:Array.from(b).map(x=>x.toString(16).toUpperCase().padStart(2,'0')).join(' '),ok:false};}}
+const vis=s=>s.replace(/ /g,'␣').replace(/\n/g,'↵\n').replace(/\t/g,'⇥');
+const utf8=new TextEncoder();
+
+/* ---------- 00 real tokenizer ---------- */
+let enc0='o200k';
+const PRE0=[['中文','我们今天学习大语言模型的分词。'],['英文','Tokenization is the first step of every language model.'],['代码','for i in range(10):\n    print(i ** 2)'],['生僻字','魑魅魍魉，饕餮。'],['emoji','今天好开心😂🎉'],['数字','3.14159265358979 和 2026-10-14']];
+PRE0.forEach(([k,v])=>{const b=document.createElement('button');b.className='btn';b.textContent=k;b.onclick=()=>{$('in0').value=v;draw0();};$('pre0').appendChild(b);});
+segInit('seg0',v=>{enc0=v;draw0();});
+$('in0').oninput=draw0;$('ids0').onchange=draw0;
+function draw0(){
+  const txt=$('in0').value;
+  $('r0c').textContent=fmt([...txt].length);$('r0b').textContent=fmt(utf8.encode(txt).length);
+  if(!window.TK){return;}
+  const T=window.TK[enc0],other=enc0==='o200k'?'gpt2':'o200k';
+  $('st0').textContent=`${enc0==='o200k'?'GPT-4o o200k_base':'GPT-2'} · 词表 ${fmt(T.vocab)} 个 token`;
+  const ids=T.encode(txt),showId=$('ids0').checked;
+  $('out0').innerHTML=ids.map((id,i)=>{const b=T.bytes(id),l=bytesToLabel(b);
+    const title=`编号 ${id} · ${b.length} 字节: ${Array.from(b).map(x=>x.toString(16).toUpperCase().padStart(2,'0')).join(' ')}`;
+    return `<span class="tk${l.ok?'':' part'}" style="${tint(i)}" title="${esc(title)}">${esc(l.ok?vis(l.t):l.t)}${showId?`<sub>${id}</sub>`:''}</span>`;}).join('');
+  $('r0t').textContent=fmt(ids.length);
+  $('r0o').textContent=fmt(window.TK[other].encode(txt).length);
+  $('r0ol').textContent=(other==='o200k'?'GPT-4o':'GPT-2')+' 的 token 数';
+}
+window.addEventListener('tk-ready',()=>{draw0();draw4();});
+
+/* ---------- 01 BPE training (char level) ---------- */
+const DEF1='low 5\nlower 2\nnewest 6\nwidest 3';
+$('corp1').value=DEF1;
+let W1,M1,H1,last1,timer1=null;
+function parse1(){const out=[];$('corp1').value.split('\n').forEach(l=>{const m=l.trim().match(/^(\S+)\s+(\d+)$/);if(m&&+m[2]>0)out.push({w:m[1],f:+m[2]});else{const w=l.trim();if(w&&!/\s/.test(w))out.push({w,f:1});}});return out;}
+function reset1(){stop1();W1=parse1().map(o=>({w:o.w,f:o.f,seg:[...o.w]}));M1=[];H1=[];last1=null;draw1();}
+function pairs1(){const m=new Map();for(const w of W1)for(let i=0;i<w.seg.length-1;i++){const k=w.seg[i]+'\u0001'+w.seg[i+1];m.set(k,(m.get(k)||0)+w.f);}return [...m.entries()].sort((a,b)=>b[1]-a[1]);}
+function mergeSeg(seg,a,b){const s=[];for(let i=0;i<seg.length;i++){if(i<seg.length-1&&seg[i]===a&&seg[i+1]===b){s.push(a+b);i++;}else s.push(seg[i]);}return s;}
+function next1(){const p=pairs1();if(!p.length){stop1();return false;}const [k,c]=p[0];const [a,b]=k.split('\u0001');H1.push(W1.map(w=>w.seg));W1.forEach(w=>w.seg=mergeSeg(w.seg,a,b));M1.push({a,b,t:a+b,c});last1=a+b;draw1();return true;}
+function prev1(){if(!H1.length)return;stop1();const h=H1.pop();W1.forEach((w,i)=>w.seg=h[i]);M1.pop();last1=M1.length?M1[M1.length-1].t:null;draw1();}
+function stop1(){if(timer1){clearInterval(timer1);timer1=null;$('play1').textContent='自动播放';}}
+$('next1').onclick=()=>{stop1();next1();};$('prev1').onclick=prev1;$('reset1').onclick=reset1;
+$('play1').onclick=()=>{if(timer1){stop1();return;}$('play1').textContent='暂停';timer1=setInterval(()=>{if(!next1())stop1();},900);};
+let deb1;$('corp1').oninput=()=>{clearTimeout(deb1);deb1=setTimeout(reset1,400);};
+const chip1=t=>`<span class="tk ${t===last1?'new':(t.length>1?'big':'plain')}">${esc(t)}</span>`;
+function draw1(){
+  $('words1').innerHTML=W1.map(w=>`<div class="wrow"><span class="w">${esc(w.w)} ×${w.f}</span><span>${w.seg.map(chip1).join('')}</span></div>`).join('')||'<div class="status">语料为空</div>';
+  const p=pairs1();
+  $('pairs1').innerHTML=p.length?p.slice(0,7).map(([k,c],i)=>{const [a,b]=k.split('\u0001');return `<div class="prow${i===0?' top':''}"><span>${esc(a)} + ${esc(b)}</span><span>${c}</span></div>`;}).join(''):'<div class="status">每个词都已是一个整块，没有可合并的对了</div>';
+  $('rules1').innerHTML=M1.length?M1.map((m,i)=>`<div>${i+1}. ${esc(m.a)} + ${esc(m.b)} → <b>${esc(m.t)}</b> <span class="status">(${m.c} 次)</span></div>`).join(''):'<div class="status">还没有规则</div>';
+  $('rules1').scrollTop=1e6;
+  const base=[...new Set(W1.flatMap(w=>[...w.w]))].sort();
+  const vocab=base.concat(M1.map(m=>m.t));
+  $('vocab1').innerHTML=vocab.map(chip1).join('');
+  $('r1m').textContent=M1.length;$('r1v').textContent=vocab.length;
+  $('r1t').textContent=W1.reduce((a,w)=>a+w.seg.length*w.f,0);
+  $('st1').textContent=p.length?`下一步：${p[0][0].split('\u0001').join(' + ')}（${p[0][1]} 次）`:'训练结束';
+  draw2();
+}
+
+/* ---------- 02 encode with learned merges ---------- */
+['lowest','newer','slow','wider','box'].forEach(w=>{const b=document.createElement('button');b.textContent=w;b.dataset.v=w;b.setAttribute('aria-pressed','false');$('pre2').appendChild(b);});
+$('pre2').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('in2').value=b.dataset.v;draw2();});
+$('in2').oninput=draw2;
+function draw2(){
+  if(!M1)return;
+  const w=$('in2').value.trim();let seg=[...w];
+  const rows=[`<div class="st"><span class="r">起点：拆成字母</span><span>${seg.map(t=>`<span class="tk plain">${esc(t)}</span>`).join('')}</span></div>`];
+  let used=0;
+  M1.forEach((m,i)=>{const s2=mergeSeg(seg,m.a,m.b);if(s2.length!==seg.length){used++;seg=s2;
+    rows.push(`<div class="st"><span class="r">规则 ${i+1}：${esc(m.a)} + ${esc(m.b)} → ${esc(m.t)}</span><span>${seg.map(t=>`<span class="tk ${t===m.t?'new':(t.length>1?'big':'plain')}">${esc(t)}</span>`).join('')}</span></div>`);}});
+  if(!M1.length)rows.push('<div class="st"><span class="r">实验 01 还没学到任何规则，先去上面点几次「下一步」</span></div>');
+  else if(!used)rows.push(`<div class="st"><span class="r">${M1.length} 条规则都用不上，保持原样</span></div>`);
+  $('steps2').innerHTML=rows.join('');
+  $('r2c').textContent=[...w].length;$('r2t').textContent=seg.length;$('r2u').textContent=used;
+}
+
+/* ---------- corpus shared by 03 and 06 ---------- */
+const CORPUS='小猫坐在窗台上，看着外面的雨。小狗坐在门口，等主人回家。小猫喜欢晒太阳，也喜欢睡觉。下午的时候，小猫坐在垫子上，慢慢地闭上了眼睛。主人回家以后，小狗跑过去摇尾巴。小猫跳下窗台，走到主人身边。今天下雨，小猫不想出门，它坐在沙发上看着小狗。小狗坐在地上，看着小猫。晚上，小猫坐在主人的腿上，睡得很香。明天天气很好，我们一起出去走走。我们今天学习大语言模型。大语言模型先把文字切成很多小块，再把每一块变成一个向量。模型读完前面的文字，预测下一块是什么。每生成一块，就把它接到句子后面，再预测下一块。模型很大，但是它每一步只做一件事：猜下一块。我们学习分词，也学习注意力。注意力让每一块文字看前面的文字。老师说，学习要一步一步来。学生们坐在教室里，认真地听老师讲课。老师讲完以后，学生们开始做实验。实验的结果很有意思。我们把句子输入模型，模型输出每一块的概率。概率最高的不一定每次都被选中，因为我们会按概率采样。温度越高，选择越随机；温度越低，模型越保守。小猫坐在书桌上，看着我们做实验。我们笑了，小猫也好像笑了。主人说，今天的实验做得很好，明天我们再学习新的内容。小狗跑到门口，小猫跳上窗台，外面的雨停了，太阳出来了。';
+$('corp6').textContent=CORPUS;
+
+/* ---------- 03 byte-level BPE on Chinese ---------- */
+const PRETOK=/[一-鿿]+|[A-Za-z]+|\d+|\s+|[^一-鿿A-Za-z\d\s]+/g;
+const MAXM3=400;let MERGES3=[],RANK3=new Map(),VOC3=[];
+(function train3(){
+  for(let i=0;i<256;i++)VOC3.push(new Uint8Array([i]));
+  const counts=new Map();(CORPUS.match(PRETOK)||[]).forEach(p=>counts.set(p,(counts.get(p)||0)+1));
+  const words=[...counts.entries()].map(([p,f])=>({ids:Array.from(utf8.encode(p)),f}));
+  for(let m=0;m<MAXM3;m++){
+    const pc=new Map();let best=null,bc=0;
+    for(const w of words)for(let i=0;i<w.ids.length-1;i++){const k=w.ids[i]*65536+w.ids[i+1];const c=(pc.get(k)||0)+w.f;pc.set(k,c);if(c>bc||(c===bc&&k<best)){bc=c;best=k;}}
+    if(!best||bc<2)break;
+    const a=Math.floor(best/65536),b=best%65536,id=256+m;
+    const nb=new Uint8Array(VOC3[a].length+VOC3[b].length);nb.set(VOC3[a]);nb.set(VOC3[b],VOC3[a].length);VOC3.push(nb);
+    MERGES3.push([a,b]);RANK3.set(best,m);
+    for(const w of words){const s=[];for(let i=0;i<w.ids.length;i++){if(i<w.ids.length-1&&w.ids[i]===a&&w.ids[i+1]===b){s.push(id);i++;}else s.push(w.ids[i]);}w.ids=s;}
+  }
+  $('m3').max=MERGES3.length;
+})();
+function encode3(text,n){
+  const out=[];for(const p of (text.match(PRETOK)||[])){let ids=Array.from(utf8.encode(p));
+    while(ids.length>1){let br=Infinity,bi=-1;for(let i=0;i<ids.length-1;i++){const r=RANK3.get(ids[i]*65536+ids[i+1]);if(r!==undefined&&r<n&&r<br){br=r;bi=i;}}
+      if(bi<0)break;ids.splice(bi,2,256+br);}
+    out.push(...ids);}
+  return out;
+}
+let curve3=[];
+function calcCurve3(){const t=$('in3').value,n=[...t].length||1;curve3=[];for(let m=0;m<=MERGES3.length;m+=Math.max(1,Math.floor(MERGES3.length/120)))curve3.push([m,encode3(t,m).length/n]);curve3.push([MERGES3.length,encode3(t,MERGES3.length).length/n]);}
+$('m3').oninput=draw3;$('in3').oninput=()=>{calcCurve3();draw3();};
+function draw3(){
+  const n=+$('m3').value;$('m3o').textContent=n;
+  const t=$('in3').value,ids=encode3(t,n),nc=[...t].length;
+  $('out3').innerHTML=ids.map((id,i)=>{const l=bytesToLabel(VOC3[id]);return `<span class="tk${l.ok?'':' part'}" style="${tint(i)}" title="编号 ${id}">${esc(l.ok?vis(l.t):l.t)}</span>`;}).join('');
+  $('r3c').textContent=nc;$('r3t').textContent=ids.length;$('r3r').textContent=nc?(ids.length/nc).toFixed(2):'—';$('r3v').textContent=256+n;
+  const svg=$('svg3'),W=vw(svg,220);svg.innerHTML='';
+  const acc=css('--accent'),warn=css('--warn'),line=css('--line'),mu=css('--muted');
+  const X0=40,X1=W-16,Y0=20,Y1=180,maxY=Math.max(3.2,...curve3.map(c=>c[1])),maxX=MERGES3.length||1;
+  const sx=m=>X0+(X1-X0)*m/maxX,sy=v=>Y1-(Y1-Y0)*v/maxY;
+  [0,1,2,3].forEach(v=>{if(v>maxY)return;E('line',{x1:X0,y1:sy(v),x2:X1,y2:sy(v),stroke:line,'stroke-width':1},svg);E('text',{x:X0-10,y:sy(v),fill:mu,'font-size':13,'text-anchor':'end','dominant-baseline':'central'},svg,v);});
+  E('text',{x:X0,y:Y1+26,fill:mu,'font-size':13},svg,'0');E('text',{x:X1,y:Y1+26,fill:mu,'font-size':13,'text-anchor':'end'},svg,maxX+' 次合并');
+  E('text',{x:X0+8,y:Y0+4,fill:mu,'font-size':13,'dominant-baseline':'hanging'},svg,'每字符 token 数');
+  E('path',{d:curve3.map((c,i)=>(i?'L':'M')+sx(c[0]).toFixed(1)+' '+sy(c[1]).toFixed(1)).join(' '),fill:'none',stroke:acc,'stroke-width':2},svg);
+  const cy=nc?ids.length/nc:0;E('line',{x1:sx(n),y1:Y0,x2:sx(n),y2:Y1,stroke:warn,'stroke-width':1,'stroke-dasharray':'4 3'},svg);
+  E('circle',{cx:sx(n),cy:sy(cy),r:5,fill:warn},svg);
+}
+
+/* ---------- 04 pipeline ---------- */
+const MODELS={
+ gpt2:{name:'GPT-2 small',V:50257,d:768,L:12,H:12,KV:12,hd:64,ff:3072,glu:false,tied:true,pos:1024,enc:'gpt2'},
+ l8:{name:'Llama-3-8B',V:128256,d:4096,L:32,H:32,KV:8,hd:128,ff:14336,glu:true,tied:false,pos:0,enc:'o200k'},
+ l70:{name:'Llama-3-70B',V:128256,d:8192,L:80,H:64,KV:8,hd:128,ff:28672,glu:true,tied:false,pos:0,enc:'o200k'}};
+let mk='gpt2',sel4=2,T4=4;
+function P(m){const emb=m.V*m.d+m.pos*m.d,attn=m.d*m.H*m.hd+2*m.d*m.KV*m.hd+m.H*m.hd*m.d,ffn=(m.glu?3:2)*m.d*m.ff,out=m.tied?0:m.V*m.d;
+  return {emb,attn,ffn,out,attnAll:attn*m.L,ffnAll:ffn*m.L,total:emb+m.L*(attn+ffn)+out,nonEmb:m.L*(attn+ffn)+out+(m.tied?m.V*m.d:0),kvTok:2*m.L*m.KV*m.hd*2};}
+segInit('seg4',v=>{mk=v;draw4();reset5();});
+$('in4').oninput=()=>{draw4();reset5();};
+function tokCount4(){const m=MODELS[mk],t=$('in4').value;if(!window.TK)return Math.max(1,[...t].length);return Math.max(1,window.TK[m.enc].encode(t).length);}
+function stages4(){const m=MODELS[mk],p=P(m),T=T4;return [
+ {n:'分词',s:`文本 → [${T}]`,par:0,d:`分词器按合并规则把文本切成 <b>${T}</b> 个整数编号，形状 <span class="shape">[${T}]</span>。分词器本身没有可训练的参数，只是一张 ${fmt(m.V)} 条的词表加上合并规则。${m.enc==='gpt2'?'这里用的就是 GPT-2 自己的分词器。':'Llama 3 的分词器同属 tiktoken 系（12.8 万词表），这里用 GPT-4o 的 o200k 估算 token 数，结果很接近但不完全相同。'}`},
+ {n:'Embedding 查表',s:`[${T}] → [${T} × ${fmt(m.d)}]`,par:p.emb,d:`一个 <span class="shape">${fmt(m.V)} × ${fmt(m.d)}</span> 的矩阵，每个 token 编号取出对应的一行，得到 <span class="shape">[${T} × ${fmt(m.d)}]</span>。${m.pos?`GPT-2 还要再加一张 ${m.pos} × ${m.d} 的位置表，告诉模型每个 token 排第几。`:'Llama 没有位置表，位置信息用 RoPE 旋转在注意力里的 Q、K 上。'}参数 ${human(p.emb)}。`},
+ {n:`注意力 × ${m.L} 层`,s:`[${T} × ${fmt(m.d)}] → 同形状`,par:p.attnAll,d:`每层把向量变成 Q <span class="shape">[${T} × ${m.H} 头 × ${m.hd}]</span>，K、V 各 <span class="shape">[${T} × ${m.KV} 头 × ${m.hd}]</span>${m.KV<m.H?`（GQA：${m.H} 个 Q 头共用 ${m.KV} 组 K、V）`:''}，算出 <span class="shape">${m.H} × ${T} × ${T}</span> 个注意力分数，每个 token 只看自己和前面的 token。这是 token 之间<b>唯一</b>交换信息的地方。每层 ${human(p.attn)} 参数，${m.L} 层共 ${human(p.attnAll)}。`},
+ {n:`FFN × ${m.L} 层`,s:`[${T} × ${fmt(m.d)}] → 同形状`,par:p.ffnAll,d:`每个 token 各自独立地升维到 <span class="shape">${fmt(m.ff)}</span>，过非线性（${m.glu?'SwiGLU，所以有 3 个矩阵':'GELU，2 个矩阵'}），再降回 <span class="shape">${fmt(m.d)}</span>。token 之间不交流。每层 ${human(p.ffn)} 参数，${m.L} 层共 ${human(p.ffnAll)}，是模型参数的大头。注意力和 FFN 交替堆叠，每层都有残差连接和 Norm。`},
+ {n:'输出投影',s:`[${fmt(m.d)}] → [${fmt(m.V)}]`,par:p.out,d:`只取<b>最后一个位置</b>的向量 <span class="shape">[${fmt(m.d)}]</span>，乘一个 <span class="shape">${fmt(m.d)} × ${fmt(m.V)}</span> 的矩阵，得到词表里每个 token 的分数（logits）<span class="shape">[${fmt(m.V)}]</span>。${m.tied?'GPT-2 直接复用 Embedding 矩阵的转置，不另占参数。':`参数 ${human(p.out)}。`}`},
+ {n:'softmax + 采样',s:`[${fmt(m.V)}] → 1 个编号`,par:0,d:`logits 除以温度、softmax 成概率、按 top-p 截断后抽出 <b>1</b> 个 token 编号。没有参数。见实验 06。`}];}
+function draw4(){
+  const m=MODELS[mk],p=P(m);T4=tokCount4();
+  $('tok4').textContent=`输入被切成 ${T4} 个 token`+(m.enc==='o200k'?'（用 GPT-4o 分词器估算）':'（GPT-2 分词器）');
+  const st=stages4(),svg=$('svg4');
+  const W0=Math.round(Math.min(800,Math.max(320,svg.getBoundingClientRect().width||800))),narrow=W0<600,RH=narrow?74:66;
+  const W=vw(svg,24+st.length*RH);svg.innerHTML='';
+  const acc=css('--accent'),accS=css('--accent-soft'),line=css('--line'),fg=css('--fg'),mu=css('--muted'),paper=css('--paper'),warn=css('--warn');
+  const BX=narrow?2:20,BW=narrow?W-4:Math.round(W*.54),BarX=narrow?BX+14:BX+BW+20,BarW=narrow?BW-28:W-BarX-20;
+  E('text',{x:BX,y:14,fill:mu,'font-size':13},svg,narrow?'阶段（点击查看）· 条 = 参数占比':'阶段（点击查看）');
+  if(!narrow)E('text',{x:BarX,y:14,fill:mu,'font-size':13},svg,'参数占全模型的比例');
+  st.forEach((s,i)=>{const y=26+i*RH,on=i===sel4,h=RH-12;
+    const g=E('g',{style:'cursor:pointer',tabindex:0,role:'button','aria-label':s.n},svg);
+    g.onclick=()=>{sel4=i;draw4();};g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sel4=i;draw4();}};
+    E('rect',{x:BX,y,width:BW,height:h,rx:5,fill:on?accS:paper,stroke:on?acc:line,'stroke-width':on?1.5:1},g);
+    E('text',{x:BX+14,y:y+17,fill:fg,'font-size':16,'font-weight':600,'dominant-baseline':'central'},g,s.n);
+    E('text',{x:BX+14,y:y+37,fill:on?acc:mu,'font-size':13,'dominant-baseline':'central'},g,s.s);
+    if(i<st.length-1)E('line',{x1:BX+BW/2,y1:y+h,x2:BX+BW/2,y2:y+RH,stroke:line,'stroke-width':1.5},svg);
+    const frac=s.par/p.total,lab=s.par?`${human(s.par)} · ${(frac*100).toFixed(frac<.1?1:0)}%`:(i===4&&m.tied?'与 Embedding 共用':'无参数');
+    if(narrow){
+      E('text',{x:BX+BW-12,y:y+17,fill:mu,'font-size':12.5,'text-anchor':'end','dominant-baseline':'central'},g,lab);
+      E('rect',{x:BarX,y:y+h-11,width:BarW,height:5,rx:2,fill:line},g);
+      if(frac>0)E('rect',{x:BarX,y:y+h-11,width:Math.max(2,BarW*frac),height:5,rx:2,fill:i===2||i===3?warn:acc},g);
+    }else{
+      E('rect',{x:BarX,y:y+15,width:BarW,height:20,rx:3,fill:'none',stroke:line},svg);
+      if(frac>0)E('rect',{x:BarX,y:y+15,width:Math.max(1.5,BarW*frac),height:20,rx:3,fill:i===2||i===3?warn:acc,opacity:on?1:.7},svg);
+      E('text',{x:BarX,y:y+47,fill:mu,'font-size':12.5,'dominant-baseline':'central'},svg,lab);
+    }
+  });
+  $('det4').innerHTML=`<b>${st[sel4].n}</b>　${st[sel4].d}`;
+  $('r4p').textContent=human(p.total);$('r4l').textContent=m.L;$('r4d').textContent=fmt(m.d);$('r4f').textContent='≈ '+flopsH(2*p.nonEmb);
+  draw5();
+}
+
+/* ---------- 05 autoregressive ---------- */
+let step5=-1,timer5=null;
+$('n5').oninput=()=>{$('n5o').textContent=$('n5').value;reset5();};
+function reset5(){stop5();step5=-1;draw5();}
+function stop5(){if(timer5){clearInterval(timer5);timer5=null;$('play5').textContent='播放';}}
+function adv5(){const N=+$('n5').value;if(step5>=N){stop5();return false;}step5++;draw5();return true;}
+$('step5').onclick=()=>{stop5();adv5();};$('reset5').onclick=reset5;
+$('play5').onclick=()=>{if(timer5){stop5();return;}if(step5>=+$('n5').value)step5=-1;$('play5').textContent='暂停';adv5();timer5=setInterval(()=>{if(!adv5())stop5();},650);};
+function draw5(){
+  const m=MODELS[mk],p=P(m),T=T4,N=+$('n5').value,total=T+N,svg=$('svg5');
+  const W0=Math.round(Math.min(800,Math.max(320,svg.getBoundingClientRect().width||800))),narrow=W0<600;
+  const W=vw(svg,narrow?236:210);svg.innerHTML='';
+  const acc=css('--accent'),accS=css('--accent-soft'),warn=css('--warn'),warnS=css('--warn-soft'),line=css('--line'),fg=css('--fg'),mu=css('--muted'),paper=css('--paper'),ok=css('--ok');
+  const cap0=Math.floor((W-4)/17),show=Math.min(total,cap0,48),w=Math.min(36,(W-4-(show-1)*3)/show),off=Math.max(0,total-show);
+  const have=step5<0?0:T+step5;
+  E('text',{x:2,y:14,fill:mu,'font-size':13},svg,off?`token 序列（只画最后 ${show} 个）`:'token 序列');
+  for(let k=0;k<show;k++){const i=k+off,x=2+k*(w+3),y=26;
+    const isPrompt=i<T,exists=step5>=0?i<T+step5:i<T,computing=step5===0?i<T:(step5>0&&i===T+step5-1);
+    let fill=paper,stroke=line;
+    if(exists&&isPrompt){fill=accS;stroke=acc;} if(exists&&!isPrompt){fill=warnS;stroke=warn;}
+    if(!exists&&!isPrompt){fill='none';}
+    E('rect',{x,y,width:w,height:34,rx:3,fill,stroke,'stroke-width':computing?2.5:1,'stroke-dasharray':exists||isPrompt?'':'3 3'},svg);
+    if(computing)E('rect',{x,y:y+40,width:w,height:5,rx:2,fill:fg},svg);}
+  const ly=94;
+  [[accS,acc,'输入'],[warnS,warn,'已生成']].forEach(([f,s2],j)=>{const x=2+j*86;E('rect',{x,y:ly-6,width:14,height:12,rx:2,fill:f,stroke:s2},svg);});
+  E('text',{x:22,y:ly,fill:mu,'font-size':12.5,'dominant-baseline':'central'},svg,'输入');
+  E('text',{x:108,y:ly,fill:mu,'font-size':12.5,'dominant-baseline':'central'},svg,'已生成');
+  E('rect',{x:172,y:ly+2,width:14,height:4,rx:2,fill:fg},svg);E('text',{x:192,y:ly,fill:mu,'font-size':12.5,'dominant-baseline':'central'},svg,'这一遍在算');
+  const cap=total*p.kvTok,cur=have*p.kvTok;
+  let yb=128;
+  E('text',{x:2,y:yb,fill:mu,'font-size':13},svg,`KV Cache · 每个 token ${bytesH(p.kvTok)}`);
+  if(narrow){yb+=20;E('text',{x:2,y:yb,fill:mu,'font-size':12},svg,`= 2 × ${m.L} 层 × ${m.KV} 头 × ${m.hd} 维 × 2 字节`);}
+  else E('text',{x:W-2,y:yb,fill:mu,'font-size':12.5,'text-anchor':'end'},svg,`= 2 × ${m.L} 层 × ${m.KV} 头 × ${m.hd} 维 × 2 字节`);
+  yb+=12;
+  E('rect',{x:2,y:yb,width:W-4,height:24,rx:3,fill:'none',stroke:line},svg);
+  if(cur>0)E('rect',{x:2,y:yb,width:(W-4)*cur/cap,height:24,rx:3,fill:ok,opacity:.8},svg);
+  E('text',{x:2,y:yb+46,fill:fg,'font-size':13.5},svg,`${bytesH(cur)} / 生成完 ${bytesH(cap)}`);
+  const phase=step5<0?'未开始':(step5===0?'Prefill':(step5>=N?'完成':'Decode'));
+  const nTok=step5<0||step5>=N?0:(step5===0?T:1);
+  $('r5s').textContent=phase;$('r5n').textContent=nTok;
+  $('r5k').textContent=bytesH(cur);$('r5f').textContent=nTok?'≈ '+flopsH(2*p.nonEmb*nTok):'—';
+  $('st5').textContent=`${m.name} · 输入 ${T} 个 token`+(step5>0&&step5<=N?` · 已生成 ${Math.min(step5,N)} / ${N}`:'');
+}
+
+/* ---------- 06 sampling ---------- */
+const CH6=[...new Set(CORPUS)];const U6=new Map(),B6=new Map(),TR6=new Map();
+(function(){const c=[...CORPUS];c.forEach((x,i)=>{U6.set(x,(U6.get(x)||0)+1);if(i>0){const k=c[i-1];if(!B6.has(k))B6.set(k,new Map());B6.get(k).set(x,(B6.get(k).get(x)||0)+1);}
+  if(i>1){const k=c[i-2]+c[i-1];if(!TR6.has(k))TR6.set(k,new Map());TR6.get(k).set(x,(TR6.get(k).get(x)||0)+1);}});})();
+const NU6=[...CORPUS].length;
+function probs6(ctx){const c=[...ctx],a=c[c.length-2],b=c[c.length-1];
+  const tri=a&&b?TR6.get(a+b):null,bi=b?B6.get(b):null;
+  const parts=[[tri,.65],[bi,.3]].filter(x=>x[0]),wsum=parts.reduce((s,x)=>s+x[1],0)+.05;
+  const out=new Map();CH6.forEach(ch=>{let p=.05*(U6.get(ch)/NU6);parts.forEach(([m,l])=>{let t=0;m.forEach(v=>t+=v);p+=l*((m.get(ch)||0)/t);});out.set(ch,p/wsum);});return out;}
+let text6='',gen6=new Set();
+function cur6(){const T=+$('t6').value,P=+$('p6').value;const pr=probs6(text6);
+  const lg=[...pr.entries()].map(([c,p])=>({c,l:Math.log(p)}));const mx=Math.max(...lg.map(x=>x.l/T));let s=0;lg.forEach(x=>{x.e=Math.exp(x.l/T-mx);s+=x.e;});lg.forEach(x=>x.p=x.e/s);
+  lg.sort((a,b)=>b.p-a.p);let cum=0;lg.forEach(x=>{x.keep=cum<P;cum+=x.p;});const ks=lg.filter(x=>x.keep).reduce((a,x)=>a+x.p,0);lg.forEach(x=>x.q=x.keep?x.p/ks:0);return lg;}
+function sample6(){const lg=cur6();let r=Math.random(),pick=lg[0];for(const x of lg){if(!x.keep)break;r-=x.q;if(r<=0){pick=x;break;}}
+  const pos=[...text6].length;text6+=pick.c;gen6.add(pos);draw6();}
+$('samp6').onclick=sample6;$('gen6').onclick=()=>{for(let i=0;i<20;i++)sample6();};
+$('clr6').onclick=()=>{text6=$('in6').value;gen6=new Set();draw6();};
+$('in6').oninput=()=>{text6=$('in6').value;gen6=new Set();draw6();};
+$('t6').oninput=$('p6').oninput=draw6;
+function draw6(){
+  $('t6o').textContent=(+$('t6').value).toFixed(2);$('p6o').textContent=(+$('p6').value).toFixed(2);
+  $('out6').innerHTML=[...text6].map((c,i)=>gen6.has(i)?`<span class="g">${esc(c)}</span>`:esc(c)).join('')+'<span style="color:var(--muted)">▍</span>';
+  const lg=cur6(),top=lg.slice(0,14),svg=$('svg6'),W=vw(svg,330);svg.innerHTML='';
+  const acc=css('--accent'),line=css('--line'),fg=css('--fg'),mu=css('--muted');
+  const last2=[...text6].slice(-2).join('');
+  E('text',{x:2,y:16,fill:mu,'font-size':13},svg,W<600?`「${last2||'（空）'}」之后的前 14 个候选`:`在「${last2||'（空）'}」之后，前 14 个候选的概率（蓝 = top-p 留下，灰 = 被截掉）`);
+  const pmax=Math.max(.05,top[0].p),X0=W<600?82:96,BW=W-X0-70;
+  top.forEach((x,i)=>{const y=34+i*21;
+    E('text',{x:X0-14,y:y+8,fill:x.keep?fg:mu,'font-size':15,'text-anchor':'end','dominant-baseline':'central'},svg,x.c==='，'?'，(逗号)':x.c==='。'?'。(句号)':x.c);
+    E('rect',{x:X0,y,width:Math.max(1,BW*x.p/pmax*.86),height:16,rx:2,fill:x.keep?acc:line,opacity:x.keep?.85:1},svg);
+    E('text',{x:X0+BW*x.p/pmax*.86+8,y:y+8,fill:x.keep?fg:mu,'font-size':12.5,'dominant-baseline':'central'},svg,(x.p*100).toFixed(x.p<.01?2:1)+'%');});
+  $('r6k').textContent=lg.filter(x=>x.keep).length;$('r6m').textContent=(lg[0].p*100).toFixed(1)+'%';
+  $('r6h').textContent=(-lg.reduce((a,x)=>a+(x.p>0?x.p*Math.log2(x.p):0),0)).toFixed(2)+' bit';
+}
+
+function all(){draw0();draw1();draw3();draw4();draw6();}
+reset1();calcCurve3();text6=$('in6').value;all();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',all);
+let rz,lastW=innerWidth;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(innerWidth!==lastW){lastW=innerWidth;all();}},150);});
+new MutationObserver(all).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+if(window.TK){draw0();draw4();}
+</script>
+</body>
+</html>

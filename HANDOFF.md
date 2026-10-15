@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 23:12 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
+最后更新：2026-10-14 23:16 America/New_York · 更新者：Claude（会话 session_01VUsddfCsJAF5MCspd9azWH）
 
 ---
 
@@ -115,6 +115,8 @@ door4ai-lab/
 - **右上角账号区（2026-10-14 本人要求，仿常见 SaaS 样式）**：导航链接之后只有一个圆角方形头像按钮（**不要「支持」入口**，本人已明确去掉）；点开下拉菜单：已登录时顶部显示邮箱，下面「个人资料」（仅自建账号启用时显示，链 /account/）、「Resource」（链 /resources/，登录与否都显示）、「外观 ›」（展开为 跟随系统 / 浅色 / 深色）、分隔线、「退出登录」；未登录时首项为「登录」。截图里的 Language / View mode 没做（站点只有中文、无其他视图），需要时再加。Esc 和点外部关闭。
 - **外观切换**：存 localStorage `d4a-theme`（light / dark，缺省 = 跟随系统），`<head>` 里内联脚本在渲染前设 `<html data-theme>`，避免闪烁。CSS token 写法：`@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){…} }` + `:root[data-theme="dark"]{…}`，**新增的深色样式都要照此两段写**。实验页同源，加载时读同一个键；切换时父页面直接改 iframe 的 `data-theme`（实验页已有 MutationObserver 重绘画布）。
 - 课程目录 /ai：每讲左侧大号编号；**目录里不显示文章 description 小字**（本人要求，只留编号、元信息、标题、标签；description 仍用于文章页与 SEO）；第一讲标「从这里开始」；阅读进度只存本机浏览器 localStorage（键 `d4a-read`，文章页打开即记为已读），有已读时显示进度条、「已读」与「下一讲」标记。不做账号级进度。
+- 课程顺序：Token 讲（tokenizer-llm，order 4）放在硬件讲（2）和注意力讲（5）之间：先知道文字怎么变成 token、模型整体怎么跑，再拆开注意力。
+- 需要大数据表的实验（如分词器词表）把打包好的 JS 放在实验页同目录（`public/labs/<slug>/xxx.js`），同源、受同样的门禁保护；不依赖外部 CDN，国内访问更稳。
 - 课程顺序：注意力 QKV（order 5）在前，KV Cache（order 10）在后，因为 KV cache 建立在 Q/K/V 概念上。课程目录的「第 N 讲」由 order 排序自动生成。
 
 - **账号与计费（2026-10-14 本人确认）**：自建账号，D1 不用 PG；不设密码，Passkey 为主、邮箱验证码注册与兜底、TOTP 可选（未做）；每账号同一时间只允许 1 个会话，新登录踢掉旧会话；只做买断，不做订阅；买全套包含以后新增的讲；收款复用 door4ai.com 的 pay-api（接口文档待本人提供）；记录注册来源（首次/最后触达 UTM、ref 渠道码、来源问卷）。设计文档：https://claude.ai/code/artifact/9679fc7a-0fe4-4323-86f1-65cbb1cc005f
@@ -130,6 +132,7 @@ door4ai-lab/
 - [x] 安装包镜像上线并验证：12 个文件（FlClash v0.9.0 ×6、Claude 2.37337.1 ×5、Codex/ChatGPT.dmg ×1），登录后点击即下，支持断点续传（2026-10-14）
 - [x] 新增《注意力里的 Q、K、V 到底在干什么》+「注意力实验室」六个实验，排为第 1 讲（order 5），KV Cache 顺延为第 2 讲（2026-10-14）
 - [x] 新增入门讲《电脑里到底有什么：CPU、GPU、内存、显存与 Docker》+ 五个等距图解实验，排在课程最前（order 2）（2026-10-14）
+- [x] 新增《Token 是什么：一句话是怎么进出大模型的》+「Token 实验室」七个实验（00–06），排为第 2 讲（order 4，在硬件讲与注意力讲之间）（2026-10-14）
 - [ ] 下一讲：题目未定（候选见第 7 节）
 - [ ] 关于页只有两句话，待充实
 - [ ] 没有统计/分析（可考虑 Cloudflare Web Analytics，免费，一行脚本）
@@ -143,6 +146,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-14 · Claude** — 新文章《Token 是什么：一句话是怎么进出大模型的》（`src/content/blog/tokenizer-llm.md`，series ai-mastery，**order 4**，排在硬件讲之后、注意力讲之前）+ 实验页 `public/labs/tokenizer-llm/index.html`：00 真实分词器（GPT-2 `gpt2` 与 GPT-4o `o200k_base`，色块 + 字节碎片 + 编号）/ 01 字母级 BPE 逐步训练（语料可改、可后退、自动播放）/ 02 用学到的规则切新词 / 03 在浏览器里对约 500 字中文语料训练字节级 BPE，拖合并次数看字节→字→词 / 04 GPT-2 small、Llama-3-8B、Llama-3-70B 五站流水线（形状与参数占比按公开架构参数计算）/ 05 Prefill 与 Decode 动画 + KV Cache 增长 / 06 温度与 top-p（logits 来自同一段语料上的字级 3-gram，采样部分与真模型一致）。分词器打包为同目录 `tiktoken.js`（js-tiktoken 1.0.21 lite + gpt2 + o200k_base 词表，esbuild IIFE，2.9 MB / gzip 1.4 MB，暴露 `window.TK`，加载完发 `tk-ready` 事件）。SVG 按实际宽度布局（`vw()`），手机上流水线改为单列。本地 build 通过；headless Chromium 检查 1200 / 390 宽、深浅色、各实验交互、文章页 iframe 自动长高、无横向滚动。从云端会话推送；Mac 本地副本需 `git pull`。
 
 - **2026-10-14 · Claude** — 按本人要求首页只留「Attention is all you need」：`Base.astro` 新增 `bare` prop（不渲染页眉、页脚），`index.astro` 整页改为指向 `/ai/` 的链接。
 
@@ -239,7 +244,7 @@ door4ai-lab/
 
 ## 7. 下一步建议（接手者可直接挑一个做）
 
-1. 下一篇实验文章。Attention 已完成。候选：Tokenizer 实验（BPE 合并过程逐步演示）；LoRA 低秩微调为什么省参数（和 MLA 的低秩思想一脉相承）。
+1. 下一篇实验文章。Attention、Tokenizer 已完成。Tokenizer 已完成。候选：LoRA 低秩微调为什么省参数（和 MLA 的低秩思想一脉相承）。
 2. 给文章列表加按 tag 过滤。
 3. 加 Cloudflare Web Analytics。
 

@@ -12,10 +12,15 @@ export const POSTS: Record<string, PostAccess> = {
   "kv-cache-quantization": {
     "access": "paid",
     "series": "ai-mastery"
+  },
+  "tokenizer-llm": {
+    "access": "paid",
+    "series": "ai-mastery"
   }
 };
 export const LABS: Record<string, string> = {
   "labs/attention-qkv": "attention-qkv",
   "labs/computer-anatomy": "computer-anatomy",
-  "labs/kv-cache": "kv-cache-quantization"
+  "labs/kv-cache": "kv-cache-quantization",
+  "labs/tokenizer-llm": "tokenizer-llm"
 };
