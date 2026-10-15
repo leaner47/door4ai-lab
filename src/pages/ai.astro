@@ -10,14 +10,50 @@ const fmt = (d: Date) => d.toISOString().slice(0, 10);
   <div class="eyebrow">Course</div>
   <h1>AI 从入门到精通</h1>
   <p class="prose" style="color:var(--muted)">按顺序读。每一讲都有一个实验页，先玩实验再看文字，理解会快很多。</p>
+  <div class="progress" id="progress" hidden>
+    <span class="track"><span class="fill"></span></span><span class="txt"></span>
+  </div>
   <ul class="postlist">
     {posts.map((p, i) => (
-      <li>
-        <div class="eyebrow">第 {i + 1} 讲 · {fmt(p.data.pubDate)}{p.data.lab && ' · 含实验'}</div>
-        <a class="t" href={`/posts/${p.id}/`}>{p.data.title}</a>
-        <p>{p.data.description}</p>
-        {p.data.tags.length > 0 && <div class="tags">{p.data.tags.map((t) => <span class="tag">{t}</span>)}</div>}
+      <li data-slug={p.id} class:list={[{ next: i === 0 }]}>
+        <div class="num" aria-hidden="true">{String(i + 1).padStart(2, '0')}</div>
+        <div>
+          <div class="meta">
+            <span class="eyebrow">第 {i + 1} 讲 · {fmt(p.data.pubDate)}{p.data.lab && ' · 含实验'}</span>
+            {i === 0 && <span class="badge" data-start>从这里开始</span>}
+          </div>
+          <a class="t" href={`/posts/${p.id}/`}>{p.data.title}</a>
+          <p>{p.data.description}</p>
+          {p.data.tags.length > 0 && <div class="tags">{p.data.tags.map((t) => <span class="tag">{t}</span>)}</div>}
+        </div>
       </li>
     ))}
   </ul>
+  <script>
+    // 阅读进度只存在本机浏览器（localStorage），打开过的文章记为「已读」
+    (() => {
+      let read: string[] = [];
+      try { read = JSON.parse(localStorage.getItem('d4a-read') || '[]'); } catch (e) {}
+      const items = [...document.querySelectorAll<HTMLLIElement>('.postlist li')];
+      const done = items.filter((li) => read.includes(li.dataset.slug!));
+      if (!done.length) return;
+      document.querySelector('[data-start]')?.remove();
+      items.forEach((li) => li.classList.remove('next'));
+      done.forEach((li) => {
+        li.classList.add('read');
+        const b = document.createElement('span'); b.className = 'badge done'; b.textContent = '已读';
+        li.querySelector('.meta')!.append(b);
+      });
+      const nxt = items.find((li) => !li.classList.contains('read'));
+      if (nxt) {
+        nxt.classList.add('next');
+        const b = document.createElement('span'); b.className = 'badge'; b.textContent = '下一讲';
+        nxt.querySelector('.meta')!.append(b);
+      }
+      const bar = document.getElementById('progress')!;
+      bar.hidden = false;
+      (bar.querySelector('.fill') as HTMLElement).style.width = `${(done.length / items.length) * 100}%`;
+      bar.querySelector('.txt')!.textContent = `已读 ${done.length} / ${items.length} 讲`;
+    })();
+  </script>
 </Base>

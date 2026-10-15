@@ -51,11 +51,11 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="630" height="880" vi
 <rect width="630" height="880" fill="url(#glow)"/>
 <rect x="28" y="28" width="574" height="824" rx="22" fill="none" stroke="${accent}" stroke-opacity="0.55" stroke-width="3"/>
 ${logoHref ? `<image href="${logoHref}" x="${315 - S / 2}" y="70" width="${S}" height="${S}" preserveAspectRatio="xMidYMid meet"/>` : ''}
-<text x="315" y="${logoHref ? 215 : 130}" text-anchor="middle" font-family="Times New Roman, Times, serif" font-size="40" letter-spacing="2" fill="${accent}">${esc(kicker)}</text>
+<text x="315" y="${logoHref ? 228 : 130}" text-anchor="middle" font-family="Times New Roman, Times, serif" font-size="54" letter-spacing="2" fill="${accent}">${esc(kicker)}</text>
 ${platHref ? `<image href="${platHref}" x="${315 - L / 2}" y="${430 - L / 2}" width="${L}" height="${L}" preserveAspectRatio="xMidYMid meet"/>` : (logoHref ? `<image href="${logoHref}" x="${315 - L / 2}" y="${430 - L / 2}" width="${L}" height="${L}" preserveAspectRatio="xMidYMid meet"/>` : '')}
-<text x="315" y="${430 + L / 2 + 80}" text-anchor="middle" font-family="Times New Roman, Times, PingFang SC, Heiti SC, sans-serif" font-size="58" font-weight="700" fill="#f4f1ea">${esc(t1)}</text>
-${t2 ? `<text x="315" y="${430 + L / 2 + 132}" text-anchor="middle" font-family="Times New Roman, Times, PingFang SC, Heiti SC, sans-serif" font-size="38" fill="#d5d9e0">${esc(t2)}</text>` : ''}
-<text x="315" y="800" text-anchor="middle" font-family="Times New Roman, Times, PingFang SC, Heiti SC, sans-serif" font-size="32" fill="#9aa1ab">${esc(foot)}</text>
+<text x="315" y="${430 + L / 2 + 84}" text-anchor="middle" font-family="Times New Roman, Times, PingFang SC, Heiti SC, sans-serif" font-size="68" font-weight="700" fill="#f4f1ea">${esc(t1)}</text>
+${t2 ? `<text x="315" y="${430 + L / 2 + 146}" text-anchor="middle" font-family="Times New Roman, Times, PingFang SC, Heiti SC, sans-serif" font-size="50" fill="#d5d9e0">${esc(t2)}</text>` : ''}
+<text x="315" y="806" text-anchor="middle" font-family="Times New Roman, Times, PingFang SC, Heiti SC, sans-serif" font-size="48" letter-spacing="4" fill="#c3c8d0">${esc(foot)}</text>
 </svg>`;
 const image = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 const Tag = href ? 'a' : 'div';

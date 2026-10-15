@@ -23,4 +23,7 @@ const fmt = (d: Date) => d.toISOString().slice(0, 10);
     )}
     <div class="prose"><Content /></div>
   </article>
+  <script is:inline define:vars={{ slug: post.id }}>
+    try { const k = 'd4a-read', r = JSON.parse(localStorage.getItem(k) || '[]'); if (!r.includes(slug)) { r.push(slug); localStorage.setItem(k, JSON.stringify(r)); } } catch (e) {}
+  </script>
 </Base>

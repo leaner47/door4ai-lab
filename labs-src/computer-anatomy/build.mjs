@@ -90,8 +90,8 @@ b{font-weight:600}
 const sec = (id, n, title, html) => `<section id="${id}"><h2><span class="n">${n}</span>${title}</h2>${html}</section>`;
 
 const intro = `
-<h1>电脑里到底有什么</h1>
-<p class="lede">CPU、GPU、内存、显存、统一内存、Docker、服务器——一次讲清。每张图都是一台可以「动手」的小机器：点按钮、拖滑块，看它怎么干活。</p>
+<h1 class="lab-intro">电脑里到底有什么</h1>
+<p class="lede lab-intro">CPU、GPU、内存、显存、统一内存、Docker、服务器——一次讲清。每张图都是一台可以「动手」的小机器：点按钮、拖滑块，看它怎么干活。</p>
 <ul class="toc">
   <li><a href="#kitchen">先打个比方</a></li><li><a href="#cpu-gpu">CPU 与 GPU</a></li><li><a href="#memory">内存与显存</a></li>
   <li><a href="#unified">统一内存</a></li><li><a href="#docker">Docker</a></li><li><a href="#server">服务器 vs 个人电脑</a></li>
@@ -133,7 +133,7 @@ const outro = `<div class="foot">
 
 const live = [F1_LIVE, m23?.LIVE, m4?.LIVE, m5?.LIVE].filter(Boolean).join("\n");
 const html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>电脑里有什么</title><style>${CSS}</style></head>
+<title>电脑里有什么</title><style>${CSS}</style><script>if(window.self!==window.top)document.documentElement.classList.add("embedded")</script><style>html.embedded .lab-intro{display:none}html.embedded .wrap{padding-top:20px}html.embedded main{margin-top:28px}html.embedded .lab-intro+section{margin-top:0}</style></head>
 <body class="iso"><main>${intro}${kitchen}${s1}${s2}${s3}${s4}${s5}${outro}</main>
 <script type="module">${(kitScript() + "\n" + live).replace(/<\/(script)/gi, "<\\/$1")}</script></body></html>`;
 writeFileSync("index.html", html);
