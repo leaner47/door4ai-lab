@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 23:45 America/New_York · 更新者：Claude（会话 session_017mU9qFdHEjTGTDCSBqAGWr，账号系统上线、旧 Access 应用删除）
+最后更新：2026-10-14 23:55 America/New_York · 更新者：Claude（会话 session_017mU9qFdHEjTGTDCSBqAGWr）
 
 ---
 
@@ -143,15 +143,17 @@ door4ai-lab/
 - [x] 账号系统第 0 期代码完成并推送（默认关闭，线上行为不变）：邮箱验证码注册/登录、Passkey、单会话、注册来源、门禁、登录/账号/购买占位页；本地端到端 22/22 通过（2026-10-14）
 - [x] **启用账号系统**（2026-10-14，Claude 在内置浏览器操作，登录由本人完成）：D1 `door4ai-lab`（APAC，id 34ef8e2c-d102-4a24-9acd-7f209f4ce41e）建表 17 张并绑定 `DB`；Turnstile 小组件「Door4AI Lab login」（主机名 door4ai.com，含子域）；Access 新应用「Door4AI Lab Admin」保护 `lab.door4ai.com/admin` 与 `/api/admin`，策略 Only me；Resend 用已验证的 door4ai.com 发信（发件人 login@door4ai.com，API key「door4ai-lab login codes」仅发送权限、仅 door4ai.com）；Pages 变量：AUTH_ENABLED=1、ADMIN_EMAILS、MAIL_FROM、TURNSTILE_SITE_KEY、ACCESS_TEAM_DOMAIN、ACCESS_AUD 为文本，RESEND_API_KEY、TURNSTILE_SECRET、TOTP_ENC_KEY 为 Secret。Cloudflare Email Sending 需 Workers 付费版，未开。
 - [x] 本人线上登录验证通过（邮箱验证码，注册 + 欢迎页 + 问卷），随后经本人同意删除旧 Access 应用「Door4AI Lab」；匿名访问课程 / 实验页已确认跳转本站登录页，课程目录公开（2026-10-14）
-- [ ] 建议：`SYNC_KEY` 目前是明文变量，改成 Secret
+- [x] `SYNC_KEY` 已改为 Secret（值不变）（2026-10-14）
 - [ ] 加学员（支付上线前）：启用后台后直接在 /admin「用户 → 开通课程」里填邮箱（对方没注册也行）；未启用后台时执行 `npx wrangler d1 execute door4ai-lab --remote --command "INSERT INTO entitlements (id,user_id,scope,source,starts_at) SELECT lower(hex(randomblob(13))), id, 'series:ai-mastery', 'grant', unixepoch()*1000 FROM users WHERE email='学员邮箱'"`
 - [x] 两步验证（TOTP，Apple 密码可直接添加）+ 10 个恢复码 + 防重放；后台 /admin（概览、用户、渠道码、日志）。本地 43/43 + 9/9 通过（2026-10-14）
 - [ ] 启用后台：Access 应用加 `/admin` 路径；Pages 设 `ACCESS_TEAM_DOMAIN`、`ACCESS_AUD`；两步验证需设 `TOTP_ENC_KEY`（`openssl rand -base64 32` 生成）
 - [ ] 后台还没有：订单列表、退款（第 1 期支付上线时一起做）
-- [ ] 第 1 期 买断支付：等本人提供 pay-api 接口文档（签名算法、回调格式、查单/退款接口）
+- [ ] 第 1 期 买断支付：等本人提供 pay-api 接口文档（签名算法、回调格式、查单/退款接口）——本人正在向维护 pay-api 的另一个 AI 要文档
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-14 · Claude** — 按本人要求把 Pages 变量 `SYNC_KEY` 从明文改为 Secret（值不变），本次提交触发重新部署使其生效。
 
 - **2026-10-14 · Claude** — 本人在 Safari 完成线上注册登录（验证码邮件由 Resend 从 login@door4ai.com 发出）。经本人确认删除 Access 应用「Door4AI Lab」（含 Door4AI Lab students 白名单）；外部检查：/posts、/labs 未登录跳 /login/，/ai/ 公开，/admin 仍在 Access 后。
 
