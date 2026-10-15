@@ -25,7 +25,6 @@ const fmt = (d: Date) => d.toISOString().slice(0, 10);
             {i === 0 && <span class="badge" data-start>从这里开始</span>}
           </div>
           <a class="t" href={`/posts/${p.id}/`}>{p.data.title}</a>
-          <p>{p.data.description}</p>
           {p.data.tags.length > 0 && <div class="tags">{p.data.tags.map((t) => <span class="tag">{t}</span>)}</div>}
         </div>
       </li>
