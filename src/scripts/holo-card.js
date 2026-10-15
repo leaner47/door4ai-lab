@@ -398,9 +398,18 @@ export function initHoloCard(root) {
   img.onload = () => {
     if (!gl || !program) return;
     try {
+      // WebKit bug: texImage2D() from an SVG <img> uploads the SVG rasterised at the size the same
+      // image is *displayed* at elsewhere on the page (the 170px poster <img>), so the art ends up
+      // as a small copy in the top-left corner of the texture. Rasterise through a 2D canvas at
+      // the SVG's intrinsic size instead; drawImage() always renders an SVG fresh at the target size.
+      const W = img.naturalWidth || 630, H = img.naturalHeight || 880;
+      let src = img;
+      const c2 = document.createElement('canvas'); c2.width = W; c2.height = H;
+      const ctx = c2.getContext('2d');
+      if (ctx) { ctx.clearRect(0, 0, W, H); ctx.drawImage(img, 0, 0, W, H); src = c2; }
       gl.bindTexture(gl.TEXTURE_2D, texture);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img); gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src); gl.generateMipmap(gl.TEXTURE_2D);
       textureReady = true; root.dataset.ready = ''; draw(); wake();
     } catch { textureReady = false; }
   };
