@@ -147,14 +147,16 @@ door4ai-lab/
 - [ ] 加学员（支付上线前）：启用后台后直接在 /admin「用户 → 开通课程」里填邮箱（对方没注册也行）；未启用后台时执行 `npx wrangler d1 execute door4ai-lab --remote --command "INSERT INTO entitlements (id,user_id,scope,source,starts_at) SELECT lower(hex(randomblob(13))), id, 'series:ai-mastery', 'grant', unixepoch()*1000 FROM users WHERE email='学员邮箱'"`
 - [x] 两步验证（TOTP，Apple 密码可直接添加）+ 10 个恢复码 + 防重放；后台 /admin（概览、用户、渠道码、日志）。本地 43/43 + 9/9 通过（2026-10-14）
 - [ ] 启用后台：Access 应用加 `/admin` 路径；Pages 设 `ACCESS_TEAM_DOMAIN`、`ACCESS_AUD`；两步验证需设 `TOTP_ENC_KEY`（`openssl rand -base64 32` 生成）
-- [x] 第 1 期 买断支付代码完成（2026-10-15，**在分支 `payments`，未合入 main**）：课程站直连支付宝（本人决定，不经 pay-api / yz-pay）；电脑走 `alipay.trade.page.pay`、手机走 `alipay.trade.wap.pay`；异步通知验签 + 金额核对 + 幂等开通；回跳页轮询、通知丢失时主动查单补单；后台「订单」（筛选、退款并收回权限）与「渠道 → 价格」（默认价 + 渠道专属价）。**价格按学员首次触达的渠道码定，注册后固定**（本人：抖音来的 399，中小学家长群来的 1299 等）。本地模拟支付宝端到端 30/30，账号 43/43、JWT 9/9 全过。
-- [ ] **合入 `payments` 前必须先在线上 D1 执行 `migrations/0002_payments.sql`**（加列 + 种子：商品 ai-mastery、默认价 399）。Claude 用控制台会话执行写库被安全检查拦下，待本人执行或明确授权。Console 只接受单行：去掉注释后整段粘贴。顺序：先迁移，再合并 `payments` 到 main（反了的话购买页显示「即将开放」、后台渠道页报错）。
+- [x] 第 1 期 买断支付代码完成并上线（2026-10-15，已合入 main）：课程站直连支付宝（本人决定，不经 pay-api / yz-pay）；电脑走 `alipay.trade.page.pay`、手机走 `alipay.trade.wap.pay`；异步通知验签 + 金额核对 + 幂等开通；回跳页轮询、通知丢失时主动查单补单；后台「订单」（筛选、退款并收回权限）与「渠道 → 价格」（默认价 + 渠道专属价）。**价格按学员首次触达的渠道码定，注册后固定**（本人：抖音来的 399，中小学家长群来的 1299 等）。本地模拟支付宝端到端 30/30，账号 43/43、JWT 9/9 全过。
+- [x] 线上 D1 已执行 `migrations/0002_payments.sql`（2026-10-15，本人授权，Claude 经控制台会话执行；默认价 399 已种入）
 - [ ] 支付宝凭据（本人提供，设为 Pages **Secret**）：`ALIPAY_APP_ID`、`ALIPAY_PRIVATE_KEY`（应用私钥）、`ALIPAY_PUBLIC_KEY`（**支付宝公钥**，不是应用公钥），在 ECS `/etc/yz-pay.env`。需确认：应用是「公钥模式」不是「证书模式」；已签约「电脑网站支付」「手机网站支付」。三个变量不全时购买页显示「在线购买即将开放」，不影响其它功能。
 - [ ] 上线前：/admin 建渠道码（如抖音、家长群）并设价；先用 0.01 元真实付一笔 + 后台退款走通。
 - [ ] 可选：对账定时任务（Pages 没有 cron，需单独 Worker）。
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-15 · Claude** — 经本人授权在线上 D1 执行 0002 迁移（核对：orders 新增 7 列、默认价 ai-mastery@default 399），随后把分支 `payments` 合入 main 上线。等本人在 Pages 设支付宝三个 Secret。
 
 - **2026-10-15 · Claude** — 支付第 1 期写完，推到分支 `payments`（未合入 main，等线上 D1 迁移）。新增 `functions/_lib/pay/{alipay,orders}.ts`（纯 WebCrypto 的 RSA2 签名/验签，PKCS#1 私钥自动转 PKCS#8；响应签名按原文子串校验）、`functions/api/pay/{price,checkout,order}.ts`、`functions/api/pay/alipay/notify.ts`、`src/pages/pay/return.astro`、`migrations/0002_payments.sql`；后台加订单、退款、价格接口与页面；`scripts/mock-alipay.mjs` 模拟支付宝网关，`scripts/test-pay-e2e.mjs` 30 项（渠道定价、验签、重复通知幂等、伪造/改金额通知被拒、查单补单、手机 wap、退款收回权限）。修了 `test-auth-e2e` 里强制下线一项的时序竞争。
 
