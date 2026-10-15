@@ -24,7 +24,11 @@ export const onRequest: PagesFunction<AuthEnv> = async ({ request, env, next }) 
     url.port = '';
     return redirect(url.toString(), 301);
   }
-  if (!authEnabled(env)) return next();
+  if (!authEnabled(env)) {
+    // 账号系统未启用时，后台页面一律不可见
+    if (/^\/admin(\/|$)/.test(url.pathname)) return new Response('Not found', { status: 404, headers: { 'cache-control': 'no-store' } });
+    return next();
+  }
 
   const req = requirementFor(url.pathname);
   if (req.kind === 'admin') {

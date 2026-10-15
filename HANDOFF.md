@@ -144,6 +144,8 @@ door4ai-lab/
 
 ## 6. 工作日志（倒序，每次工作追加一条）
 
+- **2026-10-14 · Claude** — 线上检查发现账号系统关闭时 `/admin/` 空壳页面可公开访问（无数据，接口均返回 503）。中间件改为：未启用时 `/admin` 一律 404。测试 43/43 + 9/9。
+
 - **2026-10-14 · Claude** — 账号系统：两步验证 + 后台。新增 `functions/_lib/auth/{totp,mfa,admin}.ts`、`functions/api/auth/mfa.ts`、`functions/api/me/totp/[action].ts`、`functions/api/admin/[[path]].ts`、`src/pages/admin.astro`；login / account 页加两步验证界面（二维码、「添加到 Apple 密码」otpauth 链接、恢复码）；中间件 `/admin` 走 Access JWT + ADMIN_EMAILS。无需新表（复用 0001 的 totp_factors、recovery_codes、channels、audit_log；第二步票据存 webauthn_challenges kind='mfa'）。测试扩到端到端 43 项 + JWT 9 项，全过；合并了另一会话的新版页眉（账号菜单已接 /api/me），测试改查 `#acct-email`。线上仍为关闭状态。
 
 - **2026-10-14 · Claude** — 按本人要求去掉右上角「支持」前的问号图标，只留文字（手机上也显示文字）。改 `Base.astro`。
