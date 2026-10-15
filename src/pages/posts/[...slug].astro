@@ -10,20 +10,26 @@ const post = Astro.props;
 const { Content } = await render(post);
 const fmt = (d: Date) => d.toISOString().slice(0, 10);
 ---
-<Base title={`${post.data.title} · Door4AI Lab`} description={post.data.description}>
-  <article>
-    <div class="eyebrow">{fmt(post.data.pubDate)}{post.data.updatedDate && ` · 更新 ${fmt(post.data.updatedDate)}`}</div>
-    <h1>{post.data.title}</h1>
-    <p class="prose" style="color:var(--muted);margin-top:0">{post.data.description}</p>
-    {post.data.tags.length > 0 && <div class="tags">{post.data.tags.map((t) => <span class="tag">{t}</span>)}</div>}
-    {post.data.lab && (
-      <div class="lab-frame">
-        <iframe src={post.data.lab} title={post.data.title} scrolling="no" data-autosize></iframe>
+<Base title={`${post.data.title} · Door4AI Lab`} description={post.data.description} full={!!post.data.lab}>
+  {post.data.lab ? (
+    <article class="with-lab">
+      <h1 class="sr-only">{post.data.title}</h1>
+      <iframe class="lab-embed" src={post.data.lab} title={post.data.title} scrolling="no" data-autosize></iframe>
+      <div class="post-body">
+        <div class="prose"><Content /></div>
+        {post.data.series && <WhatsAppJoin variant="inline" />}
       </div>
-    )}
-    <div class="prose"><Content /></div>
-    {post.data.series && <WhatsAppJoin variant="inline" />}
-  </article>
+    </article>
+  ) : (
+    <article>
+      <div class="eyebrow">{fmt(post.data.pubDate)}{post.data.updatedDate && ` · 更新 ${fmt(post.data.updatedDate)}`}</div>
+      <h1>{post.data.title}</h1>
+      <p class="prose" style="color:var(--muted);margin-top:0">{post.data.description}</p>
+      {post.data.tags.length > 0 && <div class="tags">{post.data.tags.map((t) => <span class="tag">{t}</span>)}</div>}
+      <div class="prose"><Content /></div>
+      {post.data.series && <WhatsAppJoin variant="inline" />}
+    </article>
+  )}
   <script is:inline define:vars={{ slug: post.id }}>
     try { const k = 'd4a-read', r = JSON.parse(localStorage.getItem(k) || '[]'); if (!r.includes(slug)) { r.push(slug); localStorage.setItem(k, JSON.stringify(r)); } } catch (e) {}
   </script>

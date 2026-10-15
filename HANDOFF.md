@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 23:55 America/New_York · 更新者：Claude（会话 session_017mU9qFdHEjTGTDCSBqAGWr）
+最后更新：2026-10-15 00:58 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
 
 ---
 
@@ -61,7 +61,7 @@ door4ai-lab/
 │       ├── resources.astro     ← Resource 资源库，数据来自 src/data/resources.ts
 │       ├── admin.astro         ← 后台：概览（注册数、来源与转化、问卷、每日注册）/ 用户（搜索、详情、开通/撤销、强制下线、停用、重置两步验证）/ 渠道码（链接 + 二维码 + 注册/付费统计）/ 操作日志
 │       ├── login.astro / account.astro / pricing.astro ← 登录（邮箱验证码 + Passkey + 两步验证）/ 我的账号（两步验证开关、恢复码、Passkey 管理、已购课程、推荐链接、来源问卷）/ 购买页（支付未开放，占位）
-│       ├── posts/[...slug].astro ← 文章页；frontmatter 有 lab 时顶部 iframe 嵌入实验
+│       ├── posts/[...slug].astro ← 文章页；frontmatter 有 lab 时整宽无边框嵌入实验（实验自带标题），下面接正文
 │       └── rss.xml.js
 ├── functions/              ← Cloudflare Pages Functions（随仓库自动部署）
 │   ├── _lib/sources.ts     ← 镜像源：每个 target 的 resolve()（FlClash=GitHub latest；Claude=官方 latest 重定向 + apt 索引；Codex=codex-app-prod/ChatGPT.dmg）
@@ -92,7 +92,7 @@ door4ai-lab/
 - 每个实验 = 控件条（滑块/分段按钮）→ 画图区（SVG 或 canvas）→ 读数行（大数字 + 小标签）→ 一句「注意看什么」的 note。
 - 真实计算，不画假数据；数值用公开架构参数（如 Llama-3-70B：80 层 × 8 KV 头 × 128 维）。
 - 手机宽度（~400px）不能横向滚动。
-- 实验页开头的标题 + 导语必须带 `class="lab-intro"`，并在 `</head>` 前放嵌入检测片段（照抄现有实验页）：被文章页 iframe 嵌入时自动隐藏，避免和文章标题重复；「全屏打开」时照常显示。
+- **有实验的文章页 = 实验页本身的样子**（2026-10-15 本人要求，参照单独打开实验页的截图）：不加边框/底色/外框，iframe 占满页面宽度、随内容自动长高；文章页不再渲染自己的日期/标题/简介/标签（标题保留为读屏用的 `sr-only` h1），开头就是实验页自己的 eyebrow + 大标题 + 导语；实验下面接文章正文（`.post-body`，宽度与实验 `.wrap` 对齐：max 892px、左右 16px）。实验页标题区仍带 `class="lab-intro"` 和嵌入检测片段（`html.embedded` 类 + 读 `d4a-theme`），但**嵌入时不再隐藏**。没有实验的文章仍是原来的标题 + 正文版式。
 
 ## 4. 已做的关键决定（不要反复讨论）
 
@@ -155,6 +155,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-15 · Claude** — 按本人要求文章页实验去掉外框，改成和单独打开实验页一样：`posts/[...slug].astro` 有 lab 时用 `full` 布局、整宽 iframe、不渲染文章自己的标题区；`Base.astro` 删 `.lab-frame`，加 `.lab-embed` / `.post-body` / `.sr-only`；五个实验页（及 `labs-src/computer-anatomy/build.mjs`）删掉嵌入时隐藏标题的样式。本地检查 1440 / 390 宽、深浅色、正文与实验左对齐。
 
 - **2026-10-15 · Claude** — 经本人授权在线上 D1 执行 0002 迁移（核对：orders 新增 7 列、默认价 ai-mastery@default 399），随后把分支 `payments` 合入 main 上线。等本人在 Pages 设支付宝三个 Secret。
 
