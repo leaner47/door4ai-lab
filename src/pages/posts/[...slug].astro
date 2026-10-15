@@ -18,7 +18,7 @@ const fmt = (d: Date) => d.toISOString().slice(0, 10);
     {post.data.tags.length > 0 && <div class="tags">{post.data.tags.map((t) => <span class="tag">{t}</span>)}</div>}
     {post.data.lab && (
       <div class="lab-frame">
-        <iframe src={post.data.lab} title={post.data.title} loading="lazy"></iframe>
+        <iframe src={post.data.lab} title={post.data.title} scrolling="no" data-autosize></iframe>
       </div>
     )}
     <div class="prose"><Content /></div>
@@ -26,5 +26,14 @@ const fmt = (d: Date) => d.toISOString().slice(0, 10);
   </article>
   <script is:inline define:vars={{ slug: post.id }}>
     try { const k = 'd4a-read', r = JSON.parse(localStorage.getItem(k) || '[]'); if (!r.includes(slug)) { r.push(slug); localStorage.setItem(k, JSON.stringify(r)); } } catch (e) {}
+  </script>
+  <script is:inline>
+    // 实验 iframe 随内容自动长高（同源，可直接量），页面里不再出现第二个滚动条
+    document.querySelectorAll('iframe[data-autosize]').forEach((f) => {
+      const fit = () => { try { const d = f.contentDocument; if (!d || !d.documentElement) return; const h = Math.max(d.documentElement.scrollHeight, d.body ? d.body.scrollHeight : 0); if (h > 0) f.style.height = h + 'px'; } catch (e) {} };
+      const hook = () => { fit(); try { const d = f.contentDocument; if (d && d.documentElement && 'ResizeObserver' in window) new ResizeObserver(fit).observe(d.documentElement); if (d && d.body) new ResizeObserver(fit).observe(d.body); } catch (e) {} [200, 800, 2000].forEach((ms) => setTimeout(fit, ms)); };
+      f.addEventListener('load', hook); if (f.contentDocument && f.contentDocument.readyState === 'complete') hook();
+      window.addEventListener('resize', fit);
+    });
   </script>
 </Base>

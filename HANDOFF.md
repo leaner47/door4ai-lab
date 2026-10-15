@@ -101,6 +101,7 @@ door4ai-lab/
 - **Safari / iOS 注意（全息层只画在卡片左上角一小块）**：真正的原因是 WebKit 的 `texImage2D()` 从 SVG `<img>` 上传纹理时，用的是该 SVG 在页面上**显示尺寸**（170px 海报图）的栅格缓存，而不是 SVG 固有尺寸 630×880，于是整张卡面被塞进纹理左上角约 27%（=170/630）的区域。iPhone `#debug` 数据证明 CSS 盒、drawingBuffer、viewport 全部正确，所以**不是尺寸问题，别再在 CSS/resize 上找**。修法在 `holo-card.js` 的 `img.onload`：先把 SVG `drawImage()` 到一张 630×880 的 2D canvas，再把这张 canvas 交给 `texImage2D`（drawImage 对 SVG 总是按目标尺寸重新渲染）。保留的防御措施：画布缓冲区在标记里固定为 CSS 尺寸 2 倍（`<canvas width height>`），JS 不在首次绘制后改 canvas.width/height。Safari 对 HTML 缓存很顽固，看不到新版本先 ⌘⇧R / iPhone 清站点数据。
 - 安装包由本站 R2 镜像、仅登录用户可下（/dl 在 Access 内）。Codex 桌面版已并入新版 ChatGPT 桌面应用：macOS 镜像 `codex-app-prod/ChatGPT.dmg`，Windows 只有 Microsoft Store（不镜像，外链），Linux 为 CLI（外链）。新增镜像目标 = 在 `functions/_lib/sources.ts` 加一个 target，并在 `src/data/resources.ts` 加 `dl:` 按钮。
 - **WhatsApp 交流群「AI学习」**：入口放在已登录才能看的页面里（课程目录顶部卡片 + 属于课程的文章末尾一行），不放公开首页、不放 Resource 页，因此不需要改 Access。链接用干净的邀请地址（去掉 `?s=cl&p=i…` 分享参数）。入群需管理员审核（WhatsApp 里设置）。**重置群链接后只需改 `src/data/community.ts` 再推送**，二维码会随构建自动更新。
+- 文章页实验 iframe **必须随内容自动长高、不得有内部滚动条**，也不要「全屏打开」条（本人要求）。实验页本身别用 100vh 之类固定高度。
 - 课程目录 /ai：每讲左侧大号编号；**目录里不显示文章 description 小字**（本人要求，只留编号、元信息、标题、标签；description 仍用于文章页与 SEO）；第一讲标「从这里开始」；阅读进度只存本机浏览器 localStorage（键 `d4a-read`，文章页打开即记为已读），有已读时显示进度条、「已读」与「下一讲」标记。不做账号级进度。
 - 课程顺序：注意力 QKV（order 5）在前，KV Cache（order 10）在后，因为 KV cache 建立在 Q/K/V 概念上。课程目录的「第 N 讲」由 order 排序自动生成。
 
@@ -118,6 +119,8 @@ door4ai-lab/
 - [ ] 账号 + 支付系统：设计稿已出（https://claude.ai/code/artifact/9679fc7a-0fe4-4323-86f1-65cbb1cc005f ），未开工。方案：Pages 中间件 + D1（不用 PG）自建账号与权益，Passkey 为主、邮箱验证码兜底、TOTP 可选，记录注册来源（UTM / ref 渠道码），收款复用 door4ai.com 的 pay-api，只做买断（不做订阅），每账号同时只允许 1 个会话；第 0 期（账号与门禁）可先做，第 1 期起等本人提供 pay-api 接口文档。设计未经本人确认前不要写进第 4 节。
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-14 · Claude** — 按本人要求：文章页里的实验 iframe 不再是固定高度的内部滚动区，改为随内容自动长高（同源，`posts/[...slug].astro` 里的 `data-autosize` 脚本量 contentDocument.scrollHeight + ResizeObserver；`scrolling="no"`），整页只有一个滚动条。
 
 - **2026-10-14 · Claude** — 按本人要求去掉文章页实验框顶部的「可交互实验 / 全屏打开 ↗」条（`posts/[...slug].astro`），实验 iframe 直接嵌入即可交互。
 
