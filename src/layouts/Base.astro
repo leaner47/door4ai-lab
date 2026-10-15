@@ -1,4 +1,5 @@
 ---
+import WhatsAppJoin from '../components/WhatsAppJoin.astro';
 interface Props { title: string; description?: string; full?: boolean; bare?: boolean }
 const { title, description = 'Door4AI Lab — 动手理解 AI 的可交互教学博客', full = false, bare = false } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
@@ -147,6 +148,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
             <a class="menu-item" role="menuitem" id="acct-login" href="/ai/">登录</a>
             <a class="menu-item" role="menuitem" id="acct-profile" href="/account/" hidden>个人资料</a>
             <a class="menu-item" role="menuitem" href="/resources/">Resource</a>
+            <WhatsAppJoin variant="menu" />
             <button class="menu-item" type="button" role="menuitem" id="theme-toggle" aria-expanded="false" aria-controls="theme-sub">外观<svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
             <div class="submenu" id="theme-sub" role="group" aria-label="外观" hidden>
               <button class="menu-item" type="button" role="menuitemradio" data-theme-opt="system">跟随系统<svg class="check" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -172,8 +174,10 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) { open(false); btn.focus(); } });
 
         // 外观：跟随系统 / 浅色 / 深色，存在本机 localStorage；同步给页面里嵌入的实验 iframe（同源）
-        const sub = $('theme-sub'), tog = $('theme-toggle');
-        tog.addEventListener('click', () => { sub.hidden = !sub.hidden; tog.setAttribute('aria-expanded', String(!sub.hidden)); });
+        // 可展开项（外观、WhatsApp 交流群）：点一下展开/收起
+        menu.querySelectorAll('.menu-item[aria-controls]').forEach((tog) => tog.addEventListener('click', () => {
+          const sub = $(tog.getAttribute('aria-controls')); sub.hidden = !sub.hidden; tog.setAttribute('aria-expanded', String(!sub.hidden));
+        }));
         const get = () => { try { return localStorage.getItem('d4a-theme') || 'system'; } catch (e) { return 'system'; } };
         const apply = (t) => {
           const set = (root) => { if (t === 'system') delete root.dataset.theme; else root.dataset.theme = t; };
@@ -191,6 +195,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
           $('acct-email').textContent = email; $('acct-who').hidden = false;
           $('acct-login').hidden = true; $('acct-out').hidden = false;
           if (profile) $('acct-profile').hidden = false;
+          menu.querySelectorAll('[data-signed-in]').forEach((n) => { n.hidden = false; });
           if (logout) $('acct-logout').addEventListener('click', logout);
         };
         (async () => {

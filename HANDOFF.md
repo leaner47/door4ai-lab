@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 23:16 America/New_York · 更新者：Claude（会话 session_01VUsddfCsJAF5MCspd9azWH）
+最后更新：2026-10-14 23:20 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
 
 ---
 
@@ -51,7 +51,7 @@ door4ai-lab/
 │   ├── components/HoloCard.astro ← 全息卡片（移植自 React Bits HoloCard，MIT + Commons Clause）；卡面是由 props 生成的 SVG
 │   ├── scripts/holo-card.js / .css ← HoloCard 的 WebGL 着色器与交互（原版去 React 化）
 │   ├── data/community.ts   ← WhatsApp 交流群名称与邀请链接（url 置空 = 全站隐藏入口）
-│   ├── components/WhatsAppJoin.astro ← 群入口：card（课程目录顶部，电脑端带二维码）/ inline（课程文章末尾一行）
+│   ├── components/WhatsAppJoin.astro ← 群入口：menu（头像下拉菜单里的可展开项，电脑端带二维码，登录后才显示）/ inline（课程文章末尾一行）
 │   ├── data/resources.ts   ← Resource 页的条目（link.dl = 镜像 id 走 /dl/，link.url = 外链）
 │   ├── layouts/Base.astro  ← 全站布局 + 导航 + 全部 CSS；右上角头像按钮下拉菜单（邮箱 / 个人资料 / 外观 / 退出登录，未登录时首项为「登录」），登录状态先调 /api/me（自建账号启用时用它），否则回退到 /cdn-cgi/access/get-identity；全局 `[hidden]{display:none!important}`；prop `full` 让 main 占满宽度（首页用）
 │   └── pages/
@@ -110,9 +110,9 @@ door4ai-lab/
 - Resource 页：每个软件一个分组（标题 + 说明），**每个平台的下载按钮本身是一张 HoloCard 全息卡**：卡面布局：顶部小号软件 logo + 软件名，中间**大号平台图标**（macOS 苹果 / Windows 田字 / Linux 企鹅 / Android 机器人，`public/logos/apple|windows|linux|android.svg`，取自 Font Awesome Free 6，CC BY 4.0），图标下平台名，底部「点击下载」。软件 logo：flclash.png 来自 FlClash 仓库，openai.svg / claude.svg 来自 @lobehub/icons-static-svg（MIT），door4ai.com 的卡片 logo 是文字「AI」（`public/logos/ai-text.svg`，Times New Roman 粗体，本人指定，不用 favicon）。平台→图标的映射在 `resources.astro` 的 `platformLogo()`；没有匹配平台（如 door4ai 的「打开」）时中间放软件 logo。箔纹颜色跟随品牌色：`look` 表里每个软件配 logo / preset / accent（光晕、边框）/ foil（箔片色）/ intensity / tint。**Codex 定稿为黑金**（黑底 + 金色箔纹，accent #9a7a2a，foil #f6d27a，intensity 0.55，tint 0.95），本人明确要求。**箔纹统一用 `shards`（碎片纹）**：本人否决了 glitter 的细碎点阵，Codex / Claude / FlClash 三者纹路必须一致（door4ai.com 用 gold）。着色器新增 `uTint`（data-tint，默认 0.65）把彩虹箔向品牌色拉。卡下小字显示版本 · 大小 · 同步日期。
 - **Safari / iOS 注意（全息层只画在卡片左上角一小块）**：真正的原因是 WebKit 的 `texImage2D()` 从 SVG `<img>` 上传纹理时，用的是该 SVG 在页面上**显示尺寸**（170px 海报图）的栅格缓存，而不是 SVG 固有尺寸 630×880，于是整张卡面被塞进纹理左上角约 27%（=170/630）的区域。iPhone `#debug` 数据证明 CSS 盒、drawingBuffer、viewport 全部正确，所以**不是尺寸问题，别再在 CSS/resize 上找**。修法在 `holo-card.js` 的 `img.onload`：先把 SVG `drawImage()` 到一张 630×880 的 2D canvas，再把这张 canvas 交给 `texImage2D`（drawImage 对 SVG 总是按目标尺寸重新渲染）。保留的防御措施：画布缓冲区在标记里固定为 CSS 尺寸 2 倍（`<canvas width height>`），JS 不在首次绘制后改 canvas.width/height。Safari 对 HTML 缓存很顽固，看不到新版本先 ⌘⇧R / iPhone 清站点数据。
 - 安装包由本站 R2 镜像、仅登录用户可下（/dl 在 Access 内）。Codex 桌面版已并入新版 ChatGPT 桌面应用：macOS 镜像 `codex-app-prod/ChatGPT.dmg`，Windows 只有 Microsoft Store（不镜像，外链），Linux 为 CLI（外链）。新增镜像目标 = 在 `functions/_lib/sources.ts` 加一个 target，并在 `src/data/resources.ts` 加 `dl:` 按钮。
-- **WhatsApp 交流群「AI学习」**：入口放在已登录才能看的页面里（课程目录顶部卡片 + 属于课程的文章末尾一行），不放公开首页、不放 Resource 页，因此不需要改 Access。链接用干净的邀请地址（去掉 `?s=cl&p=i…` 分享参数）。入群需管理员审核（WhatsApp 里设置）。**重置群链接后只需改 `src/data/community.ts` 再推送**，二维码会随构建自动更新。
+- **WhatsApp 交流群「AI学习」**：**入口在右上角头像菜单里**（「WhatsApp 交流群 ›」，点开显示二维码 + 加入按钮；手机宽度只显示按钮；只在登录后显示）+ 属于课程的文章末尾一行。课程目录页不再放群卡片（本人要求移进菜单）。链接用干净的邀请地址（去掉 `?s=cl&p=i…` 分享参数）。入群需管理员审核（WhatsApp 里设置）。**重置群链接后只需改 `src/data/community.ts` 再推送**，二维码会随构建自动更新。
 - 文章页实验 iframe **必须随内容自动长高、不得有内部滚动条**，也不要「全屏打开」条（本人要求）。实验页本身别用 100vh 之类固定高度。
-- **右上角账号区（2026-10-14 本人要求，仿常见 SaaS 样式）**：导航链接之后只有一个圆角方形头像按钮（**不要「支持」入口**，本人已明确去掉）；点开下拉菜单：已登录时顶部显示邮箱，下面「个人资料」（仅自建账号启用时显示，链 /account/）、「Resource」（链 /resources/，登录与否都显示）、「外观 ›」（展开为 跟随系统 / 浅色 / 深色）、分隔线、「退出登录」；未登录时首项为「登录」。截图里的 Language / View mode 没做（站点只有中文、无其他视图），需要时再加。Esc 和点外部关闭。
+- **右上角账号区（2026-10-14 本人要求，仿常见 SaaS 样式）**：导航链接之后只有一个圆角方形头像按钮（**不要「支持」入口**，本人已明确去掉）；点开下拉菜单：已登录时顶部显示邮箱，下面「个人资料」（仅自建账号启用时显示，链 /account/）、「Resource」（链 /resources/，登录与否都显示）、「WhatsApp 交流群 ›」（登录后才显示）、「外观 ›」（展开为 跟随系统 / 浅色 / 深色）、分隔线、「退出登录」；未登录时首项为「登录」。截图里的 Language / View mode 没做（站点只有中文、无其他视图），需要时再加。Esc 和点外部关闭。
 - **外观切换**：存 localStorage `d4a-theme`（light / dark，缺省 = 跟随系统），`<head>` 里内联脚本在渲染前设 `<html data-theme>`，避免闪烁。CSS token 写法：`@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){…} }` + `:root[data-theme="dark"]{…}`，**新增的深色样式都要照此两段写**。实验页同源，加载时读同一个键；切换时父页面直接改 iframe 的 `data-theme`（实验页已有 MutationObserver 重绘画布）。
 - 课程目录 /ai：每讲左侧大号编号；**目录里不显示文章 description 小字**（本人要求，只留编号、元信息、标题、标签；description 仍用于文章页与 SEO）；第一讲标「从这里开始」；阅读进度只存本机浏览器 localStorage（键 `d4a-read`，文章页打开即记为已读），有已读时显示进度条、「已读」与「下一讲」标记。不做账号级进度。
 - 课程顺序：Token 讲（tokenizer-llm，order 4）放在硬件讲（2）和注意力讲（5）之间：先知道文字怎么变成 token、模型整体怎么跑，再拆开注意力。
@@ -146,6 +146,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-14 · Claude** — 按本人要求把课程目录顶部的 WhatsApp 群卡片移进头像菜单：`WhatsAppJoin.astro` 的 card 改为 menu 变体（可展开，二维码 + 加入按钮，`data-signed-in` 登录后显示），`Base.astro` 引入并通用化展开逻辑，`ai.astro` 删卡片。文章末尾一行保留。
 
 - **2026-10-14 · Claude** — 新文章《Token 是什么：一句话是怎么进出大模型的》（`src/content/blog/tokenizer-llm.md`，series ai-mastery，**order 4**，排在硬件讲之后、注意力讲之前）+ 实验页 `public/labs/tokenizer-llm/index.html`：00 真实分词器（GPT-2 `gpt2` 与 GPT-4o `o200k_base`，色块 + 字节碎片 + 编号）/ 01 字母级 BPE 逐步训练（语料可改、可后退、自动播放）/ 02 用学到的规则切新词 / 03 在浏览器里对约 500 字中文语料训练字节级 BPE，拖合并次数看字节→字→词 / 04 GPT-2 small、Llama-3-8B、Llama-3-70B 五站流水线（形状与参数占比按公开架构参数计算）/ 05 Prefill 与 Decode 动画 + KV Cache 增长 / 06 温度与 top-p（logits 来自同一段语料上的字级 3-gram，采样部分与真模型一致）。分词器打包为同目录 `tiktoken.js`（js-tiktoken 1.0.21 lite + gpt2 + o200k_base 词表，esbuild IIFE，2.9 MB / gzip 1.4 MB，暴露 `window.TK`，加载完发 `tk-ready` 事件）。SVG 按实际宽度布局（`vw()`），手机上流水线改为单列。本地 build 通过；headless Chromium 检查 1200 / 390 宽、深浅色、各实验交互、文章页 iframe 自动长高、无横向滚动。从云端会话推送；Mac 本地副本需 `git pull`。
 

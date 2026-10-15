@@ -1,7 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
 import { getCollection } from 'astro:content';
-import WhatsAppJoin from '../components/WhatsAppJoin.astro';
 const posts = (await getCollection('blog'))
   .filter((p) => p.data.series === 'ai-mastery')
   .sort((a, b) => (a.data.order ?? 999) - (b.data.order ?? 999));
@@ -11,7 +10,6 @@ const fmt = (d: Date) => d.toISOString().slice(0, 10);
   <div class="eyebrow">Course</div>
   <h1>AI 从入门到精通</h1>
   <p class="prose" style="color:var(--muted)">按顺序读。每一讲都有一个实验页，先玩实验再看文字，理解会快很多。</p>
-  <WhatsAppJoin />
   <div class="progress" id="progress" hidden>
     <span class="track"><span class="fill"></span></span><span class="txt"></span>
   </div>

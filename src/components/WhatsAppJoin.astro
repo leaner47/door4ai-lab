@@ -1,28 +1,24 @@
 ---
-// WhatsApp 交流群入口。variant="card"：课程目录顶部的大卡片（电脑端带二维码）；variant="inline"：文章末尾一行。
+// WhatsApp 交流群入口。variant="menu"：头像下拉菜单里的可展开项（电脑端带二维码，登录后才显示）；variant="inline"：课程文章末尾一行。
 import fs from 'node:fs';
 import path from 'node:path';
 import QRCode from 'qrcode';
 import { whatsapp } from '../data/community';
-interface Props { variant?: 'card' | 'inline' }
-const { variant = 'card' } = Astro.props;
+interface Props { variant?: 'menu' | 'inline' }
+const { variant = 'menu' } = Astro.props;
 const url = whatsapp.url;
 const icon = url ? fs.readFileSync(path.join(process.cwd(), 'public/logos/whatsapp.svg'), 'utf8').replace(/<!--.*?-->/, '').replace('<svg', '<svg aria-hidden="true" fill="currentColor"') : '';
-const qr = url && variant === 'card' ? await QRCode.toString(url, { type: 'svg', margin: 0, errorCorrectionLevel: 'M', color: { dark: '#111214', light: '#ffffff' } }) : '';
+const qr = url && variant === 'menu' ? await QRCode.toString(url, { type: 'svg', margin: 0, errorCorrectionLevel: 'M', color: { dark: '#111214', light: '#ffffff' } }) : '';
 ---
-{url && variant === 'card' && (
-  <aside class="wa-card" id="community">
-    <div class="wa-main">
-      <div class="wa-kicker"><span class="wa-ic" set:html={icon} />WhatsApp 交流群</div>
-      <div class="wa-name">{whatsapp.name}</div>
-      <p class="wa-text">读到哪里卡住、实验里看到想不通的现象，直接到群里问。入群需管理员审核。</p>
+{url && variant === 'menu' && (
+  <>
+    <button class="menu-item" type="button" role="menuitem" id="wa-toggle" aria-expanded="false" aria-controls="wa-sub" data-signed-in hidden>WhatsApp 交流群<svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="submenu wa-sub" id="wa-sub" role="group" aria-label="WhatsApp 交流群" hidden>
+      <div class="wa-qr-box" set:html={qr} />
+      <p class="wa-note">手机扫码加入「{whatsapp.name}」<br />入群需管理员审核</p>
       <a class="wa-btn" href={url} target="_blank" rel="noopener"><span class="wa-ic" set:html={icon} />加入群聊</a>
     </div>
-    <figure class="wa-qr">
-      <div class="wa-qr-box" set:html={qr} />
-      <figcaption>手机扫码加入</figcaption>
-    </figure>
-  </aside>
+  </>
 )}
 {url && variant === 'inline' && (
   <aside class="wa-inline">
@@ -32,21 +28,17 @@ const qr = url && variant === 'card' ? await QRCode.toString(url, { type: 'svg',
   </aside>
 )}
 <style>
-  .wa-card{--wa:#25d366;display:flex;gap:28px;align-items:center;justify-content:space-between;margin:28px 0 8px;padding:22px 24px;background:var(--paper);border:1px solid var(--line);border-left:3px solid var(--wa);border-radius:8px}
-  .wa-kicker{display:flex;align-items:center;gap:6px;font-size:13px;letter-spacing:.06em;color:var(--muted)}
-  .wa-kicker .wa-ic{color:var(--wa)}
   .wa-ic{display:inline-flex;width:1.1em;height:1.1em}
   .wa-ic :global(svg){width:100%;height:100%}
-  .wa-name{font-size:26px;font-weight:700;line-height:1.3;margin-top:2px}
-  .wa-text{margin:6px 0 14px;color:var(--muted);font-size:15.5px;line-height:1.7;max-width:46ch}
-  .wa-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 18px;border-radius:999px;background:var(--wa);color:#06291a;font-weight:700;font-size:15px;text-decoration:none;transition:filter .15s,transform .15s}
-  .wa-btn:hover{filter:brightness(1.06);transform:translateY(-1px)}
-  .wa-btn:focus-visible{outline:2px solid var(--wa);outline-offset:3px}
-  .wa-qr{margin:0;flex:0 0 auto;text-align:center}
-  .wa-qr-box{width:128px;height:128px;padding:10px;background:#fff;border-radius:8px;box-sizing:content-box}
+  .wa-sub{display:flex;flex-direction:column;align-items:center;gap:8px;padding:6px 24px 12px}
+  .wa-sub[hidden]{display:none}
+  .wa-qr-box{width:132px;height:132px;padding:8px;background:#fff;border-radius:8px;box-sizing:content-box;border:1px solid var(--line)}
   .wa-qr-box :global(svg){display:block;width:100%;height:100%}
-  .wa-qr figcaption{margin-top:6px;font-size:12.5px;color:var(--muted)}
-  @media (max-width:640px){.wa-qr{display:none}.wa-card{padding:18px}.wa-btn{width:100%;justify-content:center;padding:11px 18px}}
+  .wa-note{margin:0;font-size:12.5px;line-height:1.5;color:var(--muted);text-align:center}
+  .wa-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:8px 14px;border-radius:999px;background:#25d366;color:#06291a;font-weight:700;font-size:15px;text-decoration:none;transition:filter .15s}
+  .wa-btn:hover{filter:brightness(1.06)}
+  .wa-btn:focus-visible{outline:2px solid #25d366;outline-offset:3px}
+  @media (max-width:640px){.wa-qr-box,.wa-note{display:none}}
   .wa-inline{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:48px 0 0;padding:14px 16px;border:1px solid var(--line);border-radius:8px;background:var(--paper);font-size:15.5px;color:var(--muted);max-width:68ch}
   .wa-inline .wa-ic{color:#25d366}
   .wa-inline a{margin-left:auto;font-weight:700;text-decoration:none;color:#1a9e4b}
