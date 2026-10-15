@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 20:58 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7，WhatsApp 交流群入口）
+最后更新：2026-10-14 21:20 America/New_York · 更新者：Claude（会话 session_017mU9qFdHEjTGTDCSBqAGWr，账号与支付系统设计）
 
 ---
 
@@ -115,9 +115,11 @@ door4ai-lab/
 - [ ] 下一讲：题目未定（候选见第 7 节）
 - [ ] 关于页只有两句话，待充实
 - [ ] 没有统计/分析（可考虑 Cloudflare Web Analytics，免费，一行脚本）
-- [ ] 账号 + 支付系统：设计稿已出（https://claude.ai/code/artifact/9679fc7a-0fe4-4323-86f1-65cbb1cc005f ），未开工。方案：Pages 中间件 + D1（不用 PG）自建账号与权益，Passkey 为主、邮箱验证码兜底、TOTP 可选，记录注册来源（UTM / ref 渠道码），收款复用 door4ai.com 的 pay-api，买断 + 期卡订阅；第 0 期（账号与门禁）可先做，第 1 期起等本人提供 pay-api 接口文档。设计未经本人确认前不要写进第 4 节。
+- [ ] 账号 + 支付系统：设计稿已出（https://claude.ai/code/artifact/9679fc7a-0fe4-4323-86f1-65cbb1cc005f ），未开工。方案：Pages 中间件 + D1（不用 PG）自建账号与权益，Passkey 为主、邮箱验证码兜底、TOTP 可选，记录注册来源（UTM / ref 渠道码），收款复用 door4ai.com 的 pay-api，只做买断（不做订阅），每账号同时只允许 1 个会话；第 0 期（账号与门禁）可先做，第 1 期起等本人提供 pay-api 接口文档。设计未经本人确认前不要写进第 4 节。
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-14 · Claude** — 按本人要求修订设计：计费只保留买断（去掉月卡/年卡订阅及相关字段）；防共享改为每账号同时只允许 1 个会话，新登录踢掉旧会话。未改代码。
 
 - **2026-10-14 · Claude** — door4ai.com 卡片 logo 改为文字「AI」（新增 `public/logos/ai-text.svg`，`look` 表指向它，scale 0.5）。
 
