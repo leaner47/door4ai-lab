@@ -28,6 +28,8 @@ export function requirementFor(pathname: string): Requirement {
     }
     case 'admin':
       return { kind: 'admin' };
+    case 'ai':
+      return seg[1] === 'apply' ? LOGIN : PUBLIC; // AI账号申请：需登录
     case 'resources':
     case 'dl':
     case 'account':

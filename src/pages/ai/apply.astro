@@ -1,0 +1,140 @@
+---
+import Base from '../../layouts/Base.astro';
+const SERVICES = ['ChatGPT Plus', 'ChatGPT Pro', 'Claude Pro', 'Claude Max', 'Gemini Advanced', '其他'];
+---
+<Base title="AI账号申请 · Door4AI Lab" description="申请 ChatGPT / Claude 等 AI 账号。">
+  <div class="eyebrow">Apply</div>
+  <h1>AI账号申请</h1>
+  <p class="prose" style="color:var(--muted);margin-top:0">选你需要的账号、说明用途并留下联系方式，审核后会通过 WhatsApp 或微信联系你。</p>
+
+  <form id="apply" class="apply" novalidate>
+    <div class="field">
+      <div class="label">申请的账号 <span class="req">*</span></div>
+      <div class="chips" role="group" aria-label="申请的账号">
+        {SERVICES.map((s) => (<label class="chip"><input type="checkbox" name="services" value={s} /><span>{s}</span></label>))}
+      </div>
+      <input class="input" name="other" id="other" placeholder="选了「其他」请写明是什么账号" maxlength="200" hidden />
+    </div>
+    <label class="field">
+      <span class="label">用途 <span class="req">*</span></span>
+      <textarea class="input" name="purpose" rows="4" maxlength="2000" placeholder="例如：跟着课程做实验，需要用 Claude 写代码；每天大约用 2 小时"></textarea>
+    </label>
+    <label class="field">
+      <span class="label">WhatsApp 或微信 <span class="req">*</span></span>
+      <input class="input" name="contact" maxlength="200" placeholder="例如：WhatsApp +1 617 555 0100 / 微信 abc123" />
+    </label>
+    <label class="field">
+      <span class="label">备注</span>
+      <textarea class="input" name="note" rows="2" maxlength="2000" placeholder="可选"></textarea>
+    </label>
+    <div class="row">
+      <button class="submit" type="submit">提交申请</button>
+      <span class="who" id="who"></span>
+    </div>
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+  </form>
+
+  <section class="mine">
+    <h2 id="list-title">我的申请</h2>
+    <div id="list"><p class="empty">加载中…</p></div>
+  </section>
+
+  <style is:global>
+    .apply{margin-top:28px;display:flex;flex-direction:column;gap:22px;max-width:640px}
+    .field{display:flex;flex-direction:column;gap:8px}
+    .label{font-weight:700;font-size:16px}
+    .req{color:#d0463b}
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{position:relative;cursor:pointer}
+    .chip input{position:absolute;opacity:0;pointer-events:none}
+    .chip span{display:inline-block;padding:6px 14px;border:1px solid var(--line);border-radius:999px;background:var(--paper);font-size:15px;line-height:1.4;transition:all .15s}
+    .chip input:checked + span{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+    .chip input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+    .input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--fg);font:inherit;font-size:16px;line-height:1.6}
+    .input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+    textarea.input{resize:vertical}
+    .row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+    .submit{padding:10px 26px;border:0;border-radius:999px;background:var(--fg);color:var(--bg);font:inherit;font-weight:700;font-size:16px;cursor:pointer}
+    .submit:disabled{opacity:.5;cursor:default}
+    .who{font-size:13.5px;color:var(--muted)}
+    .msg{margin:0;min-height:1.6em;font-size:15px}
+    .msg.err{color:#d0463b}.msg.ok{color:#1a9e4b}
+    .mine{margin-top:56px;border-top:1px solid var(--line);padding-top:8px}
+    .mine h2{font-size:22px;margin:20px 0 4px}
+    .mine .empty{color:var(--muted)}
+    .mine .app{padding:16px 0;border-bottom:1px solid var(--line)}
+    .mine .app-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .mine .app-head b{font-size:17px}
+    .mine .pill{font-size:12.5px;line-height:1;padding:5px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+    .mine .pill.approved{background:#1a9e4b;border-color:#1a9e4b;color:#fff}
+    .mine .pill.rejected{background:transparent;border-color:#d0463b;color:#d0463b}
+    .mine .app-meta{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:4px;word-break:break-all}
+    .mine .app p{margin:6px 0 0;white-space:pre-wrap}
+    .mine .app .reply{color:var(--muted);font-size:15px}
+    .mine .adm{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .mine .adm input{flex:1 1 220px;padding:6px 10px;font-size:14px}
+    .mine .adm button{padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--fg);font:inherit;font-size:14px;cursor:pointer}
+    .mine .adm button:hover{border-color:var(--accent)}
+  </style>
+
+  <script>
+    const API = '/ai/apply/api';
+    const $ = (id) => document.getElementById(id);
+    const form = $('apply'), msg = $('msg'), other = $('other');
+    const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    const LABEL = { pending: '待处理', approved: '已开通', rejected: '未通过' };
+    const say = (t, kind = '') => { msg.textContent = t; msg.className = 'msg ' + kind; };
+    form.querySelectorAll('input[name="services"]').forEach((c) => c.addEventListener('change', () => {
+      other.hidden = !form.querySelector('input[value="其他"]').checked;
+    }));
+
+    let admin = false;
+    const render = (items) => {
+      $('list-title').textContent = admin ? `全部申请（${items.length}）` : '我的申请';
+      if (!items.length) { $('list').innerHTML = '<p class="empty">还没有申请。</p>'; return; }
+      $('list').innerHTML = items.map((x) => `
+        <div class="app" data-id="${esc(x.id)}">
+          <div class="app-head"><b>${esc(x.services.map((s) => s === '其他' && x.other ? `其他：${x.other}` : s).join(' · '))}</b><span class="pill ${esc(x.status)}">${LABEL[x.status] || esc(x.status)}</span></div>
+          <div class="app-meta">${esc(x.createdAt.slice(0, 16).replace('T', ' '))} UTC${admin ? ` · ${esc(x.email)} · ${esc(x.contact)}` : ''}</div>
+          <p>${esc(x.purpose)}</p>
+          ${x.note ? `<p class="reply">备注：${esc(x.note)}</p>` : ''}
+          ${x.reply ? `<p class="reply">回复：${esc(x.reply)}</p>` : ''}
+          ${admin ? `<div class="adm"><input class="input" placeholder="回复（可选，学员可见）" value="${esc(x.reply || '')}" />
+            <button data-s="approved">已开通</button><button data-s="rejected">未通过</button><button data-s="pending">待处理</button></div>` : ''}
+        </div>`).join('');
+    };
+    const load = async () => {
+      try {
+        const r = await fetch(API, { credentials: 'same-origin' });
+        const d = await r.json();
+        if (!r.ok) { $('list').innerHTML = `<p class="empty">${esc(d.error || '加载失败')}</p>`; return; }
+        admin = d.admin; $('who').textContent = `以 ${d.email} 提交`; render(d.items);
+      } catch (e) { $('list').innerHTML = '<p class="empty">加载失败，请刷新重试。</p>'; }
+    };
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const body = { services: fd.getAll('services'), other: fd.get('other'), purpose: fd.get('purpose'), contact: fd.get('contact'), note: fd.get('note') };
+      const btn = form.querySelector('.submit'); btn.disabled = true; say('提交中…');
+      try {
+        const r = await fetch(API, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+        const d = await r.json();
+        if (!r.ok) say(d.error || '提交失败', 'err');
+        else { say('已提交，审核后会联系你。', 'ok'); form.reset(); other.hidden = true; load(); }
+      } catch (e) { say('网络出错，请重试', 'err'); }
+      btn.disabled = false;
+    });
+
+    $('list').addEventListener('click', async (e) => {
+      const b = e.target.closest('.adm button'); if (!b) return;
+      const card = b.closest('.app');
+      const reply = card.querySelector('.adm input').value;
+      b.disabled = true;
+      const r = await fetch(API, { method: 'PATCH', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: card.dataset.id, status: b.dataset.s, reply }) }).catch(() => null);
+      if (!r || !r.ok) { b.disabled = false; b.textContent = '保存失败，重试'; return; }
+      load();
+    });
+    load();
+  </script>
+</Base>
