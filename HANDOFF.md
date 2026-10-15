@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-15 03:10 America/New_York · 更新者：Claude（会话 session_01LZcZftAh4bM58tpY1qUYx2）
+最后更新：2026-10-14 23:25 America/New_York · 更新者：Claude（会话 session_01VUsddfCsJAF5MCspd9azWH）
 
 ---
 
@@ -147,6 +147,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-14 · Claude** — Git 讲（order 3）插到了硬件讲与 Token 讲之间，Token 讲文末「上一讲讲的显存和带宽」改为「第 1 讲」。Mac 本地副本已与 main 同步。
 
 - **2026-10-15 · Claude** — 按本人要求新增入门讲《Git 和 GitHub：代码的时光机与云端仓库》（`src/content/blog/git-github.md`，series ai-mastery，order 3）+ 实验页 `public/labs/git-github/index.html`：00 Git 与 GitHub 的区别 / 01 工作区→暂存区→仓库（含真实格式的 `git status` 输出、点旧提交看快照）/ 02 SHA-1 指纹（页内实现 SHA-1，blob 哈希与 `git hash-object` 逐位一致，已用 `hello\n` → ce01362… 验证）+ 提交链 parent 哈希连锁变化 / 03 分支与合并提交图（fast-forward 与合并提交两种情况）/ 04 你、GitHub、同学三方 clone/commit/push/pull，含 push 被拒（fetch first）与 pull 生成合并提交 / 05 Pull Request 十步演示 + PR 卡片；末尾 Git vs GitHub 对比表与命令速查。`access-map.ts` 随构建重新生成。本地 build 通过；headless Chromium 检查 1000px 浅色 / 390px 深色、无横向滚动、无脚本错误。注意：Mac 连接文件夹里 astro build 清理 dist 时需要删除权限，本次在临时副本里构建。
 
