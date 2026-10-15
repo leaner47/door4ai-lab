@@ -4,8 +4,8 @@ import HoloCard from '../components/HoloCard.astro';
 import { resources } from '../data/resources';
 // 每个软件的 logo、品牌色（同时用作箔片色与光晕色）和箔纹
 const look: Record<string, { logo: string; preset: any; accent: string; foil: string; scale?: number; intensity?: number; tint?: number }> = {
-  'Codex': { logo: 'openai.svg', preset: 'glitter', accent: '#9a7a2a', foil: '#f6d27a', scale: 0.44, intensity: 0.55, tint: 0.95 }, // 黑金：黑底 + 金色亮片
-  'Claude': { logo: 'claude.svg', preset: 'glitter', accent: '#d97757', foil: '#e8a07f', scale: 0.46 },
+  'Codex': { logo: 'openai.svg', preset: 'shards', accent: '#9a7a2a', foil: '#f6d27a', scale: 0.44, intensity: 0.55, tint: 0.95 }, // 黑金：黑底 + 金色碎片箔纹（与 FlClash 同纹路）
+  'Claude': { logo: 'claude.svg', preset: 'shards', accent: '#d97757', foil: '#e8a07f', scale: 0.46 },
   'FlClash': { logo: 'flclash.png', preset: 'shards', accent: '#5b7cf5', foil: '#6e8cff', scale: 0.5 },
   'door4ai.com': { logo: 'door4ai.svg', preset: 'gold', accent: '#1f5fd1', foil: '#9fc0ff', scale: 0.44 },
 };
