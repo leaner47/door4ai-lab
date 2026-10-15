@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 22:36 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7，右上角账号菜单 + 外观切换）
+最后更新：2026-10-14 22:38 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
 
 ---
 
@@ -111,7 +111,7 @@ door4ai-lab/
 - 安装包由本站 R2 镜像、仅登录用户可下（/dl 在 Access 内）。Codex 桌面版已并入新版 ChatGPT 桌面应用：macOS 镜像 `codex-app-prod/ChatGPT.dmg`，Windows 只有 Microsoft Store（不镜像，外链），Linux 为 CLI（外链）。新增镜像目标 = 在 `functions/_lib/sources.ts` 加一个 target，并在 `src/data/resources.ts` 加 `dl:` 按钮。
 - **WhatsApp 交流群「AI学习」**：入口放在已登录才能看的页面里（课程目录顶部卡片 + 属于课程的文章末尾一行），不放公开首页、不放 Resource 页，因此不需要改 Access。链接用干净的邀请地址（去掉 `?s=cl&p=i…` 分享参数）。入群需管理员审核（WhatsApp 里设置）。**重置群链接后只需改 `src/data/community.ts` 再推送**，二维码会随构建自动更新。
 - 文章页实验 iframe **必须随内容自动长高、不得有内部滚动条**，也不要「全屏打开」条（本人要求）。实验页本身别用 100vh 之类固定高度。
-- **右上角账号区（2026-10-14 本人要求，仿常见 SaaS 样式）**：导航链接之后是「支持」（问号图标，链到 `/ai/#community` 即 WhatsApp 群卡片）+ 圆角方形头像按钮；点开下拉菜单：已登录时顶部显示邮箱，下面「个人资料」（仅自建账号启用时显示，链 /account/）、「外观 ›」（展开为 跟随系统 / 浅色 / 深色）、分隔线、「退出登录」；未登录时首项为「登录」。截图里的 Language / View mode 没做（站点只有中文、无其他视图），需要时再加。Esc 和点外部关闭。
+- **右上角账号区（2026-10-14 本人要求，仿常见 SaaS 样式）**：导航链接之后是纯文字「支持」（**不带图标**，本人要求；链到 `/ai/#community` 即 WhatsApp 群卡片）+ 圆角方形头像按钮；点开下拉菜单：已登录时顶部显示邮箱，下面「个人资料」（仅自建账号启用时显示，链 /account/）、「外观 ›」（展开为 跟随系统 / 浅色 / 深色）、分隔线、「退出登录」；未登录时首项为「登录」。截图里的 Language / View mode 没做（站点只有中文、无其他视图），需要时再加。Esc 和点外部关闭。
 - **外观切换**：存 localStorage `d4a-theme`（light / dark，缺省 = 跟随系统），`<head>` 里内联脚本在渲染前设 `<html data-theme>`，避免闪烁。CSS token 写法：`@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){…} }` + `:root[data-theme="dark"]{…}`，**新增的深色样式都要照此两段写**。实验页同源，加载时读同一个键；切换时父页面直接改 iframe 的 `data-theme`（实验页已有 MutationObserver 重绘画布）。
 - 课程目录 /ai：每讲左侧大号编号；**目录里不显示文章 description 小字**（本人要求，只留编号、元信息、标题、标签；description 仍用于文章页与 SEO）；第一讲标「从这里开始」；阅读进度只存本机浏览器 localStorage（键 `d4a-read`，文章页打开即记为已读），有已读时显示进度条、「已读」与「下一讲」标记。不做账号级进度。
 - 课程顺序：注意力 QKV（order 5）在前，KV Cache（order 10）在后，因为 KV cache 建立在 Q/K/V 概念上。课程目录的「第 N 讲」由 order 排序自动生成。
@@ -138,6 +138,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-14 · Claude** — 按本人要求去掉右上角「支持」前的问号图标，只留文字（手机上也显示文字）。改 `Base.astro`。
 
 - **2026-10-14 · Claude** — 右上角改为「支持 + 头像下拉菜单」，并加站点级外观切换（跟随系统 / 浅色 / 深色）。改 `Base.astro`（token 支持 data-theme、head 早期脚本、菜单结构与脚本，兼容 /api/me 与 Access 两种登录）、`WhatsAppJoin.astro`（卡片 id=community、深色规则改两段写法）、三个实验页及 `labs-src/computer-anatomy/build.mjs`（加载时读 `d4a-theme`）。本地 build 通过；Playwright 模拟登录检查菜单、子菜单、切深色后文章页与 iframe 同步、390px 无横向滚动、Esc 关闭。
 
