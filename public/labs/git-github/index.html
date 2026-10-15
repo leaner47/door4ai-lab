@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>Git 实验室</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c; --ok-soft:#dcefe4;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  --mono:Menlo,Consolas,"SF Mono","Courier New",monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --ok-soft:#173a29; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --ok-soft:#173a29; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{max-width:860px;margin:0 auto;padding-inline:16px;padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);max-width:68ch;margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{max-width:68ch;margin:12px 0}
+code{font-family:var(--mono);font-size:.82em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+ul,ol{max-width:68ch;padding-left:1.2em}
+.aside{border-left:3px solid var(--accent);padding:4px 0 4px 16px;margin:16px 0;max-width:68ch;font-size:15.5px}
+.aside b{display:block;margin-bottom:2px}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:8px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+.seg button:disabled{opacity:.4;cursor:not-allowed}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:4px 10px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap}
+.btn.pri{border-color:var(--accent);color:var(--accent)}
+.btn.sm{padding:1px 7px;font-size:12px}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn code{background:none;padding:0;font-size:12px}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn b{color:var(--warn)} .ro.ok b{color:var(--ok)} .ro.acc b{color:var(--accent)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td code{white-space:nowrap}
+.tw{overflow-x:auto}
+.key{margin-top:40px;border-top:1px solid var(--line);padding-top:20px}
+
+/* 终端：两种主题下都是深色 */
+.term{background:#0d1117;color:#d6dde6;font-family:var(--mono);font-size:12.5px;line-height:1.6;border-radius:6px;padding:10px 12px;margin-top:12px;white-space:pre-wrap;word-break:break-word;min-height:3.4em}
+.term .p{color:#7ee787} .term .r{color:#ff7b72} .term .y{color:#e3b341} .term .c{color:#79c0ff} .term .m{color:#8b949e}
+
+/* 实验 01：三个区域 */
+.zones{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.zone{border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--bg);min-width:0}
+.zone h3{font-size:15px;margin:0;font-weight:700}
+.zone .sub{font-size:12px;color:var(--muted);margin:0 0 8px;line-height:1.5}
+.file{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 8px;border:1px solid var(--line);border-radius:4px;margin:6px 0;font-size:14px;background:var(--paper)}
+.file .nm{font-family:var(--mono);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file .v{color:var(--muted);font-size:12px;margin-left:4px}
+.file .bs{display:flex;gap:4px;flex-shrink:0}
+.file.mod{border-color:var(--warn);background:var(--warn-soft)}
+.file.stg{border-color:var(--accent);background:var(--accent-soft)}
+.empty{font-size:13px;color:var(--muted);padding:6px 2px}
+.log{list-style:none;padding:0;margin:6px 0 0}
+.log li{display:flex;gap:8px;align-items:baseline;padding:4px 6px;border-radius:4px;cursor:pointer;font-size:14px;line-height:1.5}
+.log li:hover{background:var(--paper)}
+.log li.sel{background:var(--ok-soft)}
+.hash{font-family:var(--mono);font-size:12px;color:var(--ok)}
+.snap{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.6}
+.zbar{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+
+/* 实验 02：哈希 */
+textarea{width:100%;font-family:var(--mono);font-size:13px;line-height:1.5;padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);resize:vertical;min-height:70px}
+.pipe{font-size:13px;color:var(--muted);margin:10px 0 4px}
+.bighash{font-family:var(--mono);font-size:clamp(12px,2.6vw,17px);letter-spacing:.04em;word-break:break-all;line-height:1.5;padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:var(--bg)}
+.bighash .d{color:var(--warn);font-weight:700}
+.chain{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px}
+.cbox{border:1px solid var(--line);border-radius:4px;padding:5px 9px;font-size:13px;background:var(--bg);line-height:1.45;min-width:110px}
+.cbox .hash{display:block}
+.cbox.chg{border-color:var(--warn);background:var(--warn-soft)}
+.cbox.chg .hash{color:var(--warn)}
+.arr{color:var(--muted);font-size:14px}
+
+/* 实验 04：远程 */
+.repos{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.repo{border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--bg);min-width:0}
+.repo.gh{border-color:var(--fg)}
+.repo h3{font-size:15px;margin:0;font-weight:700;display:flex;align-items:center;gap:6px}
+.repo .st{font-size:12px;color:var(--muted);min-height:1.5em}
+.repo .st b{font-weight:600}
+.repo .st .bh{color:var(--warn)}
+.repo .st .ah{color:var(--accent)}
+.rlog{list-style:none;padding:0;margin:8px 0;min-height:60px}
+.rlog li{display:flex;gap:7px;align-items:center;font-size:13px;line-height:1.5;padding:2px 0}
+.rlog li .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.rlog li.lo{opacity:1}
+.rlog li.lo .msg::after{content:" · 未推送";color:var(--warn);font-size:11px}
+.rlog .msg{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
+
+/* 实验 05：PR */
+.stepper{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.stepper .t{font-weight:700;font-size:16px}
+.stepper .k{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.dots{display:flex;gap:4px;flex-wrap:wrap}
+.dots span{width:18px;height:4px;border-radius:2px;background:var(--line)}
+.dots span.on{background:var(--accent)}
+.prcard{border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-top:12px;background:var(--bg);font-size:14px}
+.prcard .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.badge{font-size:12px;padding:1px 9px;border-radius:999px;color:#fff;font-weight:600}
+.badge.open{background:#2a8a5c} .badge.merged{background:#8250df} .badge.none{background:var(--muted)}
+.prcard .meta{font-size:12.5px;color:var(--muted);margin-top:2px}
+.prcard .cm{border-left:2px solid var(--line);padding-left:10px;margin-top:8px;font-size:13.5px}
+.desc{margin:10px 0 0;font-size:15px}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script><style>html.embedded .lab-intro{display:none}html.embedded .wrap{padding-top:20px}html.embedded main{margin-top:28px}html.embedded .lab-intro+section{margin-top:0}</style></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">git · github · commit · branch · push · pull request</div>
+  <h1>Git 实验室：代码的时光机与云端仓库</h1>
+  <p class="lede">Git 是装在你电脑上的版本管理工具，GitHub 是存放 Git 仓库、方便多人协作的网站。下面五个实验背后跑的都是真实的 Git 规则，哈希也是真算出来的。从一个文件夹出发，一直讲到多人在 GitHub 上合作。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>先说清楚：Git 和 GitHub 不是一回事</h2>
+  <p>没用过版本管理的人，文件夹里往往是这样的：<code>报告_v2.docx</code>、<code>报告_final.docx</code>、<code>报告_final_改.docx</code>、<code>报告_真的最终版.docx</code>。谁改了哪里、哪一版能用、想退回三天前怎么办，全靠记性。</p>
+  <p><b>Git</b> 就是来解决这个问题的。它是 Linus Torvalds（Linux 的作者）在 2005 年写的一个<b>软件</b>，装在你自己的电脑上。它把一个文件夹变成「仓库」（repository），记下这个文件夹的每一次改动：什么时候、谁、改了什么、为什么改。想回到任何一个过去的版本，一条命令就行。不联网也能用。</p>
+  <p><b>GitHub</b> 是一个<b>网站</b>（2018 年被微软收购）。它在云端替你保存 Git 仓库，并在上面加了协作功能：多人同步、在线审阅代码（Pull Request）、记录问题（Issues）、每次更新后自动测试和部署（Actions）。这个课程网站就放在 GitHub 上，每次往里推送新内容，Cloudflare 都会自动重新发布。</p>
+  <div class="aside"><b>一个比方</b>Git 像 Word 的「修订记录」，只不过记录的是整个文件夹；GitHub 像网盘，再加上一个大家一起看修订、一起评论的地方。GitLab、Bitbucket、Gitee 是和 GitHub 同类的网站，底下用的都是 Git。</div>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>三个区域：工作区 → 暂存区 → 仓库</h2>
+  <p>Git 里的一个文件可能处在三个地方。<b>工作区</b>就是你看得见、正在编辑的文件。<b>暂存区</b>是「下一次提交要带上的改动」，像是装箱前的清单。<b>仓库</b>里存着一串提交（commit），每个提交是整个项目在某一刻的完整快照。</p>
+  <p>为什么中间要多一个暂存区？因为你可能同时改了三个文件，但只想把其中两个作为「修好了登录 bug」一起提交，第三个还没写完。<code>git add</code> 决定哪些改动进清单，<code>git commit</code> 把清单打包成一个快照。</p>
+  <div class="lab" id="lab1">
+    <div class="zones" id="zones"></div>
+    <div class="term" id="zTerm" aria-live="polite"></div>
+    <div class="readout" id="zRo"></div>
+    <p class="note">试试看：编辑 train.py 和 README.md，只 add 其中一个再提交，然后跑一下 <code>git status</code>，看另一个文件还留在工作区。点仓库里任何一个旧提交，可以看到项目在那一刻的样子，这就是「时光机」。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>每个提交都有一个指纹</h2>
+  <p>你会在 GitHub 上看到 <code>a3f9c21</code> 这样的编号，它是提交的<b>哈希</b>：Git 把内容送进 SHA-1 算法，得到 40 位十六进制数，平时只显示前 7 位。内容哪怕只差一个字符，结果也会面目全非。所以哈希可以当作内容的指纹。</p>
+  <div class="lab" id="lab2">
+    <div class="ctrl" style="margin-bottom:6px"><label for="hTxt">文件内容（随便改）</label><button class="btn sm" id="hReset">恢复原文</button></div>
+    <textarea id="hTxt" spellcheck="false" rows="3"></textarea>
+    <div class="pipe" id="hPipe"></div>
+    <div class="bighash" id="hOut"></div>
+    <div class="readout" id="hRo"></div>
+    <p class="note">这里算的就是 Git 真正存文件时用的哈希，和终端里 <code>git hash-object</code> 的结果完全一致。橙色字符是和原文哈希相比变了的位置。</p>
+
+    <p style="margin-top:22px">每个提交里还记着<b>上一个提交的哈希</b>（parent）。所以提交串成了一条链：</p>
+    <div class="chain" id="chain"></div>
+    <p class="note">上面那段文件属于第 2 个提交。改动它，第 2 个提交的哈希会变；第 3 个提交记着第 2 个的哈希，所以它也变；第 4 个跟着变。历史没法悄悄改：动了一处，后面全都对不上。（为了简单，这里用文件哈希代替了 Git 真实的目录树，也省掉了作者和时间。）</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>分支与合并：平行宇宙</h2>
+  <p>想试一个新功能，又怕把能用的代码搞坏？开一个<b>分支</b>（branch）。分支其实就是一张贴在某个提交上的标签。新提交会让当前分支的标签往前挪，其他分支纹丝不动。试成功了就<b>合并</b>（merge）回 main；试失败了，直接把分支删掉，main 不受影响。</p>
+  <div class="lab" id="lab3">
+    <div class="ctrls">
+      <div class="ctrl"><label>当前分支</label><div class="seg" id="bSw"></div></div>
+      <div class="ctrl"><button class="btn pri" id="bCommit">提交</button><button class="btn" id="bNew">新建分支</button></div>
+      <div class="ctrl"><label>合并进当前分支</label><div class="seg" id="bMerge"></div></div>
+      <div class="ctrl"><button class="btn" id="bReset">重置</button></div>
+    </div>
+    <svg id="bSvg" role="img" aria-label="提交图"></svg>
+    <div class="term" id="bTerm" aria-live="polite"></div>
+    <div class="readout" id="bRo"></div>
+    <p class="note">实心标签是你现在所在的分支（HEAD）。合并有两种结果：如果 main 在你开分支之后没动过，Git 只是把 main 标签挪到分支最新处，叫 fast-forward，不产生新提交；如果两边都有新提交，Git 会造一个有两个父提交的「合并提交」（双圈），两条线在这里汇合。</p>
+  </div>
+  <div class="aside"><b>冲突</b>如果两条分支改了同一个文件的同一行，Git 不会替你选，它会在文件里把两种写法都标出来，叫「合并冲突」（merge conflict）。你手动改好、重新 add 和 commit 就算解决了。这个实验里假设两边改的是不同的地方。</div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>本地仓库与远程仓库：push 和 pull</h2>
+  <p>到这里为止，一切都发生在你自己电脑上。GitHub 上的仓库叫<b>远程仓库</b>，习惯上叫 <code>origin</code>。它和你电脑上的仓库是两份独立的副本，不会自动同步，要靠三条命令：<code>git clone</code> 第一次把整个仓库连同全部历史复制下来；<code>git push</code> 把你的新提交送上去；<code>git pull</code> 把别人的新提交拉下来。</p>
+  <div class="lab" id="lab4">
+    <div class="repos" id="repos"></div>
+    <div class="legend"><span><i style="background:var(--accent)"></i>你的提交</span><span><i style="background:var(--warn)"></i>同学的提交</span><span><i style="background:var(--muted)"></i>合并提交</span></div>
+    <div class="term" id="rTerm" aria-live="polite"></div>
+    <div class="ctrl" style="margin-top:10px"><button class="btn" id="rReset">重置</button></div>
+    <p class="note">按这个顺序试一遍：同学先 clone → 你和同学各提交一次 → 你 push（成功）→ 同学 push（<b>被拒绝</b>，因为 GitHub 上有他没有的提交）→ 同学 pull（自动生成一个合并提交）→ 同学再 push（成功）→ 你 pull，三方重新一致。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>在 GitHub 上协作：Pull Request</h2>
+  <p>多人项目一般不允许直接往 main 推送。标准流程是：开分支、提交、把分支推到 GitHub，然后开一个 <b>Pull Request</b>（简称 PR，意思是「请把我的分支合进 main」）。同事在网页上逐行审阅，提意见，你补改，通过后再合并。一步一步看：</p>
+  <div class="lab" id="lab5">
+    <div class="stepper">
+      <button class="btn" id="pPrev" aria-label="上一步">← 上一步</button>
+      <button class="btn pri" id="pNext" aria-label="下一步">下一步 →</button>
+      <span class="k" id="pK"></span>
+      <div class="dots" id="pDots"></div>
+    </div>
+    <p class="desc"><span class="t" id="pT" style="font-weight:700"></span>　<span id="pD"></span></p>
+    <svg id="pSvg" role="img" aria-label="Pull Request 过程的提交图"></svg>
+    <div class="term" id="pTerm"></div>
+    <div class="prcard" id="pCard"></div>
+  </div>
+</section>
+
+<section class="key">
+  <h2>速查</h2>
+  <div class="tw"><table>
+    <thead><tr><th></th><th>Git</th><th>GitHub</th></tr></thead>
+    <tbody>
+      <tr><td>是什么</td><td>版本管理软件（命令行工具）</td><td>托管 Git 仓库的网站</td></tr>
+      <tr><td>在哪里</td><td>你的电脑</td><td>云端</td></tr>
+      <tr><td>能单独用吗</td><td>能，完全离线也行</td><td>不能，它建立在 Git 之上</td></tr>
+      <tr><td>管什么</td><td>提交、分支、合并、历史</td><td>远程备份、Pull Request、Issues、Actions、权限</td></tr>
+      <tr><td>同类</td><td>基本没有对手（事实标准）</td><td>GitLab、Bitbucket、Gitee</td></tr>
+    </tbody>
+  </table></div>
+  <div class="tw"><table>
+    <thead><tr><th>命令</th><th>做什么</th></tr></thead>
+    <tbody>
+      <tr><td><code>git init</code></td><td>把当前文件夹变成仓库</td></tr>
+      <tr><td><code>git clone &lt;地址&gt;</code></td><td>把远程仓库连同全部历史复制到本地</td></tr>
+      <tr><td><code>git status</code></td><td>看哪些文件改了、哪些已暂存</td></tr>
+      <tr><td><code>git add &lt;文件&gt;</code> / <code>git add .</code></td><td>把改动放进暂存区</td></tr>
+      <tr><td><code>git commit -m "说明"</code></td><td>把暂存区打包成一个提交</td></tr>
+      <tr><td><code>git log --oneline</code></td><td>看提交历史</td></tr>
+      <tr><td><code>git switch -c &lt;分支&gt;</code></td><td>新建分支并切过去</td></tr>
+      <tr><td><code>git switch &lt;分支&gt;</code></td><td>切换分支</td></tr>
+      <tr><td><code>git merge &lt;分支&gt;</code></td><td>把另一个分支合并进当前分支</td></tr>
+      <tr><td><code>git push</code></td><td>把本地新提交送到远程</td></tr>
+      <tr><td><code>git pull</code></td><td>把远程新提交拉到本地并合并</td></tr>
+      <tr><td><code>git restore &lt;文件&gt;</code></td><td>丢弃工作区里还没暂存的改动</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">写好提交说明的习惯：一句话说清「为什么改」，比如「修复空输入时除零报错」，不要写「更新」「改了点东西」。三个月后翻历史的你会感谢现在的你。</p>
+</section>
+</div>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const enc=new TextEncoder();
+
+/* ---------- SHA-1（标准算法，输入按 UTF-8 编码） ---------- */
+function sha1(str){
+  const b=enc.encode(str),l=b.length,n=((l+8)>>6)+1<<4,w=new Uint32Array(n);
+  for(let i=0;i<l;i++)w[i>>2]|=b[i]<<(24-(i&3)*8);
+  w[l>>2]|=0x80<<(24-(l&3)*8);
+  w[n-1]=l*8;
+  let h0=0x67452301,h1=0xEFCDAB89,h2=0x98BADCFE,h3=0x10325476,h4=0xC3D2E1F0;
+  const W=new Uint32Array(80);
+  for(let i=0;i<n;i+=16){
+    for(let t=0;t<16;t++)W[t]=w[i+t];
+    for(let t=16;t<80;t++){const x=W[t-3]^W[t-8]^W[t-14]^W[t-16];W[t]=(x<<1)|(x>>>31)}
+    let a=h0,bb=h1,c=h2,d=h3,e=h4;
+    for(let t=0;t<80;t++){
+      let f,k;
+      if(t<20){f=(bb&c)|(~bb&d);k=0x5A827999}
+      else if(t<40){f=bb^c^d;k=0x6ED9EBA1}
+      else if(t<60){f=(bb&c)|(bb&d)|(c&d);k=0x8F1BBCDC}
+      else{f=bb^c^d;k=0xCA62C1D6}
+      const tmp=(((a<<5)|(a>>>27))+f+e+k+W[t])>>>0;
+      e=d;d=c;c=((bb<<30)|(bb>>>2))>>>0;bb=a;a=tmp;
+    }
+    h0=(h0+a)>>>0;h1=(h1+bb)>>>0;h2=(h2+c)>>>0;h3=(h3+d)>>>0;h4=(h4+e)>>>0;
+  }
+  return [h0,h1,h2,h3,h4].map(x=>x.toString(16).padStart(8,'0')).join('');
+}
+const blobHash=s=>sha1('blob '+enc.encode(s).length+'\0'+s);
+window.__sha1=sha1;window.__blobHash=blobHash;
+
+const P='<span class="p">$</span> ';
+
+/* ================= 01 三个区域 ================= */
+const FILES=['README.md','train.py','data.csv'];
+const Z={};
+function zInit(){
+  Z.commits=[];Z.sel=null;
+  const s={};FILES.forEach(f=>s[f]=1);
+  Z.work={...s};Z.index={...s};
+  zCommitRaw('初始化项目',s);
+  Z.out=P+'git init\n'+P+'git add .\n'+P+'git commit -m "初始化项目"\n[main (root-commit) '+Z.commits[0].h+'] 初始化项目\n 3 files changed';
+}
+function zCommitRaw(msg,snap){
+  const parent=Z.commits.length?Z.commits[Z.commits.length-1].h:'';
+  const h=sha1(parent+JSON.stringify(snap)+msg).slice(0,7);
+  Z.commits.push({h,msg,snap:{...snap}});
+}
+const zHead=()=>Z.commits[Z.commits.length-1].snap;
+const zMod=f=>Z.work[f]!==Z.index[f];
+const zStg=f=>Z.index[f]!==zHead()[f];
+function zStatus(){
+  const st=FILES.filter(zStg),md=FILES.filter(zMod);
+  let s='On branch main\n';
+  if(st.length)s+='<span class="m">Changes to be committed:</span>\n'+st.map(f=>'<span class="p">\tmodified:   '+f+'</span>').join('\n')+'\n';
+  if(md.length)s+='<span class="m">Changes not staged for commit:</span>\n'+md.map(f=>'<span class="r">\tmodified:   '+f+'</span>').join('\n')+'\n';
+  if(!st.length&&!md.length)s+='nothing to commit, working tree clean';
+  return s.trimEnd();
+}
+function zRender(){
+  const head=zHead();
+  const work=FILES.map(f=>{
+    const m=zMod(f);
+    return `<div class="file${m?' mod':''}"><span class="nm">${f}<span class="v">v${Z.work[f]}${m?' · 已修改':''}</span></span><span class="bs"><button class="btn sm" data-a="edit" data-f="${f}">编辑</button>${m?`<button class="btn sm pri" data-a="add" data-f="${f}">add</button>`:''}</span></div>`;
+  }).join('');
+  const stg=FILES.filter(zStg);
+  const stage=stg.length?stg.map(f=>`<div class="file stg"><span class="nm">${f}<span class="v">v${Z.index[f]}</span></span><span class="bs"><button class="btn sm" data-a="unstage" data-f="${f}" title="git restore --staged ${f}">撤出</button></span></div>`).join(''):'<div class="empty">（空）</div>';
+  const list=Z.commits.slice().reverse().slice(0,7);
+  const sel=Z.sel??Z.commits.length-1;
+  const log=list.map(c=>{const i=Z.commits.indexOf(c);return `<li class="${i===sel?'sel':''}" data-a="sel" data-i="${i}" tabindex="0"><span class="hash">${c.h}</span><span>${esc(c.msg)}</span></li>`}).join('');
+  const sc=Z.commits[sel];
+  $('#zones').innerHTML=`
+  <div class="zone"><h3>工作区</h3><p class="sub">你正在编辑的文件</p>${work}
+    <div class="zbar"><button class="btn sm" data-a="addall" ${FILES.some(zMod)?'':'disabled'}><code>git add .</code></button><button class="btn sm" data-a="status"><code>git status</code></button></div></div>
+  <div class="zone"><h3>暂存区</h3><p class="sub">下次提交要带上的改动</p>${stage}
+    <div class="zbar"><button class="btn sm pri" data-a="commit" ${stg.length?'':'disabled'}><code>git commit</code></button></div></div>
+  <div class="zone"><h3>仓库 <small style="font-weight:400;color:var(--muted);font-size:12px">.git</small></h3><p class="sub">所有提交，新的在上（点一下看当时的样子）</p><ul class="log">${log}</ul>
+    <div class="snap">${sel===Z.commits.length-1?'最新提交':'<code>git checkout '+sc.h+'</code>'}：${FILES.map(f=>f+' v'+sc.snap[f]).join(' · ')}</div></div>`;
+  $('#zTerm').innerHTML=Z.out;
+  const nm=FILES.filter(zMod).length,ns=stg.length;
+  $('#zRo').innerHTML=`<div class="ro${nm?' warn':''}"><b>${nm}</b><span>已修改、未暂存</span></div><div class="ro${ns?' acc':''}"><b>${ns}</b><span>已暂存</span></div><div class="ro ok"><b>${Z.commits.length}</b><span>提交数</span></div>`;
+}
+$('#zones').addEventListener('click',e=>{
+  const t=e.target.closest('[data-a]');if(!t)return;
+  const a=t.dataset.a,f=t.dataset.f;
+  if(a==='edit'){Z.work[f]++;Z.out='<span class="m"># 在编辑器里修改了 '+f+' 并保存</span>\n'+P+'git status\n'+zStatus()}
+  else if(a==='add'){Z.index[f]=Z.work[f];Z.out=P+'git add '+f+'\n'+P+'git status\n'+zStatus()}
+  else if(a==='addall'){FILES.forEach(x=>Z.index[x]=Z.work[x]);Z.out=P+'git add .\n'+P+'git status\n'+zStatus()}
+  else if(a==='unstage'){Z.index[f]=zHead()[f];Z.out=P+'git restore --staged '+f+'\n'+P+'git status\n'+zStatus()}
+  else if(a==='status'){Z.out=P+'git status\n'+zStatus()}
+  else if(a==='commit'){
+    const st=FILES.filter(zStg);const msg='修改 '+st.join('、');
+    zCommitRaw(msg,{...Z.index});Z.sel=null;
+    const c=Z.commits[Z.commits.length-1];
+    Z.out=P+'git commit -m "'+msg+'"\n[main '+c.h+'] '+msg+'\n '+st.length+' file'+(st.length>1?'s':'')+' changed';
+  }
+  else if(a==='sel'){Z.sel=+t.dataset.i}
+  zRender();
+});
+$('#zones').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('li[data-a]')){e.preventDefault();e.target.click()}});
+zInit();zRender();
+
+/* ================= 02 哈希 ================= */
+const H0='def train(lr=0.001):\n    print("开始训练")\n';
+const hTxt=$('#hTxt');hTxt.value=H0;
+const base=blobHash(H0);
+const CH=[{msg:'初始化项目',body:'# 我的项目\n'},{msg:'写训练脚本',body:null},{msg:'加入数据',body:'x,y\n1,2\n3,4\n'},{msg:'调学习率',body:'lr = 3e-4\n'}];
+function chainOf(body2){
+  let prev=null;return CH.map((c,i)=>{
+    const b=i===1?body2:c.body;
+    const obj='tree '+blobHash(b)+'\n'+(prev?'parent '+prev+'\n':'')+'\n'+c.msg+'\n';
+    const h=sha1('commit '+enc.encode(obj).length+'\0'+obj);prev=h;return h;
+  });
+}
+const chain0=chainOf(H0);
+function hRender(){
+  const v=hTxt.value,h=blobHash(v),bytes=enc.encode(v).length;
+  let diff=0;
+  $('#hOut').innerHTML=[...h].map((ch,i)=>{const d=ch!==base[i];if(d)diff++;return d?`<span class="d">${ch}</span>`:ch}).join('');
+  $('#hPipe').innerHTML=`SHA-1( <code>"blob ${bytes}\\0"</code> + 文件内容 ) =`;
+  const ch=chainOf(v);let nc=0;
+  $('#chain').innerHTML=ch.map((x,i)=>{const c=x!==chain0[i];if(c)nc++;return (i?'<span class="arr" aria-hidden="true">←</span>':'')+`<div class="cbox${c?' chg':''}"><span class="hash">${x.slice(0,7)}</span>${i+1}. ${CH[i].msg}</div>`}).join('');
+  $('#hRo').innerHTML=`<div class="ro"><b>${bytes}</b><span>字节</span></div><div class="ro acc"><b>${h.slice(0,7)}</b><span>短哈希（前 7 位）</span></div><div class="ro${diff?' warn':''}"><b>${diff} / 40</b><span>和原文相比变了的字符</span></div><div class="ro${nc?' warn':''}"><b>${nc} / 4</b><span>哈希变了的提交</span></div>`;
+}
+hTxt.addEventListener('input',hRender);
+$('#hReset').onclick=()=>{hTxt.value=H0;hRender()};
+hRender();
+
+/* ================= 通用：提交图 ================= */
+const LANE=['var(--accent)','var(--warn)','var(--ok)','#8250df'];
+function G(){return {commits:[],branches:{},lanes:['main'],head:'main',n:{}}}
+function gAdd(g,msg,parents,lane){
+  const id=g.commits.length;
+  const h=sha1(parents.map(p=>g.commits[p].h).join(',')+'\n'+msg+'\n'+id).slice(0,7);
+  g.commits.push({id,h,parents,lane,msg});return id;
+}
+function gCommit(g,msg){
+  const tip=g.branches[g.head];
+  const id=gAdd(g,msg,tip==null?[]:[tip],g.lanes.indexOf(g.head));
+  g.branches[g.head]=id;
+  return '['+g.head+' '+g.commits[id].h+'] '+msg;
+}
+function gBranch(g,name){g.branches[name]=g.branches[g.head];if(!g.lanes.includes(name))g.lanes.push(name);g.head=name;return "Switched to a new branch '"+name+"'"}
+function gAnc(g,id){const s=new Set(),st=[id];while(st.length){const x=st.pop();if(x==null||s.has(x))continue;s.add(x);st.push(...g.commits[x].parents)}return s}
+function gMerge(g,name){
+  const a=g.branches[g.head],b=g.branches[name];
+  if(gAnc(g,a).has(b))return 'Already up to date.';
+  if(gAnc(g,b).has(a)){g.branches[g.head]=b;return 'Updating '+g.commits[a].h+'..'+g.commits[b].h+'\nFast-forward';}
+  const id=gAdd(g,"Merge branch '"+name+"'",[a,b],g.lanes.indexOf(g.head));
+  g.branches[g.head]=id;return "Merge made by the 'ort' strategy.";
+}
+function drawGraph(svg,g){
+  const W=Math.max(300,svg.parentElement.clientWidth-2);
+  const n=g.commits.length,L=g.lanes.length;
+  const padL=24,padR=70;
+  const dx=Math.min(68,(W-padL-padR)/Math.max(n-1,1));
+  const top=58,gap=70;
+  const X=i=>padL+i*dx,Y=l=>top+l*gap;
+  const Hh=top+(L-1)*gap+34;
+  let s='';
+  // 泳道底线
+  g.lanes.forEach((nm,l)=>{s+=`<line x1="${padL-10}" x2="${W-6}" y1="${Y(l)}" y2="${Y(l)}" style="stroke:var(--line)" stroke-dasharray="2 5"/>`});
+  // 边
+  g.commits.forEach(c=>c.parents.forEach(p=>{
+    const pc=g.commits[p],x1=X(p),y1=Y(pc.lane),x2=X(c.id),y2=Y(c.lane);
+    const col=LANE[Math.max(pc.lane,c.lane)%LANE.length];
+    const d=y1===y2?`M${x1} ${y1}L${x2} ${y2}`:`M${x1} ${y1}C${(x1+x2)/2} ${y1},${(x1+x2)/2} ${y2},${x2} ${y2}`;
+    s+=`<path d="${d}" fill="none" style="stroke:${col}" stroke-width="2.5"/>`;
+  }));
+  // 节点
+  g.commits.forEach(c=>{
+    const x=X(c.id),y=Y(c.lane),col=LANE[c.lane%LANE.length];
+    if(c.parents.length>1)s+=`<circle cx="${x}" cy="${y}" r="12" fill="none" style="stroke:${col}" stroke-width="2"/>`;
+    s+=`<circle cx="${x}" cy="${y}" r="8" style="fill:${col};stroke:var(--paper)" stroke-width="2"><title>${c.h} ${esc(c.msg)}</title></circle>`;
+    if(dx>=50)s+=`<text x="${x}" y="${y+26}" text-anchor="middle" font-size="11" style="fill:var(--muted);font-family:var(--mono)">${c.h}</text>`;
+  });
+  // 分支标签
+  const stack={};
+  Object.entries(g.branches).forEach(([nm,id])=>{
+    if(id==null)return;
+    const k=stack[id]=(stack[id]||0)+1;
+    const c=g.commits[id],x=X(id),y=Y(c.lane)-16-(k-1)*20;
+    const col=LANE[g.lanes.indexOf(nm)%LANE.length],cur=nm===g.head;
+    const w=nm.length*7.2+14;
+    s+=`<rect x="${x-w/2}" y="${y-15}" width="${w}" height="17" rx="8.5" style="fill:${cur?col:'var(--paper)'};stroke:${col}" stroke-width="1.4"/>`;
+    s+=`<text x="${x}" y="${y-2.5}" text-anchor="middle" font-size="12" font-weight="600" style="fill:${cur?'#fff':col};font-family:var(--mono)">${esc(nm)}</text>`;
+  });
+  svg.setAttribute('viewBox',`0 0 ${W} ${Hh}`);
+  svg.setAttribute('width',W);svg.setAttribute('height',Hh);
+  svg.innerHTML=s;
+}
+
+/* ================= 03 分支与合并 ================= */
+const MSG={main:['加 README','修正拼写','更新依赖','补充文档','调整配置','修复路径'],feature:['加登录页','登录页样式','接上登录接口','登录单元测试','优化登录提示'],fix:['定位除零 bug','修复除零错误','补回归测试']};
+const NAMES=['feature','fix'];
+let B,bOut;
+function bInit(){B=G();gCommit(B,'初始化项目');gCommit(B,'加 README');B.n={main:1};bOut=P+'git log --oneline\n'+B.commits.slice().reverse().map(c=>'<span class="y">'+c.h+'</span> '+c.msg).join('\n')}
+const MAXC=18;
+function bRender(){
+  const full=B.commits.length>=MAXC;
+  $('#bSw').innerHTML=B.lanes.filter(x=>x in B.branches).map(nm=>`<button aria-pressed="${nm===B.head}" data-b="${nm}">${nm}</button>`).join('');
+  const others=B.lanes.filter(x=>x!==B.head&&x in B.branches);
+  $('#bMerge').innerHTML=others.length?others.map(nm=>`<button data-m="${nm}" ${full?'disabled':''}>${nm}</button>`).join(''):'<button disabled>（还没有别的分支）</button>';
+  $('#bCommit').disabled=full;
+  $('#bNew').disabled=full||NAMES.every(x=>x in B.branches);
+  drawGraph($('#bSvg'),B);
+  $('#bTerm').innerHTML=bOut+(full?'\n<span class="m"># 实验最多 '+MAXC+' 个提交，点「重置」重新开始</span>':'');
+  const merges=B.commits.filter(c=>c.parents.length>1).length;
+  $('#bRo').innerHTML=`<div class="ro acc"><b>${B.commits.length}</b><span>提交数</span></div><div class="ro"><b>${Object.keys(B.branches).length}</b><span>分支数</span></div><div class="ro"><b>${merges}</b><span>合并提交</span></div><div class="ro ok"><b>${B.head}</b><span>HEAD 指向</span></div>`;
+}
+$('#bCommit').onclick=()=>{
+  const list=MSG[B.head]||['提交'];const k=B.n[B.head]=(B.n[B.head]||0)+1;
+  const msg=list[k%list.length];
+  bOut=P+'git commit -m "'+msg+'"\n'+gCommit(B,msg);bRender();
+};
+$('#bNew').onclick=()=>{const nm=NAMES.find(x=>!(x in B.branches));if(!nm)return;B.n[nm]=-1;bOut=P+'git switch -c '+nm+'\n'+gBranch(B,nm);bRender()};
+$('#bSw').onclick=e=>{const b=e.target.closest('[data-b]');if(!b)return;B.head=b.dataset.b;bOut=P+'git switch '+B.head+"\nSwitched to branch '"+B.head+"'";bRender()};
+$('#bMerge').onclick=e=>{const b=e.target.closest('[data-m]');if(!b||b.disabled)return;bOut=P+'git merge '+b.dataset.m+'\n'+gMerge(B,b.dataset.m);bRender()};
+$('#bReset').onclick=()=>{bInit();bRender()};
+bInit();bRender();
+
+/* ================= 04 远程 ================= */
+const WHO={you:{name:'你的 Mac',col:'var(--accent)'},friend:{name:'同学的电脑',col:'var(--warn)'}};
+const RM={you:['写数据加载','加训练循环','保存模型','画损失曲线','加评估脚本','修复随机种子'],friend:['补充 README','加 requirements.txt','整理目录','加单元测试','修正注释']};
+let R;
+function rNew(msg,parents,who){const id=R.c.length;const h=sha1(parents.map(p=>R.c[p].h).join(',')+msg+id+who).slice(0,7);R.c.push({id,parents,who,msg,h});return id}
+function rAnc(id){const s=new Set(),st=[id];while(st.length){const x=st.pop();if(x==null||s.has(x))continue;s.add(x);st.push(...R.c[x].parents)}return s}
+function rInit(){
+  R={c:[],k:{you:0,friend:0}};
+  const a=rNew('初始化项目',[],'you'),b=rNew('加 README',[a],'you');
+  R.you=b;R.origin=b;R.friend=null;
+  R.out='<span class="m">你的 Mac</span> '+P+'git push -u origin main\nTo github.com:leaner47/demo.git\n * [new branch]      main -> main';
+}
+function rLog(tip,cmp){
+  if(tip==null)return '<li style="color:var(--muted);font-size:13px">（还没有这个仓库）</li>';
+  const s=[...rAnc(tip)].sort((a,b)=>b-a),o=cmp!=null?rAnc(cmp):null;
+  const rows=s.slice(0,6).map(id=>{const c=R.c[id];const col=c.parents.length>1?'var(--muted)':WHO[c.who].col;
+    return `<li class="${o&&!o.has(id)?'lo':''}"><span class="dot" style="background:${col}"></span><span class="hash">${c.h}</span><span class="msg">${esc(c.msg)}</span></li>`}).join('');
+  return rows+(s.length>6?`<li style="color:var(--muted);font-size:12px">… 还有 ${s.length-6} 个更早的提交</li>`:'');
+}
+function rStat(tip){
+  if(tip==null)return '尚未 clone';
+  const a=rAnc(tip),o=rAnc(R.origin);
+  const ahead=[...a].filter(x=>!o.has(x)).length,behind=[...o].filter(x=>!a.has(x)).length;
+  if(!ahead&&!behind)return '和 GitHub <b style="color:var(--ok)">一致</b>';
+  return `比 GitHub <b class="ah">领先 ${ahead}</b> · <b class="bh">落后 ${behind}</b>`;
+}
+function rCard(who){
+  const tip=R[who],cloned=tip!=null;
+  const btns=cloned?`<button class="btn sm" data-r="commit" data-w="${who}">提交</button><button class="btn sm pri" data-r="push" data-w="${who}"><code>git push</code></button><button class="btn sm" data-r="pull" data-w="${who}"><code>git pull</code></button>`
+    :`<button class="btn sm pri" data-r="clone" data-w="${who}"><code>git clone</code></button>`;
+  return `<div class="repo"><h3><span class="dot" style="width:9px;height:9px;border-radius:50%;background:${WHO[who].col};display:inline-block"></span>${WHO[who].name}</h3><div class="st">${rStat(tip)}</div><ul class="rlog">${rLog(tip,R.origin)}</ul><div class="zbar">${btns}</div></div>`;
+}
+function rRender(){
+  $('#repos').innerHTML=rCard('you')+`<div class="repo gh"><h3>GitHub · origin</h3><div class="st">leaner47/demo · 远程仓库</div><ul class="rlog">${rLog(R.origin,null)}</ul><div class="st" style="margin-top:8px">只能靠 push 改变它</div></div>`+rCard('friend');
+  $('#rTerm').innerHTML=R.out;
+}
+$('#repos').addEventListener('click',e=>{
+  const t=e.target.closest('[data-r]');if(!t)return;
+  const w=t.dataset.w,a=t.dataset.r,pre='<span class="m">'+WHO[w].name+'</span> ';
+  if(R.c.length>=40&&(a==='commit'||a==='pull')){R.out='<span class="m"># 实验提交数到上限了，点「重置」</span>';rRender();return}
+  if(a==='clone'){R[w]=R.origin;R.out=pre+P+'git clone https://github.com/leaner47/demo.git\nCloning into \'demo\'...\nReceiving objects: 100% ('+rAnc(R.origin).size+'/'+rAnc(R.origin).size+'), done.'}
+  else if(a==='commit'){const list=RM[w];const msg=list[R.k[w]++%list.length];R[w]=rNew(msg,[R[w]],w);R.out=pre+P+'git commit -am "'+msg+'"\n[main '+R.c[R[w]].h+'] '+msg}
+  else if(a==='push'){
+    const t1=R[w],o=R.origin;
+    if(t1===o||rAnc(o).has(t1))R.out=pre+P+'git push\nEverything up-to-date';
+    else if(rAnc(t1).has(o)){R.origin=t1;R.out=pre+P+'git push\nTo github.com:leaner47/demo.git\n   '+R.c[o].h+'..'+R.c[t1].h+'  main -> main'}
+    else R.out=pre+P+'git push\nTo github.com:leaner47/demo.git\n<span class="r"> ! [rejected]        main -> main (fetch first)\nerror: failed to push some refs to \'github.com:leaner47/demo.git\'</span>\n<span class="y">hint: GitHub 上有你本地没有的提交。先 git pull 把它们合进来，再 push。</span>';
+  }
+  else if(a==='pull'){
+    const t1=R[w],o=R.origin;
+    if(t1===o||rAnc(t1).has(o))R.out=pre+P+'git pull\nAlready up to date.';
+    else if(rAnc(o).has(t1)){R[w]=o;R.out=pre+P+'git pull\nUpdating '+R.c[t1].h+'..'+R.c[o].h+'\nFast-forward'}
+    else{R[w]=rNew('合并 GitHub 上的 main',[t1,o],w);R.out=pre+P+'git pull\nMerge made by the \'ort\' strategy.\n<span class="m"># 本地多了一个合并提交，现在可以 push 了</span>'}
+  }
+  rRender();
+});
+$('#rReset').onclick=()=>{rInit();rRender()};
+rInit();rRender();
+
+/* ================= 05 Pull Request ================= */
+const STEPS=[
+  {t:'起点',cmd:'git clone https://github.com/leaner47/demo.git',d:'GitHub 上的 main 已经有 3 个提交，你把仓库 clone 到本地。',f:g=>{}},
+  {t:'开分支',cmd:'git switch -c fix-typo',d:'不直接动 main，先开一条自己的分支。',f:g=>gBranch(g,'fix-typo')},
+  {t:'提交',cmd:'git commit -am "修正 README 错别字"',d:'在分支上改好、提交。此时这个提交只在你电脑上。',f:g=>gCommit(g,'修正 README 错别字')},
+  {t:'推送分支',cmd:'git push -u origin fix-typo',d:'把分支推到 GitHub。GitHub 会提示：要不要为它开一个 Pull Request？',f:g=>{}},
+  {t:'开 PR',cmd:'# 在 GitHub 网页上点 Compare & pull request',d:'PR 的意思是「请把 fix-typo 合进 main」。网页上会列出改了哪些行（diff），所有协作者都能看到。',f:g=>{},pr:'open'},
+  {t:'审阅',cmd:'# 同事在 PR 页面逐行查看并留言',d:'同事指出还有一处没改。审阅就发生在这里，代码合并之前。',f:g=>{},pr:'review'},
+  {t:'补提交',cmd:'git commit -am "再修一处" && git push',d:'在同一条分支上继续提交、push，PR 自动更新，不用重新开。',f:g=>gCommit(g,'再修一处'),pr:'review2'},
+  {t:'main 也在前进',cmd:'# 与此同时，别人的 PR 先合进了 main',d:'协作时 main 不会停下来等你，所以两条线分叉了。',f:g=>{g.head='main';gCommit(g,'更新依赖');g.head='fix-typo'},pr:'review2'},
+  {t:'合并',cmd:'# 审阅通过，点 Merge pull request',d:'GitHub 在 main 上生成一个合并提交，你的改动正式进入 main。',f:g=>{g.head='main';gMerge(g,'fix-typo')},pr:'merged'},
+  {t:'清理',cmd:'git switch main && git pull && git branch -d fix-typo',d:'本地切回 main、拉取最新版本，删掉用完的分支。分支只是一张标签，删了它，提交照样留在历史里。',f:g=>{delete g.branches['fix-typo']},pr:'merged'}
+];
+let pk=0;
+function pBuild(k){const g=G();gCommit(g,'初始化项目');gCommit(g,'加 README');gCommit(g,'加训练脚本');for(let i=0;i<=k;i++)STEPS[i].f(g);return g}
+function pRender(){
+  const s=STEPS[pk],g=pBuild(pk);
+  $('#pK').textContent=(pk+1)+' / '+STEPS.length;
+  $('#pDots').innerHTML=STEPS.map((_,i)=>`<span class="${i<=pk?'on':''}"></span>`).join('');
+  $('#pT').textContent=s.t;$('#pD').textContent=s.d;
+  $('#pPrev').disabled=pk===0;$('#pNext').disabled=pk===STEPS.length-1;
+  drawGraph($('#pSvg'),g);
+  $('#pTerm').innerHTML=s.cmd.startsWith('#')?'<span class="m">'+esc(s.cmd)+'</span>':P+esc(s.cmd);
+  const pr=s.pr;
+  let card;
+  if(!pr)card=`<div class="top"><span class="badge none">还没有 PR</span></div><div class="meta">${pk>=3?'GitHub 上已有分支 fix-typo，等你开 PR':'分支还只在你电脑上'}</div>`;
+  else{
+    const ncm=pr==='open'||pr==='review'?1:2;
+    card=`<div class="top"><span class="badge ${pr==='merged'?'merged':'open'}">${pr==='merged'?'Merged':'Open'}</span><b>#1 修正 README 错别字</b></div><div class="meta">fix-typo → main · ${ncm} 个提交</div>`;
+    if(pr!=='open')card+=`<div class="cm"><b>同事</b>：第 3 行「训练」还写成了「训炼」。</div>`;
+    if(pr==='review2'||pr==='merged')card+=`<div class="cm"><b>你</b>：已修，见 「再修一处」。</div>`;
+    if(pr==='merged')card+=`<div class="cm"><b>同事</b>：Approved ✓，已合并。</div>`;
+  }
+  $('#pCard').innerHTML=card;
+}
+$('#pPrev').onclick=()=>{if(pk>0){pk--;pRender()}};
+$('#pNext').onclick=()=>{if(pk<STEPS.length-1){pk++;pRender()}};
+pRender();
+
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{bRender();pRender()},120)});
+})();
+</script>
+</body>
+</html>

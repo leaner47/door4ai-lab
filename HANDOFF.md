@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 23:20 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
+最后更新：2026-10-15 03:10 America/New_York · 更新者：Claude（会话 session_01LZcZftAh4bM58tpY1qUYx2）
 
 ---
 
@@ -133,6 +133,7 @@ door4ai-lab/
 - [x] 新增《注意力里的 Q、K、V 到底在干什么》+「注意力实验室」六个实验，排为第 1 讲（order 5），KV Cache 顺延为第 2 讲（2026-10-14）
 - [x] 新增入门讲《电脑里到底有什么：CPU、GPU、内存、显存与 Docker》+ 五个等距图解实验，排在课程最前（order 2）（2026-10-14）
 - [x] 新增《Token 是什么：一句话是怎么进出大模型的》+「Token 实验室」七个实验（00–06），排为第 2 讲（order 4，在硬件讲与注意力讲之间）（2026-10-14）
+- [x] 新增入门讲《Git 和 GitHub：代码的时光机与云端仓库》+「Git 实验室」五个实验，排为 order 3（硬件讲之后、Token 讲之前）（2026-10-15）
 - [ ] 下一讲：题目未定（候选见第 7 节）
 - [ ] 关于页只有两句话，待充实
 - [ ] 没有统计/分析（可考虑 Cloudflare Web Analytics，免费，一行脚本）
@@ -146,6 +147,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-15 · Claude** — 按本人要求新增入门讲《Git 和 GitHub：代码的时光机与云端仓库》（`src/content/blog/git-github.md`，series ai-mastery，order 3）+ 实验页 `public/labs/git-github/index.html`：00 Git 与 GitHub 的区别 / 01 工作区→暂存区→仓库（含真实格式的 `git status` 输出、点旧提交看快照）/ 02 SHA-1 指纹（页内实现 SHA-1，blob 哈希与 `git hash-object` 逐位一致，已用 `hello\n` → ce01362… 验证）+ 提交链 parent 哈希连锁变化 / 03 分支与合并提交图（fast-forward 与合并提交两种情况）/ 04 你、GitHub、同学三方 clone/commit/push/pull，含 push 被拒（fetch first）与 pull 生成合并提交 / 05 Pull Request 十步演示 + PR 卡片；末尾 Git vs GitHub 对比表与命令速查。`access-map.ts` 随构建重新生成。本地 build 通过；headless Chromium 检查 1000px 浅色 / 390px 深色、无横向滚动、无脚本错误。注意：Mac 连接文件夹里 astro build 清理 dist 时需要删除权限，本次在临时副本里构建。
 
 - **2026-10-14 · Claude** — 按本人要求把课程目录顶部的 WhatsApp 群卡片移进头像菜单：`WhatsAppJoin.astro` 的 card 改为 menu 变体（可展开，二维码 + 加入按钮，`data-signed-in` 登录后显示），`Base.astro` 引入并通用化展开逻辑，`ai.astro` 删卡片。文章末尾一行保留。
 
