@@ -65,7 +65,7 @@ const Tag = href ? 'a' : 'div';
   <div class="holo-card__rotor">
     <div class="holo-card__face holo-card__face--front">
       <img src={image} alt="" draggable="false" />
-      <canvas></canvas>
+      <canvas width={width * 2} height={Math.round((width / 0.716) * 2)}></canvas>
     </div>
   </div>
 </Tag>

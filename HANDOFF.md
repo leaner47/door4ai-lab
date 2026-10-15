@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-14 20:07 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7；同时段 session_017nqPj8MzXKK8YfLau84Y55 在改 Resource 卡片配色）
+最后更新：2026-10-14 20:08 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7；同时段 session_017nqPj8MzXKK8YfLau84Y55 在改 Resource 卡片配色）
 
 ---
 
@@ -96,7 +96,7 @@ door4ai-lab/
 - 课程与资源页必须登录才能看（Cloudflare Access），首页公开。
 - Resource 页顺序固定：**Codex → Claude → FlClash → door4ai.com**（`src/data/resources.ts` 的数组顺序）。**Resource 页没有页面大标题**（去掉了居中的「Resource」h1）；**每个软件名居中显示**；**不写任何介绍文字**：没有页面导语、没有软件说明段、卡片下方没有版本/大小小字（版本与大小只放在卡片 title 悬停提示里）。`resources.ts` 里的 `note` 字段保留但页面不渲染。每个软件的卡片在一行里平铺（`.cardrow`：flex + 横向滚动 + scroll-snap，放得下时居中，放不下时左右平滑滑动）。**不要再做 3D 转盘**，本人已明确否决。
 - Resource 页：每个软件一个分组（标题 + 说明），**每个平台的下载按钮本身是一张 HoloCard 全息卡**：卡面布局：顶部小号软件 logo + 软件名，中间**大号平台图标**（macOS 苹果 / Windows 田字 / Linux 企鹅 / Android 机器人，`public/logos/apple|windows|linux|android.svg`，取自 Font Awesome Free 6，CC BY 4.0），图标下平台名，底部「点击下载」。软件 logo：flclash.png 来自 FlClash 仓库，openai.svg / claude.svg 来自 @lobehub/icons-static-svg（MIT），door4ai.svg 即本站 favicon。平台→图标的映射在 `resources.astro` 的 `platformLogo()`；没有匹配平台（如 door4ai 的「打开」）时中间放软件 logo。箔纹颜色跟随品牌色：`look` 表里每个软件配 logo / preset / accent（光晕、边框）/ foil（箔片色）/ intensity / tint。**Codex 定稿为黑金**（黑底 + 金色亮片 glitter，accent #9a7a2a，foil #f6d27a，intensity 0.55，tint 0.95），本人明确要求，着色器新增 `uTint`（data-tint，默认 0.65）把彩虹箔向品牌色拉。卡下小字显示版本 · 大小 · 同步日期。
-- **Safari 注意**：HoloCard 的画布尺寸必须由 JS 钉成显式像素（holo-card.js 的 resize()），否则 Safari 会把全息层画成左上角一小块；已验证修复。另外 Safari 对 HTML 缓存很顽固，看不到新版本先 ⌘⇧R。
+- **Safari 注意**：HoloCard 的 WebGL 画布缓冲区在标记里就固定为 CSS 尺寸的 2 倍（`<canvas width height>`），JS 只设 CSS 像素尺寸、**绝不**在首次绘制后改 canvas.width/height——Safari 在画布缓冲区被改尺寸后会保留过期的合成层，表现为全息层只画在左上角一小块（间歇出现）。另外 Safari 对 HTML 缓存很顽固，看不到新版本先 ⌘⇧R。
 - 安装包由本站 R2 镜像、仅登录用户可下（/dl 在 Access 内）。Codex 桌面版已并入新版 ChatGPT 桌面应用：macOS 镜像 `codex-app-prod/ChatGPT.dmg`，Windows 只有 Microsoft Store（不镜像，外链），Linux 为 CLI（外链）。新增镜像目标 = 在 `functions/_lib/sources.ts` 加一个 target，并在 `src/data/resources.ts` 加 `dl:` 按钮。
 - 课程目录 /ai：每讲左侧大号编号；第一讲标「从这里开始」；阅读进度只存本机浏览器 localStorage（键 `d4a-read`，文章页打开即记为已读），有已读时显示进度条、「已读」与「下一讲」标记。不做账号级进度。
 - 课程顺序：注意力 QKV（order 5）在前，KV Cache（order 10）在后，因为 KV cache 建立在 Q/K/V 概念上。课程目录的「第 N 讲」由 order 排序自动生成。
@@ -115,6 +115,8 @@ door4ai-lab/
 - [ ] 没有评论、订阅、付费墙——课程售卖形态未定，先积累内容
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-14 · Claude** — Safari 左上角小块问题复现（间歇）：第三次修复，画布缓冲区改为标记里固定 2x 尺寸，JS 不再改缓冲区尺寸。
 
 - **2026-10-14 · Claude** — 全站设计修整：(1) 导航改为 flex + gap，修复手机上换行后首项缩进；(2) 三个实验页的标题/导语加 `.lab-intro`，嵌入文章页时隐藏、收紧顶部留白（computer-anatomy 同步改了 `labs-src/.../build.mjs`）；(3) HoloCard 卡面小字放大（软件名 54、平台副标 50、「点击下载」48，SVG 单位）；(4) 课程目录重做为大号编号 + 「从这里开始」/「已读」/「下一讲」标记 + 本机阅读进度条，文章页写入 localStorage。改 `Base.astro`、`ai.astro`、`posts/[...slug].astro`、`HoloCard.astro`、三个实验页。本地 build 通过，headless Chromium 检查 390px 无横向滚动、深浅色。
 

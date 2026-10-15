@@ -386,8 +386,12 @@ export function initHoloCard(root) {
     // aspect-ratio box), so pin every box to explicit pixels.
     root.style.height = ch + 'px';
     [rotor, canvas.parentElement, canvas, canvas.parentElement.querySelector('img')].forEach((el) => { if (el) { el.style.width = cw + 'px'; el.style.height = ch + 'px'; } });
-    const w = Math.max(1, Math.round(cw * dpr)), h = Math.max(1, Math.round(ch * dpr));
-    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    // The drawing buffer is fixed at markup time (2x the CSS size) and never resized here:
+    // Safari keeps a stale compositing layer when a WebGL canvas is resized after its first paint.
+    if (!canvas.hasAttribute('width')) {
+      const w = Math.max(1, Math.round(cw * dpr)), h = Math.max(1, Math.round(ch * dpr));
+      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    }
     draw(); wake();
   };
   const img = new Image(); img.decoding = 'async';
