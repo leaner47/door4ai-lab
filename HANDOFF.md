@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-15 00:58 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
+最后更新：2026-10-15 22:20 America/New_York · 更新者：Claude（会话 session_01BMYreMHGsorAx7NqQQo6vN）
 
 ---
 
@@ -118,6 +118,8 @@ door4ai-lab/
 - **外观切换**：存 localStorage `d4a-theme`（light / dark，缺省 = 跟随系统），`<head>` 里内联脚本在渲染前设 `<html data-theme>`，避免闪烁。CSS token 写法：`@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){…} }` + `:root[data-theme="dark"]{…}`，**新增的深色样式都要照此两段写**。实验页同源，加载时读同一个键；切换时父页面直接改 iframe 的 `data-theme`（实验页已有 MutationObserver 重绘画布）。
 - **AI账号申请（2026-10-14 本人要求）**：学员申请 ChatGPT / Claude 等账号（选项：ChatGPT Plus / ChatGPT Pro / Claude Pro / Claude Max / Gemini Advanced / 其他，选项列表在 `functions/ai/apply/api.ts` 与 `src/pages/ai/apply.astro` 两处，改时同步）。必填：账号、用途（≥10 字）、WhatsApp 或微信；备注可选；邮箱取登录身份（Access 的 `cf-access-authenticated-user-email` 头，自建账号启用后取会话）。同一邮箱 24h 最多 5 条。状态：待处理 / 已开通 / 未通过 + 一句回复（学员可见）。**管理员 = Pages 环境变量 `ADMIN_EMAILS` 里的邮箱**，同一页面看到全部申请并改状态；（已随账号系统启用设好）；也可在 R2 桶 `door4ai-lab-dl` 的 `apply/` 前缀下直接看 JSON。路径放在 `/ai/` 下是为了直接受现有 Access 保护；`gate.ts` 加了 `ai/apply → 需登录`。D1 开通后可把 R2 记录迁成表。没有邮件通知（Resend 未配置）。
 - 课程目录 /ai：每讲左侧大号编号；**目录里不显示文章 description 小字**（本人要求，只留编号、元信息、标题、标签；description 仍用于文章页与 SEO）；第一讲标「从这里开始」；阅读进度只存本机浏览器 localStorage（键 `d4a-read`，文章页打开即记为已读），有已读时显示进度条、「已读」与「下一讲」标记。不做账号级进度。
+- 课程顺序：网络讲（internet-basics，order 2.5）放在硬件讲之后、Git 讲之前：先懂电脑，再懂电脑怎么连网，再讲 Git/GitHub。order 可以用小数插队。
+- 网络讲的 DNS 污染部分直接点名「防火长城」（2026-10-15 本人决定），只讲原理和可观察的现象，不提供翻墙教程。
 - 课程顺序：Token 讲（tokenizer-llm，order 4）放在硬件讲（2）和注意力讲（5）之间：先知道文字怎么变成 token、模型整体怎么跑，再拆开注意力。
 - 需要大数据表的实验（如分词器词表）把打包好的 JS 放在实验页同目录（`public/labs/<slug>/xxx.js`），同源、受同样的门禁保护；不依赖外部 CDN，国内访问更稳。
 - 课程顺序：注意力 QKV（order 5）在前，KV Cache（order 10）在后，因为 KV cache 建立在 Q/K/V 概念上。课程目录的「第 N 讲」由 order 排序自动生成。
@@ -137,6 +139,7 @@ door4ai-lab/
 - [x] 新增入门讲《电脑里到底有什么：CPU、GPU、内存、显存与 Docker》+ 五个等距图解实验，排在课程最前（order 2）（2026-10-14）
 - [x] 新增《Token 是什么：一句话是怎么进出大模型的》+「Token 实验室」七个实验（00–06），排为第 2 讲（order 4，在硬件讲与注意力讲之间）（2026-10-14）
 - [x] 新增入门讲《Git 和 GitHub：代码的时光机与云端仓库》+「Git 实验室」五个实验，排为 order 3（硬件讲之后、Token 讲之前）（2026-10-15）
+- [x] 新增入门讲《我们是怎么连上互联网的：IP、DNS、路由与 DNS 污染》+「网络实验室」七部分（00 比方 + 01–06 实验），order 2.5（2026-10-15）
 - [ ] 下一讲：题目未定（候选见第 7 节）
 - [ ] 关于页只有两句话，待充实
 - [ ] 没有统计/分析（可考虑 Cloudflare Web Analytics，免费，一行脚本）
@@ -155,6 +158,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-15 · Claude** — 按本人要求把聊天里讲的「DNS 污染 / 路由 / 怎么连上互联网」做成课程一讲：`src/content/blog/internet-basics.md`（series ai-mastery，order 2.5）+ 实验页 `public/labs/internet-basics/index.html`：00 四个比方 / 01 出发地→服务器的环节链与距离延迟（真实城市坐标 + 光纤 204 km/ms + 绕远系数滑块）/ 02 IPv4 位串与地址段分类 + NAT 表（示例公网 IP 203.0.113.7）/ 03 DNS 逐级查询分步演示（含缓存命中）/ 04 十个城市的路由网络，Dijkstra 最短路径，可点线挖断、点节点看路由表、traceroute 输出 / 05 DNS 污染时序图（运营商 DNS、8.8.8.8、DoH、代理 fake-ip 四种方式 × 普通/被封域名；时间取自 04 的图）/ 06 打开网页的来回次数（TLS1.2/1.3/HTTP3、DNS 缓存、对比 CDN）。窄屏下路由图用单独的竖排坐标。本地 build 通过；headless Chromium 检查 1000 浅色 / 390 深色、无横向滚动、无脚本错误，文章页 iframe 自动长高。直接推 main（本人同意）。
 
 - **2026-10-15 · Claude** — 按本人要求文章页实验去掉外框，改成和单独打开实验页一样：`posts/[...slug].astro` 有 lab 时用 `full` 布局、整宽 iframe、不渲染文章自己的标题区；`Base.astro` 删 `.lab-frame`，加 `.lab-embed` / `.post-body` / `.sr-only`；五个实验页（及 `labs-src/computer-anatomy/build.mjs`）删掉嵌入时隐藏标题的样式。本地检查 1440 / 390 宽、深浅色、正文与实验左对齐。
 

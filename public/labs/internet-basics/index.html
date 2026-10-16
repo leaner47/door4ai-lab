@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>网络实验室</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c; --ok-soft:#dcefe4;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  --mono:Menlo,Consolas,"SF Mono","Courier New",monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --ok-soft:#173a29; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --ok-soft:#173a29; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{max-width:860px;margin:0 auto;padding-inline:16px;padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);max-width:68ch;margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{max-width:68ch;margin:12px 0}
+code{font-family:var(--mono);font-size:.82em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+.aside{border-left:3px solid var(--accent);padding:4px 0 4px 16px;margin:16px 0;max-width:68ch;font-size:15.5px}
+.aside b{display:block;margin-bottom:2px}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:8px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl output{font-variant-numeric:tabular-nums;min-width:3em}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:4px 10px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap}
+.btn.pri{border-color:var(--accent);color:var(--accent)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+input[type=range]{accent-color:var(--accent);width:150px}
+input[type=text]{font-family:var(--mono);font-size:15px;padding:5px 9px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);width:12em;max-width:100%}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn b{color:var(--warn)} .ro.ok b{color:var(--ok)} .ro.acc b{color:var(--accent)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td code{white-space:nowrap}
+.tw{overflow-x:auto}
+.key{margin-top:40px;border-top:1px solid var(--line);padding-top:20px}
+.term{background:#0d1117;color:#d6dde6;font-family:var(--mono);font-size:12.5px;line-height:1.6;border-radius:6px;padding:10px 12px;margin-top:12px;white-space:pre-wrap;word-break:break-word;min-height:3.4em}
+.term .p{color:#7ee787} .term .r{color:#ff7b72} .term .y{color:#e3b341} .term .c{color:#79c0ff} .term .m{color:#8b949e}
+
+/* 00 比方 */
+.analogy{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:14px}
+.an{border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--paper)}
+.an b{display:block;font-size:16px}
+.an .eq{font-size:13px;color:var(--accent);margin:2px 0 4px}
+.an p{font-size:14px;margin:0;color:var(--muted);line-height:1.6}
+
+/* 01 路径 */
+.hops{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch}
+.hop{border:1px solid var(--line);border-radius:5px;padding:6px 9px;background:var(--bg);font-size:14px;line-height:1.4;min-width:96px;flex:1 1 96px;transition:background .15s,border-color .15s}
+.hop b{display:block;font-size:14px}
+.hop span{font-size:12px;color:var(--muted)}
+.hop.gate{border-color:var(--warn)}
+.hop.on{background:var(--accent-soft);border-color:var(--accent)}
+.hop.back{background:var(--ok-soft);border-color:var(--ok)}
+
+/* 02 IP */
+.bits{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;font-family:var(--mono);font-size:13px}
+.oct{display:flex;flex-direction:column;align-items:center;gap:2px}
+.oct .d{font-size:16px;font-weight:600}
+.oct .b{display:flex}
+.oct .b i{font-style:normal;width:1.15em;text-align:center;border:1px solid var(--line);margin-left:-1px;background:var(--bg)}
+.oct .b i.pf{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);position:relative;z-index:1}
+.quick{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.nat{margin-top:22px}
+
+/* 03 DNS */
+.dns{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-top:12px}
+.dn{border:1px solid var(--line);border-radius:5px;padding:7px 9px;background:var(--bg);font-size:13px;line-height:1.45;transition:background .15s,border-color .15s}
+.dn b{display:block;font-size:14px}
+.dn span{color:var(--muted);font-size:12px}
+.dn.ask{background:var(--accent-soft);border-color:var(--accent)}
+.dn.ans{background:var(--ok-soft);border-color:var(--ok)}
+.dn.miss{background:var(--warn-soft);border-color:var(--warn)}
+.stepper{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+.stepper .t{font-weight:700;font-size:16px}
+.stepper .k{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.dots{display:flex;gap:4px;flex-wrap:wrap}
+.dots span{width:18px;height:4px;border-radius:2px;background:var(--line)}
+.dots span.on{background:var(--accent)}
+.desc{margin:10px 0 0;font-size:15px}
+
+/* 04 路由图 */
+#rSvg .edge{stroke:var(--line);stroke-width:2}
+#rSvg .edge.intl{stroke-dasharray:5 4}
+#rSvg .edge.path{stroke:var(--accent);stroke-width:3.5}
+#rSvg .edge.cut{stroke:var(--warn);stroke-width:2;stroke-dasharray:2 4;opacity:.8}
+#rSvg .hit{stroke:transparent;stroke-width:16;cursor:pointer}
+#rSvg .node circle{fill:var(--paper);stroke:var(--fg);stroke-width:1.5;cursor:pointer}
+#rSvg .node.path circle{fill:var(--accent);stroke:var(--accent)}
+#rSvg .node.dst circle{fill:var(--ok);stroke:var(--ok)}
+#rSvg .node.sel circle{stroke:var(--warn);stroke-width:3}
+#rSvg .node text{font-size:12px;fill:var(--fg);text-anchor:middle;pointer-events:none}
+#rSvg .wt{font-size:10px;fill:var(--muted);text-anchor:middle;pointer-events:none}
+#rSvg .x{fill:var(--warn);font-size:14px;font-weight:700;text-anchor:middle;pointer-events:none}
+
+/* 05 污染 */
+#pSvg .lane{stroke:var(--line);stroke-width:1.5;stroke-dasharray:3 4}
+#pSvg .lane.off{opacity:.35}
+#pSvg .lh{font-size:12px;fill:var(--fg);text-anchor:middle;font-weight:600}
+#pSvg .lh.off{fill:var(--muted);font-weight:400}
+#pSvg .ev{stroke-width:2;fill:none}
+#pSvg .ev.q{stroke:var(--accent)} #pSvg .ev.ok{stroke:var(--ok)} #pSvg .ev.bad{stroke:var(--warn);stroke-width:2.5}
+#pSvg .ev.late{stroke:var(--muted);stroke-dasharray:4 4} #pSvg .ev.enc{stroke:var(--accent);stroke-dasharray:7 3}
+#pSvg .el{font-size:11px;paint-order:stroke;stroke:var(--paper);stroke-width:4px;stroke-linejoin:round}
+#pSvg .el.q{fill:var(--accent)} #pSvg .el.ok{fill:var(--ok)} #pSvg .el.bad{fill:var(--warn)} #pSvg .el.late{fill:var(--muted)} #pSvg .el.enc{fill:var(--accent)}
+#pSvg .tk{font-size:10px;fill:var(--muted)}
+#pSvg .blk{fill:var(--warn);font-size:16px;font-weight:700;text-anchor:middle}
+
+/* 06 加载 */
+.bar{display:flex;height:30px;border-radius:4px;overflow:hidden;margin-top:6px;border:1px solid var(--line)}
+.bar div{display:flex;align-items:center;justify-content:center;font-size:11.5px;color:#fff;white-space:nowrap;overflow:hidden;min-width:0;transition:flex-grow .25s}
+.blbl{font-size:13px;color:var(--muted);margin-top:12px;display:flex;justify-content:space-between;gap:10px}
+.blbl b{color:var(--fg);font-variant-numeric:tabular-nums;white-space:nowrap}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">ip · nat · dns · routing · dns 污染 · rtt</div>
+  <h1>网络实验室：我们是怎么连上互联网的</h1>
+  <p class="lede">在浏览器里敲下一个网址，到网页出现，中间经过了你家路由器、运营商、国际出口、海底光缆和好几台 DNS 服务器。下面六个实验把这条路拆开来看：延迟按真实城市坐标和光在光纤里的速度算，路由用的是真实的最短路径算法。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>先记住四个比方</h2>
+  <p>互联网上的东西几乎都可以套进「寄快递」这个比方：</p>
+  <div class="analogy">
+    <div class="an"><b>IP 地址</b><div class="eq">= 门牌号</div><p>每台联网设备的地址，形如 <code>104.21.5.8</code>。网络只认这个号码，不认名字。</p></div>
+    <div class="an"><b>域名</b><div class="eq">= 店名</div><p><code>lab.door4ai.com</code> 是给人记的名字，背后对应一个或几个 IP。</p></div>
+    <div class="an"><b>DNS</b><div class="eq">= 查号台</div><p>把名字翻译成 IP。每次打开网站，第一件事就是问它。</p></div>
+    <div class="an"><b>路由</b><div class="eq">= 快递分拣</div><p>数据被切成很多小包，每个路口的路由器看一眼目的地址，决定下一站交给谁。</p></div>
+  </div>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>从你的手机到服务器，要走多远</h2>
+  <p>选一个出发地和一台服务器。下面这串方块就是一个数据包要经过的环节，读数按两座城市的真实坐标算出直线距离，再除以光在光纤里的速度（约每毫秒 204 公里，是真空光速的三分之二）。</p>
+  <div class="lab" id="lab1">
+    <div class="ctrls">
+      <div class="ctrl"><label>你在</label><div class="seg" id="tSrc"></div></div>
+      <div class="ctrl"><label>服务器在</label><div class="seg" id="tDst"></div></div>
+      <div class="ctrl"><label for="tF">线路绕远系数</label><input type="range" id="tF" min="1" max="2.5" step="0.1" value="1.5"><output id="tFo"></output></div>
+    </div>
+    <div class="hops" id="hops"></div>
+    <div class="ctrl" style="margin-top:12px"><button class="btn pri" id="tSend">发一个包看看</button></div>
+    <div class="readout" id="tRo"></div>
+    <p class="note">光缆不会走地图上的直线，要沿海岸线、绕过山脉、在城市之间中转，所以实际长度通常是直线的 1.3 到 2 倍。<b>RTT</b>（往返时间）是一个包去、再回来一趟的时间，<code>ping</code> 显示的就是它。从扬州到洛杉矶，就算线路是笔直的，光走一个来回也要 100 毫秒以上，这是物理上限，花钱也买不到更快。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>IP 地址：门牌号不够用了怎么办</h2>
+  <p>现在最常用的 IPv4 地址是 32 位二进制数，平时写成 4 段十进制，每段 0–255。32 位一共只能编出 2<sup>32</sup> ≈ 43 亿个地址，而全世界的手机、电脑、摄像头远不止这么多。解决办法是：<b>一部分地址只在家里、公司里用（内网地址），出门时共用一个公网地址</b>。</p>
+  <div class="lab" id="lab2">
+    <div class="ctrl"><label for="ipIn">输入一个 IP</label><input type="text" id="ipIn" value="192.168.1.23" spellcheck="false" autocomplete="off" inputmode="decimal"></div>
+    <div class="quick" id="ipQuick"></div>
+    <div class="bits" id="ipBits"></div>
+    <div class="readout" id="ipRo"></div>
+    <p class="note">蓝色的位是这个地址段固定不变的「前缀」，剩下的位可以自由编号。<code>192.168.x.x</code>、<code>10.x.x.x</code>、<code>172.16–31.x.x</code> 是全世界通用的内网段：你家和邻居家可以同时有一台 <code>192.168.1.23</code>，互不冲突，因为它们从不直接出现在公网上。</p>
+
+    <div class="nat">
+      <p style="margin-top:0"><b>NAT（地址转换）</b>：你家路由器只从运营商那里拿到一个公网 IP（下面用示例地址 <code>203.0.113.7</code>）。家里每台设备出门时，路由器把发件人改成这个公网 IP，并换一个端口号记在表里；回信到达时再按表转回去。点几下试试：</p>
+      <div class="ctrls" style="margin-bottom:0">
+        <div class="ctrl"><label>谁上网</label><button class="btn" data-dev="0">手机</button><button class="btn" data-dev="1">电脑</button><button class="btn" data-dev="2">平板</button></div>
+        <div class="ctrl"><button class="btn pri" id="natBack">一个回包到达</button><button class="btn" id="natIn">外面有人主动连进来</button><button class="btn" id="natReset">清空</button></div>
+      </div>
+      <div class="tw"><table id="natTbl"></table></div>
+      <div class="term" id="natTerm" aria-live="polite"></div>
+    </div>
+  </div>
+  <div class="aside"><b>这就是为什么家里的电脑「从外面连不进来」</b>NAT 表里只有家里设备主动发出去的连接。外面有人主动敲门时，表里查不到这是给谁的，包就被丢掉。这顺带起到了一点防护作用，但也是远程访问家里服务器要额外折腾（端口转发、内网穿透）的原因。新一代的 IPv6 有 2<sup>128</sup> 个地址，每台设备都能分到公网地址，就不需要 NAT 了。</div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>DNS：把名字翻译成 IP</h2>
+  <p>电脑不知道 <code>lab.door4ai.com</code> 在哪，要先查。查询是逐级问路：先看自己有没有记着，没有就问<b>递归解析器</b>（通常是运营商的 DNS，或你手动设的 8.8.8.8、114.114.114.114）。解析器从<b>根服务器</b>问起，一级一级问到这个域名的<b>权威服务器</b>，也就是真正管这个域名的那台。</p>
+  <div class="lab" id="lab3">
+    <div class="ctrl"><label>场景</label><div class="seg" id="dMode"><button aria-pressed="true" data-m="0">第一次访问</button><button aria-pressed="false" data-m="1">再访问一次</button></div></div>
+    <div class="dns" id="dNodes"></div>
+    <div class="stepper">
+      <button class="btn" id="dPrev">← 上一步</button><button class="btn pri" id="dNext">下一步 →</button>
+      <span class="k" id="dK"></span><div class="dots" id="dDots"></div>
+    </div>
+    <div class="t desc" id="dT" style="font-weight:700"></div>
+    <p class="desc" id="dD"></p>
+    <div class="term" id="dTerm"></div>
+    <div class="readout" id="dRo"></div>
+    <p class="note">各步耗时取的是典型值。答案里的 <b>TTL</b>（这里是 300 秒）是「这个答案可以记多久」，过期前所有人都直接用缓存，所以第二次访问几乎不花时间。也因为有缓存，改了 DNS 记录后，旧答案要过一会儿才会在各地消失。</p>
+  </div>
+  <div class="aside"><b>这个网站的 DNS 就在 Cloudflare</b>door4ai.com 的权威服务器是 Cloudflare 的两台服务器。实验里返回的是 Cloudflare 的地址（104.21 和 172.67 开头的段），而不是真正存网页的机器：打开了「代理」（橙色云朵）的记录，访问者先连到 Cloudflare 离他较近的机房，再由 Cloudflare 转给源站，源站的真实地址对外是隐藏的。</div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>路由：每个路口只管下一站</h2>
+  <p>没有哪台路由器知道完整的路线。每台路由器只有一张<b>路由表</b>：「去某个目的地，交给哪个邻居」。数据包每到一站，那里的路由器查一次表，交给下一站，直到到达终点。下面这张图里的节点放在真实城市，连线的延迟按两城距离计算（绕远系数 1.5）。</p>
+  <div class="lab" id="lab4">
+    <div class="ctrls">
+      <div class="ctrl"><label>目的地</label><div class="seg" id="rDst"></div></div>
+      <div class="ctrl"><button class="btn" id="rReset">恢复所有线路</button></div>
+    </div>
+    <svg id="rSvg" role="img" aria-label="路由网络图"></svg>
+    <div class="legend"><span><i style="background:var(--accent)"></i>当前路径</span><span><i style="background:none;border:1px dashed var(--muted)"></i>虚线 = 出境 / 海底光缆</span><span><i style="background:var(--warn)"></i>✕ 断开的线路</span></div>
+    <div class="term" id="rTerm"></div>
+    <div id="rTbl"></div>
+    <div class="readout" id="rRo"></div>
+    <p class="note"><b>点任意一条线把它「挖断」</b>，看路由自动绕路；<b>点一个节点</b>，看它的路由表。上面终端里是 <code>traceroute</code> 的样子：它故意发出 TTL（最多跳几站）为 1、2、3…… 的包，每一站把 TTL 减 1，减到 0 时会回一封「超时」信，于是能一站一站地把路线问出来。真实互联网上，不同运营商之间用 <b>BGP</b> 协议互相告诉对方「哪些地址从我这里能到」，原理和这里一样：每个节点只知道邻居，合在一起就能到达全世界。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>DNS 污染：抢答的假答案</h2>
+  <p>传统 DNS 查询是<b>明文</b>的 UDP 包，一路上的设备都能看到你查的是哪个域名。中国大陆的国际出入口处部署着<b>防火长城</b>（GFW）的设备，它们旁听经过的 DNS 查询，一旦发现查的是被封锁的域名，就立刻伪造一个回复发给你，里面是一个错误的 IP。它离你比真正的 DNS 服务器近，所以<b>假答案先到</b>；电脑只认第一个到达的答案，后到的真答案会被丢弃。这就是 DNS 污染。</p>
+  <div class="lab" id="lab5">
+    <div class="ctrls">
+      <div class="ctrl"><label>查询的域名</label><div class="seg" id="pDom"></div></div>
+      <div class="ctrl"><label>用什么查</label><div class="seg" id="pRes"></div></div>
+    </div>
+    <svg id="pSvg" role="img" aria-label="DNS 查询时序图"></svg>
+    <div class="term" id="pTerm"></div>
+    <div class="readout" id="pRo"></div>
+    <p class="note" id="pNote"></p>
+  </div>
+  <div class="aside"><b>污染、劫持、封锁的区别</b><b style="display:inline;font-weight:600">DNS 污染</b>发生在路上：你问的服务器没问题，是中间设备抢答，所以把 DNS 换成 8.8.8.8 也躲不过。<b style="display:inline;font-weight:600">DNS 劫持</b>是你用的 DNS 服务器自己给出假答案，比如有的运营商把输错的网址导到广告页。而 DNS 只是第一步：就算拿到了正确的 IP，连接仍可能被<b style="display:inline;font-weight:600">封 IP</b>，或者在 HTTPS 握手时被识别出明文的域名（SNI）而阻断。所以只修好 DNS，通常还打不开被封锁的网站。</div>
+</section>
+
+<section id="s6">
+  <h2><span class="n">06</span>打开一个网页，要来回几趟</h2>
+  <p>拿到 IP 之后还没完。浏览器要先和服务器建立连接（TCP 握手），再协商加密（TLS 握手），然后才发出真正的请求。每一步都至少要一个来回，所以<b>离服务器越远，这几个来回就越贵</b>。拖一拖：</p>
+  <div class="lab" id="lab6">
+    <div class="ctrls">
+      <div class="ctrl"><label for="lRtt">到服务器的 RTT</label><input type="range" id="lRtt" min="5" max="300" step="5" value="180"><output id="lRtto"></output></div>
+      <div class="ctrl"><label>协议</label><div class="seg" id="lProto"></div></div>
+      <div class="ctrl"><label>DNS</label><div class="seg" id="lDns"><button aria-pressed="false" data-v="0">没缓存</button><button aria-pressed="true" data-v="1">已缓存</button></div></div>
+    </div>
+    <div class="blbl"><span>直接连源站</span><b id="lT1"></b></div>
+    <div class="bar" id="lBar1"></div>
+    <div class="blbl"><span>连附近的 CDN 机房（RTT 20 ms，静态内容在机房里已有缓存）</span><b id="lT2"></b></div>
+    <div class="bar" id="lBar2"></div>
+    <div class="legend" id="lLeg"></div>
+    <div class="readout" id="lRo"></div>
+    <p class="note">这是一个小页面的第一次请求，不算下载大文件的时间。看两件事：一是 RTT 从 20 拖到 200 时总时间接近翻 10 倍，因为来回次数是固定的；二是新协议（TLS 1.3、HTTP/3）的主要改进就是<b>少跑几趟</b>。CDN（比如本站用的 Cloudflare）的思路是把内容放到离你近的机房，让每一趟都变短。</p>
+  </div>
+</section>
+
+<section class="key">
+  <h2>速查</h2>
+  <div class="tw"><table>
+    <thead><tr><th>名词</th><th>一句话</th></tr></thead>
+    <tbody>
+      <tr><td>IP 地址</td><td>设备在网络上的门牌号；IPv4 是 32 位，IPv6 是 128 位</td></tr>
+      <tr><td>内网 / 公网 IP</td><td>内网地址只在局域网里有效；公网地址全世界唯一，能被直接访问</td></tr>
+      <tr><td>NAT</td><td>路由器把多台设备的内网地址换成同一个公网地址出门，按表把回包送回</td></tr>
+      <tr><td>端口</td><td>同一个 IP 上区分不同程序的号码，网页 HTTPS 用 443，DNS 用 53</td></tr>
+      <tr><td>DNS</td><td>把域名翻译成 IP 的系统</td></tr>
+      <tr><td>递归解析器</td><td>替你跑腿查到底的 DNS 服务器（运营商 DNS、8.8.8.8、114.114.114.114）</td></tr>
+      <tr><td>权威服务器</td><td>真正管某个域名、给出最终答案的 DNS 服务器</td></tr>
+      <tr><td>TTL</td><td>DNS 里是「答案能缓存多久」；IP 包里是「最多还能跳几站」</td></tr>
+      <tr><td>路由 / 路由表</td><td>每台路由器按目的地址决定下一跳</td></tr>
+      <tr><td>BGP</td><td>运营商之间互相通告「哪些地址从我这能到」的协议</td></tr>
+      <tr><td>RTT</td><td>一个包往返一次的时间，<code>ping</code> 显示的数字</td></tr>
+      <tr><td>CDN</td><td>把内容复制到各地机房，让用户就近访问</td></tr>
+      <tr><td>DNS 劫持</td><td>你用的 DNS 服务器自己返回假答案</td></tr>
+      <tr><td>DNS 污染</td><td>路上的设备抢先伪造回复，假答案比真答案先到</td></tr>
+      <tr><td>DoH / DoT</td><td>加密的 DNS，路上的设备看不到你查的域名</td></tr>
+      <tr><td>SNI</td><td>HTTPS 握手开头以明文发出的域名，常被用来识别和阻断连接</td></tr>
+    </tbody>
+  </table></div>
+  <div class="tw"><table>
+    <thead><tr><th>命令</th><th>做什么</th></tr></thead>
+    <tbody>
+      <tr><td><code>ping lab.door4ai.com</code></td><td>测到对方的 RTT 和丢包</td></tr>
+      <tr><td><code>traceroute lab.door4ai.com</code>（Windows 用 <code>tracert</code>）</td><td>列出沿途每一跳</td></tr>
+      <tr><td><code>nslookup lab.door4ai.com</code></td><td>查一个域名解析到哪个 IP（Mac、Windows 都有）</td></tr>
+      <tr><td><code>dig @8.8.8.8 lab.door4ai.com</code></td><td>指定 DNS 服务器查询，看完整的问答（Mac / Linux）</td></tr>
+      <tr><td><code>ipconfig</code>（Windows）/ <code>ifconfig</code>（Mac）</td><td>看本机的内网 IP</td></tr>
+      <tr><td><code>curl -v https://lab.door4ai.com</code></td><td>看连接、TLS 握手和请求的全过程</td></tr>
+    </tbody>
+  </table></div>
+</section>
+</div>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=(x,d=1)=>(+x).toFixed(d);
+const FIBER=204; // 光纤中的光速：约 204 km/ms（折射率约 1.47）
+
+/* ---------- 地理 ---------- */
+const GEO={'扬州':[32.39,119.42],'南京':[32.06,118.80],'上海':[31.23,121.47],'北京':[39.90,116.40],'广州':[23.13,113.26],'香港':[22.32,114.17],'东京':[35.68,139.69],'新加坡':[1.35,103.82],'洛杉矶':[34.05,-118.24],'弗吉尼亚':[39.04,-77.49],'波士顿':[42.36,-71.06]};
+function hav(a,b){const [la1,lo1]=GEO[a],[la2,lo2]=GEO[b],r=Math.PI/180,R=6371;
+  const dl=(la2-la1)*r,dn=(lo2-lo1)*r,h=Math.sin(dl/2)**2+Math.cos(la1*r)*Math.cos(la2*r)*Math.sin(dn/2)**2;
+  return 2*R*Math.asin(Math.min(1,Math.sqrt(h)))}
+const MAINLAND=new Set(['扬州','南京','上海','北京','广州','家']);
+const REGION={'扬州':'cn','北京':'cn','上海':'cn','香港':'cn','东京':'jp','洛杉矶':'us','弗吉尼亚':'us','波士顿':'us'};
+
+function seg(el,items,cur,on){
+  el.innerHTML=items.map(v=>`<button aria-pressed="${v===cur}" data-v="${esc(v)}">${esc(v)}</button>`).join('');
+  el.onclick=e=>{const b=e.target.closest('button');if(!b)return;
+    el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));on(b.dataset.v)};
+}
+function ro(el,items){el.innerHTML=items.map(([v,l,c])=>`<div class="ro ${c||''}"><b>${v}</b><span>${l}</span></div>`).join('')}
+
+/* ========== 01 路径与距离 ========== */
+let tSrc='扬州',tDst='洛杉矶',tTimer=null;
+function hopList(){
+  const H=[['手机 / 电脑','内网地址 192.168.1.23'],['Wi‑Fi 路由器','NAT：换成公网 IP'],['光猫 / 调制解调器','光信号 ↔ 电信号'],['运营商城域网',tSrc+' 本地'],['运营商骨干网','跨城市长途']];
+  const cross=MAINLAND.has(tSrc)!==MAINLAND.has(tDst);
+  const ocean=REGION[tSrc]!==REGION[tDst];
+  if(cross&&MAINLAND.has(tSrc))H.push(['国际出口','出境关口（防火长城在这里）',1]);
+  if(ocean)H.push(['海底光缆','跨海 / 跨洋']);
+  if(cross&&MAINLAND.has(tDst))H.push(['国际入口','入境关口（防火长城在这里）',1]);
+  if(tSrc!==tDst&&!(tSrc==='扬州'&&tDst==='上海'))H.push(['对方骨干网 / 交换中心',tDst]);
+  H.push(['机房网络',tDst+' 的数据中心'],['服务器','真正存网页的机器']);
+  return H;
+}
+function tRender(){
+  clearInterval(tTimer);
+  const f=+$('#tF').value;$('#tFo').textContent='×'+fmt(f);
+  const H=hopList();
+  $('#hops').innerHTML=H.map(([b,s,g])=>`<div class="hop${g?' gate':''}"><b>${esc(b)}</b><span>${esc(s)}</span></div>`).join('');
+  const d=tSrc===tDst?20:hav(tSrc,tDst);
+  const one=d/FIBER,rtt=2*one*f;
+  ro($('#tRo'),[
+    [Math.round(d).toLocaleString()+' km','直线距离'],
+    [fmt(one)+' ms','光走直线的单程时间（下限）'],
+    [fmt(rtt,0)+' ms','估计 RTT（往返，含绕远）','acc'],
+    [Math.floor(1000/rtt)+' 次','1 秒最多能来回几趟']
+  ]);
+}
+seg($('#tSrc'),['扬州','北京','波士顿'],tSrc,v=>{tSrc=v;tRender()});
+seg($('#tDst'),['上海','香港','东京','洛杉矶','弗吉尼亚'],tDst,v=>{tDst=v;tRender()});
+$('#tF').oninput=tRender;
+$('#tSend').onclick=()=>{
+  clearInterval(tTimer);const els=$$('#hops .hop'),n=els.length;let i=0;
+  tTimer=setInterval(()=>{els.forEach(e=>e.classList.remove('on','back'));
+    if(i<n)els[i].classList.add('on');else if(i<2*n-1)els[2*n-2-i].classList.add('back');else clearInterval(tTimer);i++},240);
+};
+tRender();
+
+/* ========== 02 IP 与 NAT ========== */
+const RANGES=[
+  [[10,0,0,0],8,'私有（内网）','公司、大型局域网常用',false],
+  [[172,16,0,0],12,'私有（内网）','172.16–172.31，常见于 Docker',false],
+  [[192,168,0,0],16,'私有（内网）','家用路由器最常见',false],
+  [[100,64,0,0],10,'运营商级 NAT','运营商内部共享地址，你家路由器拿到它说明还隔着一层 NAT',false],
+  [[127,0,0,0],8,'本机回环','永远指向自己这台电脑',false],
+  [[169,254,0,0],16,'链路本地','没拿到地址时自动分配的',false],
+  [[224,0,0,0],4,'组播','一对多广播用',false],
+  [[240,0,0,0],4,'保留','不用于普通设备',false],
+  [[0,0,0,0],8,'保留','表示「本网络」或「任意地址」',false]
+];
+const toN=a=>((a[0]<<24)>>>0)+(a[1]<<16)+(a[2]<<8)+a[3];
+function ipRender(){
+  const s=$('#ipIn').value.trim(),m=s.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if(!m||m.slice(1).some(x=>+x>255)){$('#ipBits').innerHTML='';ro($('#ipRo'),[['格式不对','每段 0–255，共 4 段，用点隔开','warn']]);return}
+  const a=m.slice(1).map(Number),n=toN(a);
+  let hit=null;for(const r of RANGES){const mask=r[1]===0?0:(0xffffffff<<(32-r[1]))>>>0;if(((n&mask)>>>0)===((toN(r[0])&mask)>>>0)){hit=r;break}}
+  const pf=hit?hit[1]:0;
+  $('#ipBits').innerHTML=a.map((v,k)=>`<div class="oct"><span class="d">${v}</span><span class="b">${v.toString(2).padStart(8,'0').split('').map((b,j)=>`<i class="${k*8+j<pf?'pf':''}">${b}</i>`).join('')}</span></div>`).join('');
+  const t=hit?hit[2]:'公网',why=hit?hit[3]:'全世界唯一，由运营商或机构分配';
+  ro($('#ipRo'),[[t,why,hit?'':'ok'],[hit?'不能':'能','从互联网上直接访问它',hit?'warn':'ok'],[hit?(2**(32-pf)).toLocaleString():'—','这个地址段一共有几个地址']]);
+}
+$('#ipIn').oninput=ipRender;
+$('#ipQuick').innerHTML=['192.168.1.23','10.0.0.5','172.17.0.2','100.64.12.3','127.0.0.1','8.8.8.8','104.21.5.8'].map(v=>`<button class="btn" data-ip="${v}">${v}</button>`).join('');
+$('#ipQuick').onclick=e=>{const b=e.target.closest('button');if(b){$('#ipIn').value=b.dataset.ip;ipRender()}};
+ipRender();
+
+const DEV=[['手机','192.168.1.23','lab.door4ai.com'],['电脑','192.168.1.10','github.com'],['平板','192.168.1.31','www.baidu.com']];
+const PUB='203.0.113.7';let nat=[],nextPort=40001;
+const P='<span class="p">路由器</span> ';
+function natRender(){
+  $('#natTbl').innerHTML='<thead><tr><th>设备</th><th>内网 IP:端口</th><th>→ 换成</th><th>去往</th></tr></thead><tbody>'+
+    (nat.length?nat.map(r=>`<tr><td>${r.d}</td><td><code>${r.ip}:${r.lp}</code></td><td><code>${PUB}:${r.pp}</code></td><td><code>${r.to}:443</code></td></tr>`).join(''):'<tr><td colspan="4" style="color:var(--muted)">NAT 表是空的：还没有设备主动连出去</td></tr>')+'</tbody>';
+  $('#natBack').disabled=!nat.length;
+}
+$$('[data-dev]').forEach(b=>b.onclick=()=>{
+  const [d,ip,to]=DEV[+b.dataset.dev],lp=50000+Math.floor(Math.random()*11000),pp=nextPort++;
+  nat.push({d,ip,lp,pp,to});if(nat.length>6)nat.shift();natRender();
+  $('#natTerm').innerHTML=`${P}收到 ${ip}:${lp} → ${to}:443\n${P}改写发件人为 <span class="c">${PUB}:${pp}</span>，记进 NAT 表，发出`;
+});
+$('#natBack').onclick=()=>{if(!nat.length)return;const r=nat[Math.floor(Math.random()*nat.length)];
+  $('#natTerm').innerHTML=`${P}收到 ${r.to}:443 → ${PUB}:${r.pp}\n${P}查表：端口 ${r.pp} 属于 ${r.d}\n${P}改写收件人为 <span class="p">${r.ip}:${r.lp}</span>，转进家里 ✓`};
+$('#natIn').onclick=()=>{$('#natTerm').innerHTML=`${P}收到 198.51.100.9:61000 → ${PUB}:8080\n${P}查表：端口 8080 <span class="r">没有记录</span>\n${P}<span class="r">不知道该给谁，丢弃 ✕</span>`};
+$('#natReset').onclick=()=>{nat=[];nextPort=40001;natRender();$('#natTerm').innerHTML='<span class="m"># 点上面的设备，让它访问一个网站</span>'};
+natRender();$('#natTerm').innerHTML='<span class="m"># 点上面的设备，让它访问一个网站</span>';
+
+/* ========== 03 DNS 逐级查询 ========== */
+const DN=[['br','浏览器缓存','浏览器自己记的'],['os','操作系统','系统缓存 + hosts 文件'],['rs','递归解析器','运营商 DNS / 8.8.8.8'],['root','根服务器','全球 13 组，a 到 m'],['tld','.com 服务器','a.gtld-servers.net 等'],['auth','door4ai.com 权威','*.ns.cloudflare.com']];
+const ANS='lab.door4ai.com.   300  IN  A  104.21.x.x\nlab.door4ai.com.   300  IN  A  172.67.x.x';
+const S1=[
+  {t:'浏览器先翻自己的记录',d:'浏览器会把最近查过的域名记一小会儿。第一次访问，没有。',n:{br:'miss'},c:'<span class="m"># 浏览器缓存：没有 lab.door4ai.com</span>',ms:0,q:0},
+  {t:'问操作系统',d:'系统也有一份缓存，还会看 hosts 文件（可以手动把某个域名写死到某个 IP）。还是没有，于是把问题交给网络设置里的 DNS 服务器，也就是递归解析器。',n:{br:'miss',os:'miss',rs:'ask'},c:'<span class="m"># 系统缓存、hosts：没有 → 发 UDP 查询到解析器的 53 端口</span>',ms:10,q:1},
+  {t:'解析器问根服务器',d:'解析器也没有缓存，只能从头问。根服务器不知道 lab.door4ai.com 在哪，但知道 .com 归谁管，于是把 .com 服务器的名单告诉解析器。（实际上 .com 的名单解析器早就缓存了，这一步常常省掉。）',n:{rs:'ask',root:'ans'},c:'<span class="y">解析器 → 根</span>  lab.door4ai.com 的 A 记录？\n<span class="c">根 → 解析器</span>  不归我管。com. 由 a.gtld-servers.net … m.gtld-servers.net 负责',ms:20,q:1},
+  {t:'解析器问 .com 服务器',d:'.com 服务器也不知道具体 IP，但它记着 door4ai.com 这个域名注册时登记的权威服务器：Cloudflare 的两台。',n:{rs:'ask',tld:'ans'},c:'<span class="y">解析器 → .com</span>  lab.door4ai.com 的 A 记录？\n<span class="c">.com → 解析器</span>  door4ai.com 由 *.ns.cloudflare.com（两台）负责',ms:30,q:1},
+  {t:'解析器问 Cloudflare 权威服务器',d:'终于问到了管这个域名的服务器。它给出最终答案：两个 IP，都属于 Cloudflare；并说明这个答案可以缓存 300 秒。',n:{rs:'ask',auth:'ans'},c:'<span class="y">解析器 → 权威</span>  lab.door4ai.com 的 A 记录？\n<span class="c">权威 → 解析器</span>\n;; ANSWER SECTION:\n'+ANS,ms:15,q:1},
+  {t:'答案一路传回，各自记一份',d:'解析器把答案缓存 300 秒，再回给你的电脑；操作系统和浏览器也各记一份。接下来浏览器就拿着这个 IP 去连接，走的就是实验 01 那条路。',n:{br:'ans',os:'ans',rs:'ans'},c:'<span class="p">$</span> dig lab.door4ai.com\n;; ANSWER SECTION:\n'+ANS+'\n;; Query time: 75 msec',ms:0,q:0}
+];
+const S2=[
+  {t:'浏览器缓存命中',d:'300 秒之内再打开，浏览器直接用记着的答案，一个包都不用发。过期了也没关系：解析器那里很可能还有缓存（别人刚查过），只需要你和解析器之间来回一趟。',n:{br:'ans'},c:'<span class="m"># 浏览器缓存：lab.door4ai.com → 104.21.x.x（还剩 287 秒）</span>',ms:0,q:0}
+];
+let dm=0,dk=0;
+function dRender(){
+  const S=dm?S2:S1,s=S[dk];
+  $('#dNodes').innerHTML=DN.map(([k,b,t])=>`<div class="dn ${s.n[k]||''}"><b>${b}</b><span>${t}</span></div>`).join('');
+  $('#dK').textContent=(dk+1)+' / '+S.length;
+  $('#dDots').innerHTML=S.map((_,i)=>`<span class="${i<=dk?'on':''}"></span>`).join('');
+  $('#dT').textContent=s.t;$('#dD').textContent=s.d;$('#dTerm').innerHTML=s.c;
+  $('#dPrev').disabled=dk===0;$('#dNext').disabled=dk===S.length-1;
+  const done=S.slice(0,dk+1),ms=done.reduce((a,x)=>a+x.ms,0),q=done.reduce((a,x)=>a+x.q,0);
+  ro($('#dRo'),[[q+' 次','到目前为止的网络来回'],[ms+' ms','到目前为止的耗时（典型值）','acc']]);
+}
+$('#dMode').onclick=e=>{const b=e.target.closest('button');if(!b)return;$$('#dMode button').forEach(x=>x.setAttribute('aria-pressed',x===b));dm=+b.dataset.m;dk=0;dRender()};
+$('#dPrev').onclick=()=>{if(dk>0){dk--;dRender()}};
+$('#dNext').onclick=()=>{const S=dm?S2:S1;if(dk<S.length-1){dk++;dRender()}};
+dRender();
+
+/* ========== 04 路由 ========== */
+const NODES={'家':[.04,.46],'扬州':[.15,.46],'南京':[.27,.46],'北京':[.40,.1],'上海':[.49,.56],'广州':[.40,.9],'东京':[.64,.28],'香港':[.60,.84],'新加坡':[.78,.94],'洛杉矶':[.95,.5]};
+const NODES_N={'家':[.5,0],'扬州':[.5,.1],'南京':[.5,.2],'北京':[.12,.3],'上海':[.45,.5],'广州':[.9,.46],'东京':[.15,.66],'香港':[.85,.64],'新加坡':[.88,.84],'洛杉矶':[.42,.98]};
+const EDGES=[['家','扬州'],['扬州','南京'],['南京','上海'],['南京','北京'],['上海','广州'],['北京','广州'],['北京','东京'],['上海','东京'],['广州','香港'],['香港','东京'],['香港','新加坡'],['东京','洛杉矶'],['上海','洛杉矶'],['新加坡','洛杉矶']];
+const W8=EDGES.map(([a,b])=>a==='家'?1:Math.max(.3,Math.round(hav(a,b)*1.5/FIBER*10)/10));
+const intl=([a,b])=>MAINLAND.has(a)!==MAINLAND.has(b)||(!MAINLAND.has(a)&&!MAINLAND.has(b));
+let cut=new Set(),rDst='洛杉矶',rSel=null;
+function dijkstra(src,cutSet=cut){
+  const dist={},prev={},left=new Set(Object.keys(NODES));for(const n of left)dist[n]=Infinity;dist[src]=0;
+  while(left.size){let u=null;for(const n of left)if(u===null||dist[n]<dist[u])u=n;if(dist[u]===Infinity)break;left.delete(u);
+    EDGES.forEach((e,i)=>{if(cutSet.has(i))return;const v=e[0]===u?e[1]:e[1]===u?e[0]:null;if(!v||!left.has(v))return;
+      const nd=dist[u]+W8[i];if(nd<dist[v]-1e-9){dist[v]=nd;prev[v]=u}})}
+  return{dist,prev};
+}
+function pathTo(prev,src,dst){const p=[dst];while(p[0]!==src){const q=prev[p[0]];if(!q)return null;p.unshift(q)}return p}
+const eIdx=(a,b)=>EDGES.findIndex(e=>(e[0]===a&&e[1]===b)||(e[0]===b&&e[1]===a));
+function rRender(){
+  const svg=$('#rSvg'),cw=svg.parentNode.clientWidth||600,narrow=cw<520;
+  const W=narrow?340:640,H=narrow?600:330,px=16,py=narrow?22:24;
+  const pos=n=>{if(narrow){const [x,y]=NODES_N[n];return[px+18+x*(W-2*px-36),py+y*(H-2*py-20)]}const [x,y]=NODES[n];return[px+x*(W-2*px),py+y*(H-2*py-14)]};
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const {dist,prev}=dijkstra('家'),path=pathTo(prev,'家',rDst);
+  const onPath=new Set();if(path)for(let i=1;i<path.length;i++)onPath.add(eIdx(path[i-1],path[i]));
+  let s='';
+  EDGES.forEach((e,i)=>{const [x1,y1]=pos(e[0]),[x2,y2]=pos(e[1]),c=['edge',intl(e)?'intl':'',cut.has(i)?'cut':'',onPath.has(i)?'path':''].join(' ');
+    s+=`<line class="${c}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+    const mx=(x1+x2)/2,my=(y1+y2)/2;
+    s+=cut.has(i)?`<text class="x" x="${mx}" y="${my+5}">✕</text>`:`<text class="wt" x="${mx}" y="${my-5}">${fmt(W8[i])}</text>`;
+    s+=`<line class="hit" data-e="${i}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"><title>${e[0]}–${e[1]}：${fmt(W8[i])} ms，点击${cut.has(i)?'恢复':'挖断'}</title></line>`});
+  for(const n in NODES){const [x,y]=pos(n),c=['node',path&&path.includes(n)?'path':'',n===rDst?'dst':'',n===rSel?'sel':''].join(' ');
+    s+=`<g class="${c}" data-n="${n}"><circle cx="${x}" cy="${y}" r="9"/>${narrow?`<text x="${NODES_N[n][0]>.7?x-14:x+14}" y="${y+4}" style="text-anchor:${NODES_N[n][0]>.7?'end':'start'}">${n==='家'?'你家':n}</text>`:`<text x="${x}" y="${y+24}">${n==='家'?'你家':n}</text>`}</g>`}
+  svg.innerHTML=s;
+  // traceroute
+  let t=`<span class="p">$</span> traceroute ${rDst}-server\n`;
+  if(!path)t+='<span class="r"> 1  * * *\n 2  * * *\n不可达：所有线路都断了</span>';
+  else{let cum=0;path.slice(1).forEach((n,i)=>{cum+=W8[eIdx(path[i],n)];t+=` ${String(i+1).padStart(2)}  ${(n+(i===path.length-2?'（目的地）':' 路由器')).padEnd(12,'　')}  <span class="c">${fmt(2*cum)} ms</span>\n`})}
+  $('#rTerm').innerHTML=t.trimEnd();
+  // 路由表
+  if(rSel){
+    const r=dijkstra(rSel);
+    const rows=['香港','东京','新加坡','洛杉矶','家'].filter(d=>d!==rSel).map(d=>{const p=pathTo(r.prev,rSel,d);return`<tr><td>${d==='家'?'你家':d}</td><td>${p?(p[1]==='家'?'你家':p[1]):'<span style="color:var(--warn)">不可达</span>'}</td><td>${p?fmt(r.dist[d])+' ms':'—'}</td></tr>`}).join('');
+    $('#rTbl').innerHTML=`<div class="tw"><table><thead><tr><th>${rSel==='家'?'你家路由器':rSel+' 路由器'}的路由表 · 目的地</th><th>下一跳</th><th>单程延迟</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }else $('#rTbl').innerHTML='';
+  ro($('#rRo'),path?[[path.length-1+' 跳','经过几台路由器'],[fmt(2*dist[rDst])+' ms','往返 RTT','acc'],[cut.size+' 条','被挖断的线路',cut.size?'warn':'']]:[['不可达','没有任何一条路','warn'],[cut.size+' 条','被挖断的线路','warn']]);
+}
+seg($('#rDst'),['香港','东京','新加坡','洛杉矶'],rDst,v=>{rDst=v;rRender()});
+$('#rSvg').addEventListener('click',e=>{const h=e.target.closest('[data-e]');if(h){const i=+h.dataset.e;cut.has(i)?cut.delete(i):cut.add(i);rRender();return}
+  const g=e.target.closest('[data-n]');if(g){rSel=rSel===g.dataset.n?null:g.dataset.n;rRender()}});
+$('#rReset').onclick=()=>{cut.clear();rRender()};
+
+/* ========== 05 DNS 污染 ========== */
+const base=dijkstra('家',new Set());
+const D=n=>base.dist[n];
+// 去香港的路径上第一条出境线路的起点 = 国际出口
+const hkPath=pathTo(base.prev,'家','香港');
+const EXIT=hkPath.find((n,i)=>i<hkPath.length-1&&MAINLAND.has(n)&&!MAINLAND.has(hkPath[i+1]));
+const dNJ=D('南京'),dEX=D(EXIT),dHK=D('香港');
+const dNJEX=dijkstra('南京',new Set()).dist[EXIT],dEXHK=dHK-dEX;
+const DOMS=['lab.door4ai.com','www.google.com'],RES=['运营商 / 114 DNS','8.8.8.8（UDP）','加密 DNS（DoH）','代理软件（fake-ip）'];
+let pDom=DOMS[1],pRes=RES[1];
+function scenario(){
+  const blocked=pDom===DOMS[1],L=['你的电脑','国内 DNS','国际出口（GFW）','境外 DNS'];
+  let ev=[],res,seen,note,term,off=[];
+  const real=blocked?'142.250.x.x（Google 的真实地址）':'104.21.x.x';
+  if(pRes===RES[0]){
+    if(!blocked){ev=[[0,1,0,dNJ,'查询','q'],[1,0,dNJ+.5,2*dNJ+.5,'答案（解析器有缓存）','ok']];off=[2,3];res=['正确 IP','ok'];
+      term=`<span class="p">$</span> dig @114.114.114.114 ${pDom}\n${pDom}.  300  IN  A  ${real}`;note='没被封锁的域名，国内解析器直接从缓存给出正确答案，最快。';}
+    else{const t1=dNJ+.5,t2=t1+dNJEX;
+      ev=[[0,1,0,dNJ,'查询','q'],[1,2,t1,t2,'解析器向境外权威服务器查询','q'],[2,3,t2,t2+dEXHK,'','q'],[2,1,t2,t2+dNJEX,'伪造回复','bad'],[1,0,t2+dNJEX+.5,t2+dNJEX+.5+dNJ,'假 IP','bad'],[3,1,t2+dEXHK+.5,t2+dEXHK+.5+dEXHK+dNJEX,'真回复晚到，被丢弃','late']];
+      res=['错误 IP','warn'];
+      term=`<span class="p">$</span> dig @114.114.114.114 ${pDom}\n${pDom}.  <span class="r">…  IN  A  一个与 Google 无关的 IP</span>   <span class="m"># 解析器自己被污染了</span>`;
+      note='国内解析器替你去境外查，它的查询同样经过国际出口，同样被抢答。更糟的是解析器会把假答案缓存起来，之后所有人来问，它都直接给假的。实际上被封锁域名的假答案通常早就在缓存里了。';}
+    seen='能';
+  }else if(pRes===RES[1]){
+    off=[1];const q=[[0,2,0,dEX,'查询（明文）','q'],[2,3,dEX,dHK,'','q']];
+    if(!blocked){ev=[...q,[3,0,dHK+1,2*dHK+1,'真回复','ok']];res=['正确 IP','ok'];
+      term=`<span class="p">$</span> dig @8.8.8.8 ${pDom}\n${pDom}.  300  IN  A  ${real}`;note='没被封锁的域名，出口设备看了一眼就放行，真回复正常到达。';}
+    else{ev=[...q,[2,0,dEX,2*dEX,'伪造回复，先到','bad'],[3,0,dHK+1,2*dHK+1,'真回复晚到，被丢弃','late']];res=['错误 IP','warn'];
+      term=`<span class="p">$</span> dig @8.8.8.8 ${pDom}\n${pDom}.  <span class="r">…  IN  A  一个与 Google 无关的 IP</span>   <span class="m"># 抢答成功</span>`;
+      note=`查询换成发给境外的 8.8.8.8 也没用：查询包在 ${EXIT} 的国际出口被看到，伪造回复在第 ${fmt(2*dEX)} ms 到达，真回复要第 ${fmt(2*dHK+1)} ms 才到。这里假设 8.8.8.8 落在香港节点；它越远，假答案领先得越多。`;}
+    seen='能';
+  }else if(pRes===RES[2]){
+    off=[1];ev=[[0,2,0,dEX,'加密连接（看不到内容）','enc'],[2,9,dEX,dEX,'','x']];res=['没拿到','warn'];
+    term=`<span class="p">$</span> curl https://dns.google/resolve?name=${pDom}\n<span class="r">curl: (28) Connection timed out</span>   <span class="m"># 连不上 dns.google</span>`;
+    note='加密 DNS 让出口设备看不到你查的是什么域名，没法针对性地伪造回复。但 dns.google 这类知名的境外加密 DNS 服务器，地址本身就被封了，连接直接失败，查什么域名都一样。不太知名或自建的加密 DNS 能用一段时间，被发现后同样会被封。';seen='不能';
+  }else{
+    L[1]='本机代理软件';L[3]='境外代理节点';
+    const t0=.4;ev=[[0,1,0,.1,'','q'],[1,0,.1,.2,'假地址 198.18.0.5','ok'],[0,2,t0,t0+dEX,'加密隧道','enc'],[2,3,t0+dEX,t0+dHK,'','enc'],[3,0,t0+dHK+2,t0+2*dHK+2,'节点在境外查到真 IP，取回网页','enc']];
+    res=['能访问','ok'];
+    term=`<span class="p">$</span> dig ${pDom}\n${pDom}.  1  IN  A  198.18.0.5   <span class="m"># fake-ip：本机代理软件给的占位地址</span>`;
+    note='代理软件（如 FlClash）的 fake-ip 模式在本机立刻返回一个占位地址（198.18 开头），根本不发 DNS 查询出去。等浏览器去连这个地址时，代理软件把连接打包加密，交给境外节点，由节点自己查 DNS、自己连接，所以拿到的是真地址。代价是要有一个境外节点，而代理流量本身也可能被识别和干扰。';seen='不能';
+  }
+  return{L,ev,res,seen,note,term,off,blocked};
+}
+function pRender(){
+  const sc=scenario(),svg=$('#pSvg'),cw=svg.parentNode.clientWidth||600,narrow=cw<520;
+  const W=narrow?360:640,top=narrow?54:40,H=narrow?400:330,lx=[0,1,2,3].map(i=>(W/8)*(2*i+1));
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const tmax=Math.max(...sc.ev.map(e=>e[3]))*1.08||1,y=t=>top+12+t/tmax*(H-top-30);
+  let s='';
+  sc.L.forEach((l,i)=>{const off=sc.off.includes(i);
+    const parts=narrow&&l.length>5?[l.replace(/（.*/,''),(l.match(/（.*/)||[''])[0]]:[l];
+    parts.forEach((p,k)=>s+=`<text class="lh${off?' off':''}" x="${lx[i]}" y="${16+k*15}">${esc(p)}</text>`);
+    s+=`<line class="lane${off?' off':''}" x1="${lx[i]}" y1="${top}" x2="${lx[i]}" y2="${H-10}"/>`});
+  // 刻度
+  const step=tmax>60?20:tmax>25?10:tmax>8?5:1;
+  for(let t=0;t<=tmax;t+=step)s+=`<text class="tk" x="2" y="${y(t)+3}">${t}</text>`;
+  s+=`<text class="tk" x="2" y="${top-2}">ms</text>`;
+  sc.ev.forEach(([a,b,t0,t1,lbl,k])=>{
+    if(k==='x'){s+=`<text class="blk" x="${lx[2]}" y="${y(t0)+6}">✕</text><text class="el bad" x="${lx[2]+12}" y="${y(t0)+22}">认出服务器 IP，阻断</text>`;return}
+    const x1=lx[a],x2=lx[b],y1=y(t0),y2=y(t1),ang=Math.atan2(y2-y1,x2-x1),hx=x2-8*Math.cos(ang-0.4),hy=y2-8*Math.sin(ang-0.4),hx2=x2-8*Math.cos(ang+0.4),hy2=y2-8*Math.sin(ang+0.4);
+    s+=`<path class="ev ${k}" d="M${x1},${y1}L${x2},${y2}M${hx},${hy}L${x2},${y2}L${hx2},${hy2}"/>`;
+    if(lbl){const mx=(x1+x2)/2,my=(y1+y2)/2,anchor=narrow?'middle':'middle';s+=`<text class="el ${k}" x="${mx}" y="${my-6}" text-anchor="${anchor}">${esc(lbl)}</text>`}
+  });
+  svg.innerHTML=s;
+  $('#pTerm').innerHTML=sc.term;$('#pNote').textContent=sc.note;
+  const last=sc.ev.filter(e=>e[1]===0&&e[5]!=='late').pop();
+  ro($('#pRo'),[[sc.res[0],'你的电脑最后拿到',sc.res[1]],[last?fmt(last[3])+' ms':'超时','用时'],[sc.seen,'路上的设备能否看到你查的域名',sc.seen==='能'?'warn':'ok']]);
+}
+seg($('#pDom'),DOMS,pDom,v=>{pDom=v;pRender()});
+seg($('#pRes'),RES,pRes,v=>{pRes=v;pRender()});
+
+/* ========== 06 页面加载 ========== */
+const PROTO=['TCP + TLS 1.2','TCP + TLS 1.3','HTTP/3（QUIC）'],COL={dns:'#8a6fd1',tcp:'#2f7fc1',tls:'#2a8a5c',req:'#c2541b',srv:'#8c8f94'};
+let lProto=PROTO[1],lDns=1;
+function phases(rtt,proto,dnsCached,srv){
+  const ph=[];if(!dnsCached)ph.push(['dns','DNS',30]);
+  if(proto===PROTO[2])ph.push(['tls','QUIC 握手（连接+加密）',rtt]);
+  else{ph.push(['tcp','TCP 握手',rtt]);ph.push(['tls','TLS 握手',proto===PROTO[0]?2*rtt:rtt])}
+  ph.push(['req','请求 → 响应',rtt]);ph.push(['srv','服务器处理',srv]);return ph}
+function bar(el,ph,max){el.innerHTML=ph.map(([k,l,ms])=>`<div style="flex-grow:${ms};background:${COL[k]}" title="${l} ${Math.round(ms)} ms">${ms/max>0.09?Math.round(ms):''}</div>`).join('')+`<div style="flex-grow:${Math.max(0,max-ph.reduce((a,x)=>a+x[2],0))};background:transparent"></div>`}
+function lRender(){
+  const rtt=+$('#lRtt').value;$('#lRtto').textContent=rtt+' ms';
+  const a=phases(rtt,lProto,lDns,40),b=phases(20,lProto,lDns,5);
+  const ta=a.reduce((s,x)=>s+x[2],0),tb=b.reduce((s,x)=>s+x[2],0),max=Math.max(ta,tb);
+  bar($('#lBar1'),a,max);bar($('#lBar2'),b,max);
+  $('#lT1').textContent=Math.round(ta)+' ms';$('#lT2').textContent=Math.round(tb)+' ms';
+  const trips=(lProto===PROTO[0]?4:lProto===PROTO[1]?3:2);
+  $('#lLeg').innerHTML=[['dns','DNS'],['tcp','TCP 握手'],['tls',lProto===PROTO[2]?'QUIC 握手':'TLS 握手'],['req','请求 → 响应'],['srv','服务器处理']].filter(([k])=>a.some(p=>p[0]===k)).map(([k,l])=>`<span><i style="background:${COL[k]}"></i>${l}</span>`).join('');
+  ro($('#lRo'),[[trips+' 趟','连上并拿到第一个字节要跑的来回'],[Math.round(ta)+' ms','直接连源站'],[(ta/tb).toFixed(1)+' 倍','比连附近 CDN 慢多少','acc']]);
+}
+$('#lRtt').oninput=lRender;
+seg($('#lProto'),PROTO,lProto,v=>{lProto=v;lRender()});
+$('#lDns').onclick=e=>{const b=e.target.closest('button');if(!b)return;$$('#lDns button').forEach(x=>x.setAttribute('aria-pressed',x===b));lDns=+b.dataset.v;lRender()};
+
+rRender();pRender();lRender();
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{rRender();pRender()},120)});
+})();
+</script>
+</body>
+</html>
