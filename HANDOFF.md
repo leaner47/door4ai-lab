@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-16 01:25 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7，写教材 skill + Manim）
+最后更新：2026-10-16 01:37 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
 
 ---
 
@@ -101,6 +101,7 @@ door4ai-lab/
 ## 4. 已做的关键决定（不要反复讨论）
 
 - **Manim 可视化（2026-10-16）**：动画源码放 `manim-src/<slug>/scenes.py`，统一导入 `manim-src/door4ai_style.py`（背景 `#111214`、强调色 `#6f9cf0`、中文苹方/Noto CJK、数字 Times New Roman）。产物 `public/videos/<slug>/<Scene>.webm` + 同名 `.png` 海报，用 `<figure class="clip"><video …>` 嵌入文章或实验页（`Base.astro` 与实验页模板都有 `.clip` 样式）。渲染在云端工作区装 Manim（Python 3.12 + `libpango1.0-dev` + `dvisvgm`，步骤见 skill）；本人 Mac 的 `~/.venvs/manim` 不在可用 shell 里。参考文档：claude.ai 项目里的 `manim/使用说明.md`。
+- **【总规矩】科学单位一律用英文缩写**（2026-10-16 本人要求）：s、ms、μs、m、km、kg、Hz、W 等，数字与单位空一格（`300 s`、`204 km/ms`、`1 TB/s`、`token/s`）；正文、实验页、JS 拼出的读数、Manim 画面都一样。「秒级」这类量级说法可保留。
 - **【总规矩】教材里不出现指向本人的个人信息**（2026-10-16 本人要求）：不用本人所在/家乡城市（如扬州、高邮、波士顿）、学校、真名、GitHub 用户名、邮箱、自家设备/服务器等做例子。需要城市就用北京、上海、合肥、纽约这类中性城市；需要用户名用 `your-name`；本站域名 `lab.door4ai.com` 作为课程网站自身的例子可以用。
 - **【总规矩】保持简洁，不要主动加说明性小字**（2026-10-16 本人明确要求）：不加 eyebrow 小标签、副标题、导语/说明句、计数（如「第一篇 · 4 讲」）、注释类灰字，除非本人要求进一步补充说明。新页面、新组件默认只放标题和必要内容。
 - `door4ai-lab.pages.dev` 及预览地址一律跳转到 `lab.door4ai.com`（代码里的中间件实现，不在控制台配置），避免绕过登录。
@@ -125,7 +126,7 @@ door4ai-lab/
 - **外观切换**：存 localStorage `d4a-theme`（light / dark，缺省 = 跟随系统），`<head>` 里内联脚本在渲染前设 `<html data-theme>`，避免闪烁。CSS token 写法：`@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){…} }` + `:root[data-theme="dark"]{…}`，**新增的深色样式都要照此两段写**。实验页同源，加载时读同一个键；切换时父页面直接改 iframe 的 `data-theme`（实验页已有 MutationObserver 重绘画布）。
 - **AI账号申请（2026-10-14 本人要求）**：学员申请 ChatGPT / Claude 等账号（选项：ChatGPT Plus / ChatGPT Pro / Claude Pro / Claude Max / Gemini Advanced / 其他，选项列表在 `functions/ai/apply/api.ts` 与 `src/pages/ai/apply.astro` 两处，改时同步）。必填：账号、用途（≥10 字）、WhatsApp 或微信；备注可选；邮箱取登录身份（Access 的 `cf-access-authenticated-user-email` 头，自建账号启用后取会话）。同一邮箱 24h 最多 5 条。状态：待处理 / 已开通 / 未通过 + 一句回复（学员可见）。**管理员 = Pages 环境变量 `ADMIN_EMAILS` 里的邮箱**，同一页面看到全部申请并改状态；（已随账号系统启用设好）；也可在 R2 桶 `door4ai-lab-dl` 的 `apply/` 前缀下直接看 JSON。路径放在 `/ai/` 下是为了直接受现有 Access 保护；`gate.ts` 加了 `ai/apply → 需登录`。D1 开通后可把 R2 记录迁成表。没有邮件通知（Resend 未配置）。
 - **排版统一（2026-10-16 本人要求「新章节多了，优化整体排版」）**：
-  - 全站版心：内容列 860px（容器 `max-width:892px` + 左右 16px），`Base` 的 `main`、文章页 `.post-body`、所有实验页 `.wrap` 都是这条左边线。**新实验页必须用 `.wrap{max-width:892px;box-sizing:border-box;padding-inline:16px;padding-block:40px 80px}`，开头 = `.eyebrow`（大写英文/关键词，`·` 分隔）+ `h1`（`clamp(28px,5vw,40px)`，700）+ `.lede`，都带 `lab-intro` 类。**
+  - **版面铺满（2026-10-16 本人要求）**：文字从左到右铺满，不设 max-width（不要 68ch / 892px 之类），只留左右页边距 `clamp(16px,3vw,40px)`，与页眉「Door4AI Lab」左边线对齐。`Base` 的 `main`、文章页 `.post-body`、所有实验页 `.wrap`（computer-anatomy 是 `main`）都按此。**新实验页 `.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}`，开头 = `.eyebrow` + `h1`（`clamp(28px,5vw,40px)`，700）+ `.lede`，都带 `lab-intro` 类。** 表单页（登录、账号、购买、AI账号申请的表单）保留自己的窄宽度。
   - 课程目录按篇分组（**每篇只显示篇名**，没有「第 N 篇 · M 讲」、副标题和说明；页面顶部也没有 COURSE 和导语，只有大标题 + 学习记录面板）：`src/data/course.ts` 的 `PARTS`（order < 4 基础篇：电脑、网络、Git、Cloudflare；其余模型篇）。讲号全课程连续编号。
   - 文章页：有实验 → 整宽实验（自带标题）+ 正文；没实验 → 同一版心的标题区（eyebrow = 标签用 · 连接，h1 冒号后换行，lede = description）+ 正文。两种都不显示日期。
   - 每讲末尾：WhatsApp 一行 + 「← 上一讲 / 下一讲 →」翻页卡（同 series 按 order）。
@@ -171,6 +172,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-16 · Claude** — 按本人要求：(1) 文字铺满版面——去掉 `Base.astro`、`WhatsAppJoin.astro`、六个实验页（含 `labs-src/computer-anatomy/build.mjs`）和实验页模板里的 68ch / 892px 限制，页边距统一 `clamp(16px,3vw,40px)`；(2) 科学单位改英文缩写——internet-basics 文章与实验（km/ms、ms、s）、computer-anatomy 实验与生成脚本（TB/s、GB/s、s/ms/μs、token/s）。两条规则写进第 4 节与 skill `write-lesson`。检查 7 讲 1440 / 390 宽左边线与页眉对齐、无横向滚动、实验页无脚本错误。
 
 - **2026-10-16 · Claude** — 按本人要求新建项目专用 skill `.claude/skills/write-lesson/`（问题 → 文章 + 实验页 + Manim 动画 → 上线 + 更新 HANDOFF，含三份模板）；新增 `manim-src/door4ai_style.py`、`manim-src/manim.cfg`；`Base.astro` 加 `.prose figure.clip` 视频样式；`.gitignore` 忽略 Manim 缓存。在云端装 Manim v0.22.0 实测：模板动画（中文、公式、配色）与实验页模板（深浅色、390px）均正常。
 

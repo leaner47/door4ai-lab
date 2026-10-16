@@ -23,7 +23,7 @@ ${k.ISO_CSS}
 html{color-scheme:dark light}
 body{margin:0;background:var(--bg);color:var(--fg);
   font:16px/1.85 "Times New Roman",Times,"PingFang SC","Heiti SC","Microsoft YaHei","Noto Sans SC",serif;-webkit-font-smoothing:antialiased}
-main{width:min(860px,100% - 32px);margin:40px auto 120px}
+main{margin:40px clamp(16px,3vw,40px) 120px}
 h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
 .eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 h2{font-size:24px;margin:72px 0 6px;font-weight:600}

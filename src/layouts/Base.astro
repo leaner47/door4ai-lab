@@ -71,15 +71,13 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     header.site nav a{color:var(--muted);text-decoration:none;font-size:15px}
     @media (max-width:560px){header.site{padding-top:12px;padding-bottom:10px;row-gap:4px}}
     header.site nav a:hover{color:var(--fg)}
-    main{flex:1;display:flex;flex-direction:column;width:100%;max-width:892px;margin:0 auto;padding:40px 16px 80px;box-sizing:border-box}
+    main{flex:1;display:flex;flex-direction:column;width:100%;padding:40px clamp(16px,3vw,40px) 80px;box-sizing:border-box}
     main.full{max-width:none;padding:0}
     footer.site{border-top:1px solid var(--line);padding:20px clamp(16px,3vw,40px) 28px;color:var(--muted);font-size:14px}
     .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
     h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;text-wrap:balance}
-    .prose{max-width:68ch}
     .prose h2{font-size:22px;margin:40px 0 8px}
     .prose h3{font-size:18px;margin:28px 0 6px}
-    .prose p,.prose li{max-width:68ch}
     .prose code{font-family:var(--mono);font-size:.88em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
     .prose pre{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:14px 16px;overflow-x:auto;font-size:14px;line-height:1.6}
     .prose pre code{background:none;padding:0}
@@ -96,12 +94,12 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     .prose summary{cursor:pointer;font-weight:700}
     /* 文章页里的实验：不加边框，整宽嵌入，看起来和单独打开实验页一样 */
     .lab-embed{display:block;width:100%;height:600px;border:0;overflow:hidden;background:transparent}
-    .post-body{width:100%;max-width:892px;margin:0 auto;padding:0 16px 80px;box-sizing:border-box}
+    .post-body{width:100%;padding:0 clamp(16px,3vw,40px) 80px;box-sizing:border-box}
     .post-head{padding-top:40px;padding-bottom:0;margin-bottom:0}
     .post-head h1{margin:8px 0 12px}
-    .post-head .lede{color:var(--muted);max-width:68ch;margin:0}
+    .post-head .lede{color:var(--muted);margin:0}
     .post-head + .post-body .prose > :first-child{margin-top:36px}
-    .pager{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:56px;padding-top:24px;border-top:1px solid var(--line);max-width:68ch}
+    .pager{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:56px;padding-top:24px;border-top:1px solid var(--line)}
     .pager a{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--paper);text-decoration:none;color:var(--fg);transition:border-color .15s}
     .pager a:hover{border-color:var(--accent)}
     .pager a small{font-size:13px;color:var(--muted)}

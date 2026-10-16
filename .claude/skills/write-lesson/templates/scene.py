@@ -6,7 +6,7 @@ from door4ai_style import *
 
 
 class Intro(Scene):
-    """一段只讲一件事。15–60 秒。"""
+    """一段只讲一件事。15–60 s。"""
 
     def construct(self):
         title = T("__这一段讲什么__", 36).to_edge(UP)

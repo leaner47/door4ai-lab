@@ -21,17 +21,17 @@
   --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --ok-soft:#173a29; color-scheme:dark }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
-.wrap{max-width:892px;box-sizing:border-box;margin:0 auto;padding-inline:16px;padding-block:40px 80px}
+.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}
 header{margin-bottom:48px}
 .eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
-.lede{color:var(--muted);max-width:68ch;margin:0}
+.lede{color:var(--muted);margin:0}
 section{margin-top:64px}
 h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
 h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
-p{max-width:68ch;margin:12px 0}
+p{margin:12px 0}
 code{font-family:var(--mono);font-size:.82em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
-.aside{border-left:3px solid var(--accent);padding:4px 0 4px 16px;margin:16px 0;max-width:68ch;font-size:15.5px}
+.aside{border-left:3px solid var(--accent);padding:4px 0 4px 16px;margin:16px 0;font-size:15.5px}
 .aside b{display:block;margin-bottom:2px}
 .lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
 .ctrls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-bottom:14px}
@@ -163,7 +163,7 @@ td code{white-space:nowrap}
 
 <section id="s1">
   <h2><span class="n">01</span>从你的手机到服务器，要走多远</h2>
-  <p>选一个出发地和一台服务器。下面这串方块就是一个数据包要经过的环节，读数按两座城市的真实坐标算出直线距离，再除以光在光纤里的速度（约每毫秒 204 公里，是真空光速的三分之二）。</p>
+  <p>选一个出发地和一台服务器。下面这串方块就是一个数据包要经过的环节，读数按两座城市的真实坐标算出直线距离，再除以光在光纤里的速度（约 204 km/ms，是真空光速的三分之二）。</p>
   <div class="lab" id="lab1">
     <div class="ctrls">
       <div class="ctrl"><label>你在</label><div class="seg" id="tSrc"></div></div>
@@ -173,7 +173,7 @@ td code{white-space:nowrap}
     <div class="hops" id="hops"></div>
     <div class="ctrl" style="margin-top:12px"><button class="btn pri" id="tSend">发一个包看看</button></div>
     <div class="readout" id="tRo"></div>
-    <p class="note">光缆不会走地图上的直线，要沿海岸线、绕过山脉、在城市之间中转，所以实际长度通常是直线的 1.3 到 2 倍。<b>RTT</b>（往返时间）是一个包去、再回来一趟的时间，<code>ping</code> 显示的就是它。从上海到洛杉矶，就算线路是笔直的，光走一个来回也要 100 毫秒以上，这是物理上限，花钱也买不到更快。</p>
+    <p class="note">光缆不会走地图上的直线，要沿海岸线、绕过山脉、在城市之间中转，所以实际长度通常是直线的 1.3 到 2 倍。<b>RTT</b>（往返时间）是一个包去、再回来一趟的时间，<code>ping</code> 显示的就是它。从上海到洛杉矶，就算线路是笔直的，光走一个来回也要 100 ms 以上，这是物理上限，花钱也买不到更快。</p>
   </div>
 </section>
 
@@ -214,7 +214,7 @@ td code{white-space:nowrap}
     <p class="desc" id="dD"></p>
     <div class="term" id="dTerm"></div>
     <div class="readout" id="dRo"></div>
-    <p class="note">各步耗时取的是典型值。答案里的 <b>TTL</b>（这里是 300 秒）是「这个答案可以记多久」，过期前所有人都直接用缓存，所以第二次访问几乎不花时间。也因为有缓存，改了 DNS 记录后，旧答案要过一会儿才会在各地消失。</p>
+    <p class="note">各步耗时取的是典型值。答案里的 <b>TTL</b>（这里是 300 s）是「这个答案可以记多久」，过期前所有人都直接用缓存，所以第二次访问几乎不花时间。也因为有缓存，改了 DNS 记录后，旧答案要过一会儿才会在各地消失。</p>
   </div>
   <div class="aside"><b>这个网站的 DNS 就在 Cloudflare</b>door4ai.com 的权威服务器是 Cloudflare 的两台服务器。实验里返回的是 Cloudflare 的地址（104.21 和 172.67 开头的段），而不是真正存网页的机器：打开了「代理」（橙色云朵）的记录，访问者先连到 Cloudflare 离他较近的机房，再由 Cloudflare 转给源站，源站的真实地址对外是隐藏的。</div>
 </section>
@@ -354,7 +354,7 @@ function tRender(){
     [Math.round(d).toLocaleString()+' km','直线距离'],
     [fmt(one)+' ms','光走直线的单程时间（下限）'],
     [fmt(rtt,0)+' ms','估计 RTT（往返，含绕远）','acc'],
-    [Math.floor(1000/rtt)+' 次','1 秒最多能来回几趟']
+    [Math.floor(1000/rtt)+' 次','1 s 内最多能来回几趟']
   ]);
 }
 seg($('#tSrc'),['北京','合肥','纽约'],tSrc,v=>{tSrc=v;tRender()});
@@ -422,11 +422,11 @@ const S1=[
   {t:'问操作系统',d:'系统也有一份缓存，还会看 hosts 文件（可以手动把某个域名写死到某个 IP）。还是没有，于是把问题交给网络设置里的 DNS 服务器，也就是递归解析器。',n:{br:'miss',os:'miss',rs:'ask'},c:'<span class="m"># 系统缓存、hosts：没有 → 发 UDP 查询到解析器的 53 端口</span>',ms:10,q:1},
   {t:'解析器问根服务器',d:'解析器也没有缓存，只能从头问。根服务器不知道 lab.door4ai.com 在哪，但知道 .com 归谁管，于是把 .com 服务器的名单告诉解析器。（实际上 .com 的名单解析器早就缓存了，这一步常常省掉。）',n:{rs:'ask',root:'ans'},c:'<span class="y">解析器 → 根</span>  lab.door4ai.com 的 A 记录？\n<span class="c">根 → 解析器</span>  不归我管。com. 由 a.gtld-servers.net … m.gtld-servers.net 负责',ms:20,q:1},
   {t:'解析器问 .com 服务器',d:'.com 服务器也不知道具体 IP，但它记着 door4ai.com 这个域名注册时登记的权威服务器：Cloudflare 的两台。',n:{rs:'ask',tld:'ans'},c:'<span class="y">解析器 → .com</span>  lab.door4ai.com 的 A 记录？\n<span class="c">.com → 解析器</span>  door4ai.com 由 *.ns.cloudflare.com（两台）负责',ms:30,q:1},
-  {t:'解析器问 Cloudflare 权威服务器',d:'终于问到了管这个域名的服务器。它给出最终答案：两个 IP，都属于 Cloudflare；并说明这个答案可以缓存 300 秒。',n:{rs:'ask',auth:'ans'},c:'<span class="y">解析器 → 权威</span>  lab.door4ai.com 的 A 记录？\n<span class="c">权威 → 解析器</span>\n;; ANSWER SECTION:\n'+ANS,ms:15,q:1},
-  {t:'答案一路传回，各自记一份',d:'解析器把答案缓存 300 秒，再回给你的电脑；操作系统和浏览器也各记一份。接下来浏览器就拿着这个 IP 去连接，走的就是实验 01 那条路。',n:{br:'ans',os:'ans',rs:'ans'},c:'<span class="p">$</span> dig lab.door4ai.com\n;; ANSWER SECTION:\n'+ANS+'\n;; Query time: 75 msec',ms:0,q:0}
+  {t:'解析器问 Cloudflare 权威服务器',d:'终于问到了管这个域名的服务器。它给出最终答案：两个 IP，都属于 Cloudflare；并说明这个答案可以缓存 300 s。',n:{rs:'ask',auth:'ans'},c:'<span class="y">解析器 → 权威</span>  lab.door4ai.com 的 A 记录？\n<span class="c">权威 → 解析器</span>\n;; ANSWER SECTION:\n'+ANS,ms:15,q:1},
+  {t:'答案一路传回，各自记一份',d:'解析器把答案缓存 300 s，再回给你的电脑；操作系统和浏览器也各记一份。接下来浏览器就拿着这个 IP 去连接，走的就是实验 01 那条路。',n:{br:'ans',os:'ans',rs:'ans'},c:'<span class="p">$</span> dig lab.door4ai.com\n;; ANSWER SECTION:\n'+ANS+'\n;; Query time: 75 msec',ms:0,q:0}
 ];
 const S2=[
-  {t:'浏览器缓存命中',d:'300 秒之内再打开，浏览器直接用记着的答案，一个包都不用发。过期了也没关系：解析器那里很可能还有缓存（别人刚查过），只需要你和解析器之间来回一趟。',n:{br:'ans'},c:'<span class="m"># 浏览器缓存：lab.door4ai.com → 104.21.x.x（还剩 287 秒）</span>',ms:0,q:0}
+  {t:'浏览器缓存命中',d:'300 s之内再打开，浏览器直接用记着的答案，一个包都不用发。过期了也没关系：解析器那里很可能还有缓存（别人刚查过），只需要你和解析器之间来回一趟。',n:{br:'ans'},c:'<span class="m"># 浏览器缓存：lab.door4ai.com → 104.21.x.x（还剩 287 s）</span>',ms:0,q:0}
 ];
 let dm=0,dk=0;
 function dRender(){

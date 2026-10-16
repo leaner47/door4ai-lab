@@ -29,6 +29,8 @@ description: 把本人提出的一个问题（如「X 是什么」「为什么 Y
 - **不出现指向本人的信息**：不用本人城市（扬州、高邮、波士顿等）、学校、真名、GitHub 用户名、邮箱、自家设备。需要例子就用北京、上海、合肥、纽约，用户名用 `your-name`。
 - **简洁**：不加没被要求的说明小字（eyebrow 以外的副标题、导语式灰字、计数、注释）。实验页开头只放 `.eyebrow` + `h1` + `.lede` 三样（这是实验页规范的一部分）。
 - 字体：拉丁与数字 Times New Roman，中文苹方 / 黑体。
+- **科学单位一律用英文缩写**：s、ms、μs、ns、m、km、kg、g、Hz、W 等，数字与单位之间空一格（`300 s`、`204 km/ms`、`1 TB/s`、`token/s`）。正文、实验页文字、JS 拼出的读数、Manim 画面里都一样。「秒级」这类量级说法可以保留中文。
+- **文字铺满版面**：不给段落、列表、导语设 `max-width`（不要 68ch 之类），只留左右页边距 `clamp(16px,3vw,40px)`（与页眉对齐）。表单可以有自己的宽度。
 - 手机宽度 390px 不能横向滚动；深浅两色都要能看。
 
 ## 3. 实验页 `public/labs/<slug>/index.html`
@@ -37,13 +39,13 @@ description: 把本人提出的一个问题（如「X 是什么」「为什么 Y
 
 - 设计 token（`--bg --paper --fg --muted --line --accent --warn --ok`，深色 `#000` / 卡片 `#111214`，浅色 `#f7f3ea` / 卡片 `#fffdf8`），跟随 `<html data-theme>` 与系统深浅色。
 - 嵌入检测与主题同步脚本（`html.embedded`、读 `localStorage` 的 `d4a-theme`）。**不要删。**
-- 版心 `.wrap{max-width:892px;box-sizing:border-box;padding-inline:16px}`，开头 `header.lab-intro`。
+- 版心 `.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px)}`（不设 max-width，随窗口铺满），开头 `header.lab-intro`。
 
 每个实验 = 编号小标题 `<h2><span class="n">01</span>…</h2>` → 一两段说明 → `.lab` 卡片（控件条 → 画图区 SVG/canvas → 读数行）→ 一句「注意看什么」的 `.note`。一般 4–6 个实验，从直觉到细节递进。
 
 ## 4. Manim 动画（可视化）
 
-参考项目文档 `manim/使用说明.md`。只给**动起来才讲得清**的东西做动画：公式推导、向量/矩阵变换、过程演化（训练迭代、数据流过网络）。能用滑块交互讲清的放实验页，不重复做动画。每讲 1–3 段，每段 15–60 秒。
+参考项目文档 `manim/使用说明.md`。只给**动起来才讲得清**的东西做动画：公式推导、向量/矩阵变换、过程演化（训练迭代、数据流过网络）。能用滑块交互讲清的放实验页，不重复做动画。每讲 1–3 段，每段 15–60 s。
 
 **源码**：`manim-src/<slug>/scenes.py`，从 `templates/scene.py` 复制。开头导入 `manim-src/door4ai_style.py`，它统一了背景 `#111214`、配色（`ACCENT/C_Q/C_K/C_V/WARN/OK`）、字体（`T()` 中文、`N()` 数字英文、`M()` 公式）。同一个概念整讲始终用同一种颜色；用 `Transform` 表现「这个变成那个」；动画之间 `pause(self)`；不用 Pi creatures。
 

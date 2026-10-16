@@ -177,7 +177,7 @@ export const F1_LIVE = `
   const tC = document.getElementById("f1-t-cpu"), tG = document.getElementById("f1-t-gpu");
   const still = matchMedia("(prefers-reduced-motion: reduce)");
   let mode = "parallel", t0 = 0, frame = 0, visible = false, done = false;
-  const fmtT = (s) => s >= 1 ? s.toFixed(2) + " 秒" : s >= 0.001 ? (s * 1000).toFixed(1) + " 毫秒" : (s * 1e6).toFixed(0) + " 微秒";
+  const fmtT = (s) => s >= 1 ? s.toFixed(2) + " s" : s >= 0.001 ? (s * 1000).toFixed(1) + " ms" : (s * 1e6).toFixed(0) + " μs";
   const setLit = (el, on) => { if (on) { if (!el.hasAttribute("data-lit")) el.setAttribute("data-lit", ""); } else if (el.hasAttribute("data-lit")) el.removeAttribute("data-lit"); };
   // the slower chip takes 4 s of animation; the faster one finishes in proportion (min 0.25 s so you can see it)
   function durations() { const m = M[mode]; const slow = Math.max(m.cpu, m.gpu); return { cpu: Math.max(0.25, 4 * m.cpu / slow), gpu: Math.max(0.25, 4 * m.gpu / slow) }; }

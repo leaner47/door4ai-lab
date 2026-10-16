@@ -21,7 +21,7 @@ ${F.body}
   <span>容器</span><span class="bar"><i id="f4-ct"></i></span><span class="v" id="f4-ct-v">—</span>
   <span>虚拟机</span><span class="bar"><i id="f4-vm"></i></span><span class="v" id="f4-vm-v">—</span>
 </div>
-<p class="small">上面是「额外开销」的内存粗估：每个容器约几十 MB（只多出应用本身），每台虚拟机约 2 GB（一整套操作系统）。启动时间也差很多：容器通常 1 秒内，虚拟机常要几十秒。代价是隔离没有虚拟机彻底——容器之间共用一个内核。</p>
+<p class="small">上面是「额外开销」的内存粗估：每个容器约几十 MB（只多出应用本身），每台虚拟机约 2 GB（一整套操作系统）。启动时间也差很多：容器通常 1 s 内，虚拟机常要几十 s。代价是隔离没有虚拟机彻底——容器之间共用一个内核。</p>
 <div class="note"><b>注意看：</b>吊车从不关心箱子里装的是什么，它只认箱子的外形。Docker 也一样：只要装了 Docker，任何电脑、任何云服务器都能用同一条命令把同一个箱子跑起来，环境一模一样。</div>`;
 }
 export const LIVE = f4Live(F.P, F.S);
