@@ -9,9 +9,7 @@ const numbered = posts.map((p, i) => ({ p, n: i + 1 }));
 const groups = PARTS.map((part) => ({ part, items: numbered.filter(({ p }) => partOf(p.data.order).key === part.key) })).filter((g) => g.items.length);
 ---
 <Base title="AI 从入门到精通 · Door4AI Lab" description="系统课程：从模型怎么算到推理怎么省，每一讲配可交互实验。">
-  <div class="eyebrow">Course</div>
   <h1>AI 从入门到精通</h1>
-  <p class="prose" style="color:var(--muted)">按顺序读。大多数讲配有一个可以动手的实验，先玩实验再看文字，理解会快很多。</p>
   <section class="act" id="act" aria-label="学习记录">
     <div class="act-top">
       <span class="act-title">学习记录</span>
@@ -21,16 +19,13 @@ const groups = PARTS.map((part) => ({ part, items: numbered.filter(({ p }) => pa
       <div class="act-grid" id="act-grid" role="img" aria-label="过去一年每天的学习次数"></div>
     </div>
     <div class="act-foot">
-      <span>记录只保存在这台设备的浏览器里</span>
       <span class="act-legend">少<i data-l="0"></i><i data-l="1"></i><i data-l="2"></i><i data-l="3"></i><i data-l="4"></i>多</span>
     </div>
   </section>
-  {groups.map(({ part, items }, gi) => (
+  {groups.map(({ part, items }) => (
     <section class="part">
       <header class="part-head">
-        <div class="part-kicker">第 {['一', '二', '三', '四', '五', '六'][gi] ?? gi + 1} 篇 · {items.length} 讲</div>
-        <h2 class="part-title">{part.title}<span>{part.sub}</span></h2>
-        <p class="part-desc">{part.desc}</p>
+        <h2 class="part-title">{part.title}</h2>
       </header>
       <ul class="postlist">
         {items.map(({ p, n }) => (

@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-16 00:47 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
+最后更新：2026-10-16 00:56 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
 
 ---
 
@@ -97,6 +97,7 @@ door4ai-lab/
 
 ## 4. 已做的关键决定（不要反复讨论）
 
+- **【总规矩】保持简洁，不要主动加说明性小字**（2026-10-16 本人明确要求）：不加 eyebrow 小标签、副标题、导语/说明句、计数（如「第一篇 · 4 讲」）、注释类灰字，除非本人要求进一步补充说明。新页面、新组件默认只放标题和必要内容。
 - `door4ai-lab.pages.dev` 及预览地址一律跳转到 `lab.door4ai.com`（代码里的中间件实现，不在控制台配置），避免绕过登录。
 - 术语「token」直接用英文，不译成「词」「词元」。
 - 课程顺序：硬件入门讲（computer-anatomy，order 2）放在注意力（order 5）之前，作为零基础第一课。
@@ -120,7 +121,7 @@ door4ai-lab/
 - **AI账号申请（2026-10-14 本人要求）**：学员申请 ChatGPT / Claude 等账号（选项：ChatGPT Plus / ChatGPT Pro / Claude Pro / Claude Max / Gemini Advanced / 其他，选项列表在 `functions/ai/apply/api.ts` 与 `src/pages/ai/apply.astro` 两处，改时同步）。必填：账号、用途（≥10 字）、WhatsApp 或微信；备注可选；邮箱取登录身份（Access 的 `cf-access-authenticated-user-email` 头，自建账号启用后取会话）。同一邮箱 24h 最多 5 条。状态：待处理 / 已开通 / 未通过 + 一句回复（学员可见）。**管理员 = Pages 环境变量 `ADMIN_EMAILS` 里的邮箱**，同一页面看到全部申请并改状态；（已随账号系统启用设好）；也可在 R2 桶 `door4ai-lab-dl` 的 `apply/` 前缀下直接看 JSON。路径放在 `/ai/` 下是为了直接受现有 Access 保护；`gate.ts` 加了 `ai/apply → 需登录`。D1 开通后可把 R2 记录迁成表。没有邮件通知（Resend 未配置）。
 - **排版统一（2026-10-16 本人要求「新章节多了，优化整体排版」）**：
   - 全站版心：内容列 860px（容器 `max-width:892px` + 左右 16px），`Base` 的 `main`、文章页 `.post-body`、所有实验页 `.wrap` 都是这条左边线。**新实验页必须用 `.wrap{max-width:892px;box-sizing:border-box;padding-inline:16px;padding-block:40px 80px}`，开头 = `.eyebrow`（大写英文/关键词，`·` 分隔）+ `h1`（`clamp(28px,5vw,40px)`，700）+ `.lede`，都带 `lab-intro` 类。**
-  - 课程目录按篇分组：`src/data/course.ts` 的 `PARTS`（order < 4 基础篇：电脑、网络、Git、Cloudflare；其余模型篇）。讲号全课程连续编号。
+  - 课程目录按篇分组（**每篇只显示篇名**，没有「第 N 篇 · M 讲」、副标题和说明；页面顶部也没有 COURSE 和导语，只有大标题 + 学习记录面板）：`src/data/course.ts` 的 `PARTS`（order < 4 基础篇：电脑、网络、Git、Cloudflare；其余模型篇）。讲号全课程连续编号。
   - 文章页：有实验 → 整宽实验（自带标题）+ 正文；没实验 → 同一版心的标题区（eyebrow = 标签用 · 连接，h1 冒号后换行，lede = description）+ 正文。两种都不显示日期。
   - 每讲末尾：WhatsApp 一行 + 「← 上一讲 / 下一讲 →」翻页卡（同 series 按 order）。
 - 课程目录 /ai：**每讲只显示大号编号 + 标题**（2026-10-16 本人要求：不要「第 N 讲 · 日期 · 含实验」元信息行、不要「从这里开始 / 已读 / 下一讲」标签、不要文章标签，也不要 description）。**不再有「已读」概念**（不记 d4a-read、编号不变灰不高亮）。顶部是 GitHub 贡献图式的「学习记录」面板：localStorage `d4a-activity` = {本地日期: 次数}，文章页每打开一次 +1，**重复读也算**；格子深浅 0 / 1 / 2–3 / 4–6 / 7+；汇总「过去一年学习 X 次 · Y 天 · 连续 Z 天」。只存本机浏览器，不做账号级记录。
@@ -165,6 +166,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-16 · Claude** — 按本人要求去掉说明性小字：课程目录的 COURSE、导语、每篇的「第 N 篇 · M 讲」/副标题/说明、学习面板的「记录只保存在这台设备的浏览器里」；AI账号申请页的 APPLY 与说明句。`course.ts` 删 sub/desc 字段，`Base.astro` 删对应样式。第 4 节加「不主动加说明性小字」总规矩。
 
 - **2026-10-16 · Claude** — 按本人要求学习面板去掉「已读」、重复读也算：文章页改为每次打开当天 +1（旧的 {日期: [讲]} 自动换算成次数，删 d4a-read）；`ai.astro` 汇总改为「学习 X 次 · Y 天 · 连续 Z 天」，删除已读/下一讲编号状态（`Base.astro` 对应样式）。本地用模拟数据验证计数、换算与连续天数。
 

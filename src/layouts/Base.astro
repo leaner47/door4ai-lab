@@ -113,10 +113,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     .motto em{font-style:italic;color:var(--accent)}
     .part{margin-top:48px}
     .part-head{padding-bottom:14px}
-    .part-kicker{font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--accent)}
     .part-title{font-size:28px;line-height:1.3;margin:4px 0 0;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 14px}
-    .part-title span{font-size:17px;font-weight:400;color:var(--muted)}
-    .part-desc{margin:4px 0 0;color:var(--muted);font-size:15.5px}
     .postlist{list-style:none;padding:0;margin:0}
     .postlist li{display:grid;grid-template-columns:72px 1fr;align-items:center;gap:0 8px;padding:20px 0;border-top:1px solid var(--line)}
     .postlist li:last-child{border-bottom:1px solid var(--line)}
@@ -147,7 +144,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     .act i[data-l="4"]{background:var(--accent)}
     .act i.today{outline:1.5px solid var(--fg);outline-offset:-1.5px}
     .act-foot{display:flex;justify-content:space-between;align-items:center;gap:8px 16px;flex-wrap:wrap;margin-top:8px;font-size:12.5px;color:var(--muted)}
-    .act-legend{display:inline-flex;align-items:center;gap:3px}
+    .act-legend{display:inline-flex;align-items:center;gap:3px;margin-left:auto}
     .act-legend i{margin:0 1px}
     @media (max-width:520px){.postlist li{grid-template-columns:44px 1fr}.postlist .num{font-size:34px}.postlist a.t{font-size:20px}}
     .reshead{max-width:900px;margin:0 auto;padding:0 clamp(16px,3vw,40px);box-sizing:border-box}
