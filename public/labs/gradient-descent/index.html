@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>梯度下降实验室</title>
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c; --c4:#7a4fc0;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --c4:#b48cf0; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --c4:#b48cf0; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+p code,li code{font-size:.88em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+.formula{font-size:20px;text-align:center;margin:18px 0;letter-spacing:.02em}
+.formula i{font-style:italic}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl b{font-variant-numeric:tabular-nums;min-width:3.2em}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px}
+input[type=range]{accent-color:var(--accent);max-width:180px}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+canvas{display:block;width:100%;touch-action:manipulation}
+.click{cursor:crosshair}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.two{grid-template-columns:1fr}}
+.cap{font-size:12px;color:var(--muted);margin:4px 0 0;text-align:center}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn b{color:var(--warn)} .ro.ok b{color:var(--ok)} .ro.acc b{color:var(--accent)} .ro.c4 b{color:var(--c4)}
+.ro.warn{border-color:var(--warn)} .ro.ok{border-color:var(--ok)} .ro.acc{border-color:var(--accent)} .ro.c4{border-color:var(--c4)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">梯度下降 · 学习率 · Momentum · Adam · SGD</div>
+  <h1>梯度下降实验室</h1>
+  <p class="lede">模型训练就是在一片看不见的地形上找最低点。下面每一步都是浏览器里真实算出来的。</p>
+</header>
+
+<section id="s1">
+  <h2><span class="n">01</span>看斜率，往下走一步</h2>
+  <p>横轴是一个参数 <i>x</i>，纵轴是损失 <i>L</i>。你站在曲线上某一点，看不到整条曲线，只知道脚下的斜率 <i>L′</i>(<i>x</i>)。规则只有一条：</p>
+  <p class="formula"><i>x</i> ← <i>x</i> − <i>η</i> · <i>L′</i>(<i>x</i>)</p>
+  <p>斜率为正，说明往右是上坡，就往左走；斜率为负就往右走。<i>η</i> 叫学习率，决定一步迈多大。点曲线可以换出发点。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>地形</label><div class="seg" id="f1"><button data-v="bowl" aria-pressed="true">碗</button><button data-v="wavy" aria-pressed="false">起伏</button></div></div>
+      <div class="ctrl"><label for="lr1">学习率 η</label><input id="lr1" type="range" min="0" max="100" value="50"><b id="lr1v"></b></div>
+      <div class="btns"><button class="btn pri" id="step1">走一步</button><button class="btn" id="run1">自动</button><button class="btn" id="reset1">重置</button></div>
+    </div>
+    <svg id="fig1" class="click" viewBox="0 0 800 330" role="img" aria-label="一维损失曲线上的梯度下降"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r1x">–</b><span>位置 x</span></div>
+      <div class="ro acc"><b id="r1l">–</b><span>损失 L(x)</span></div>
+      <div class="ro"><b id="r1g">–</b><span>斜率 L′(x)</span></div>
+      <div class="ro warn"><b id="r1d">–</b><span>下一步移动 −η·L′</span></div>
+      <div class="ro"><b id="r1n">0</b><span>已走步数</span></div>
+    </div>
+    <p class="note">越靠近谷底斜率越小，步子会自己变小，不用人去刹车。在「起伏」上从右边出发，会停在右边那个小坑里：梯度只看脚下，看不到远处更深的谷。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>学习率：太小、刚好、太大</h2>
+  <p>换成最简单的碗 <i>L</i> = ½ <i>a x</i>²，斜率是 <i>a x</i>，每走一步 <i>x</i> 被乘上同一个数 (1 − <i>ηa</i>)。这个乘数的绝对值小于 1 才会收敛，所以学习率有一条硬上限 <i>η</i> &lt; 2 / <i>a</i>。<i>a</i> 是曲率：碗越陡，能用的学习率越小。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="lr2">学习率 η</label><input id="lr2" type="range" min="0.01" max="1" step="0.01" value="0.1"><b id="lr2v"></b></div>
+      <div class="ctrl"><label for="a2">曲率 a</label><input id="a2" type="range" min="1" max="8" step="0.5" value="2"><b id="a2v"></b></div>
+    </div>
+    <div class="two">
+      <div><svg id="fig2a" viewBox="0 0 400 260" role="img" aria-label="x 随步数变化"></svg><p class="cap">x 随步数</p></div>
+      <div><svg id="fig2b" viewBox="0 0 400 260" role="img" aria-label="损失随步数变化（对数坐标）"></svg><p class="cap">损失随步数（对数坐标）</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r2m">–</b><span>每步乘数 1 − ηa</span></div>
+      <div class="ro acc"><b id="r2s">–</b><span>状态</span></div>
+      <div class="ro"><b id="r2t">–</b><span>损失降到 10⁻⁶ 需要的步数</span></div>
+      <div class="ro warn"><b id="r2c">–</b><span>发散临界 2 / a</span></div>
+    </div>
+    <p class="note">η 刚好等于 1 / a 时一步到位；在 1 / a 和 2 / a 之间会左右来回、越摆越小；超过 2 / a 每一步都冲过头更远，损失指数爆炸。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>两个参数：梯度是一支箭</h2>
+  <p>有两个参数时，损失是一片地形，图里颜色越浓的地方越低。梯度 ∇<i>L</i> 是两个偏导数排成的向量，指向上坡最陡的方向，并且总是垂直于等高线；梯度下降沿 −∇<i>L</i> 走。点图换出发点，三种走法同时出发：</p>
+  <ul>
+    <li><b style="color:var(--warn)">普通梯度下降</b>：只看当前梯度。</li>
+    <li><b style="color:var(--ok)">Momentum</b>：带惯性，速度 = 0.9 × 上一步速度 + 当前梯度。</li>
+    <li><b style="color:var(--accent)">Adam</b>：再给每个参数单独按梯度的大小缩放步长。</li>
+  </ul>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>地形</label><div class="seg" id="f3"><button data-v="bowl" aria-pressed="false">圆碗</button><button data-v="valley" aria-pressed="true">窄谷</button><button data-v="rosen" aria-pressed="false">香蕉谷</button></div></div>
+      <div class="ctrl"><label for="m3">学习率倍数</label><input id="m3" type="range" min="-2" max="2" step="0.25" value="0"><b id="m3v"></b></div>
+      <div class="btns"><button class="btn pri" id="run3">出发</button><button class="btn" id="reset3">重置</button></div>
+    </div>
+    <canvas id="cv3" class="click" aria-label="二维损失地形上三种优化方法的路径"></canvas>
+    <div class="readout">
+      <div class="ro warn"><b id="r3a">–</b><span id="l3a">普通梯度下降</span></div>
+      <div class="ro ok"><b id="r3b">–</b><span id="l3b">Momentum</span></div>
+      <div class="ro acc"><b id="r3c">–</b><span id="l3c">Adam</span></div>
+      <div class="ro"><b id="r3n">0</b><span>已走步数</span></div>
+    </div>
+    <p class="note">「窄谷」里一个方向陡、一个方向缓：普通梯度下降的学习率被陡的方向卡住，只能在谷壁之间来回弹，沿谷底挪得很慢。「香蕉谷」（Rosenbrock 函数）里它 3000 步都到不了终点，惯性和自适应步长的价值就在这里。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>真的训练一个模型：拟合一条直线</h2>
+  <p>下面 40 个点是按 <i>y</i> = 1.5<i>x</i> + 1 加上随机噪声生成的。模型是 <i>ŷ</i> = <i>w x</i> + <i>b</i>，只有 <i>w</i>、<i>b</i> 两个参数；损失是均方误差 MSE，即所有点的误差平方取平均。两个偏导数：</p>
+  <p class="formula">∂<i>L</i>/∂<i>w</i> = 2 · 平均(<i>e</i> · <i>x</i>)　　∂<i>L</i>/∂<i>b</i> = 2 · 平均(<i>e</i>)　　（<i>e</i> = <i>ŷ</i> − <i>y</i>）</p>
+  <p>左边看直线怎么被一步步「拉」到数据上，右边看同一过程在 (<i>w</i>, <i>b</i>) 损失地形里的路线。十字是最小二乘公式直接解出的最优点。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="lr4">学习率 η</label><input id="lr4" type="range" min="0.005" max="0.2" step="0.005" value="0.05"><b id="lr4v"></b></div>
+      <div class="btns"><button class="btn pri" id="step4">走一步</button><button class="btn" id="run4">自动</button><button class="btn" id="reset4">重置</button></div>
+    </div>
+    <div class="two">
+      <div><canvas id="cv4a" aria-label="数据点与当前拟合直线"></canvas><p class="cap">数据与当前直线（橙色线段是误差）</p></div>
+      <div><canvas id="cv4b" aria-label="参数空间里的损失地形与路线"></canvas><p class="cap">参数 (w, b) 的损失地形</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro acc"><b id="r4w">–</b><span>w</span></div>
+      <div class="ro acc"><b id="r4b">–</b><span>b</span></div>
+      <div class="ro"><b id="r4l">–</b><span>损失 MSE</span></div>
+      <div class="ro"><b id="r4g">–</b><span>梯度长度 |∇L|</span></div>
+      <div class="ro"><b id="r4n">0</b><span>已走步数</span></div>
+      <div class="ro ok"><b id="r4o">–</b><span>最优 w*, b*</span></div>
+    </div>
+    <p class="note">学习率拖过 <span id="crit4">–</span> 就会发散：这个数由数据算出（2 除以损失曲率矩阵的最大特征值），和实验 02 的 2 / a 是同一回事。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>一次看多少数据：全量、小批量、SGD</h2>
+  <p>真正的模型训练数据有几万亿个 token，每走一步都把全部数据算一遍不现实。做法是每次随机抽一小批（batch）算梯度，用它代替全量梯度。下面 200 个点，同样的学习率 0.01，四种 batch 大小花同样多的计算（按「看过的样本数」算）：</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="bud5">样本预算</label><input id="bud5" type="range" min="200" max="4000" step="200" value="2000"><b id="bud5v"></b></div>
+      <div class="btns"><button class="btn" id="shuf5">重新洗牌</button></div>
+    </div>
+    <div class="two">
+      <div><canvas id="cv5a" aria-label="四种 batch 大小在损失地形里的路线"></canvas><p class="cap">参数 (w, b) 的路线</p></div>
+      <div><canvas id="cv5b" aria-label="损失随看过的样本数变化"></canvas><p class="cap">全量损失随看过的样本数（对数坐标）</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro warn"><b id="r5a">–</b><span>batch = 1（SGD）</span></div>
+      <div class="ro ok"><b id="r5b">–</b><span>batch = 8</span></div>
+      <div class="ro acc"><b id="r5c">–</b><span>batch = 32</span></div>
+      <div class="ro c4"><b id="r5d">–</b><span>batch = 200（全量）</span></div>
+    </div>
+    <p class="note">batch = 1 每看一个样本就走一步，路线最抖，同样的计算量却走得最远，只是到了谷底也停不稳，一直在最优点附近晃；全量梯度方向最准，2000 个样本却只够走 10 步。实际训练取中间：小批量既有足够多的步数，又能让 GPU 一次并行算一批。</p>
+  </div>
+</section>
+
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const rgba = (hex, a) => { hex = hex.replace('#', ''); if (hex.length === 3) hex = hex.split('').map((c) => c + c).join(''); const n = parseInt(hex, 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
+const fmt = (v, d = 3) => {
+  if (!isFinite(v) || Math.abs(v) > 1e12) return '发散';
+  if (v !== 0 && (Math.abs(v) >= 1e4 || Math.abs(v) < 1e-3)) { const [m, e] = v.toExponential(2).split('e'); return `${m}×10${sup(+e)}`; }
+  return v.toFixed(d);
+};
+const SUP = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
+const sup = (n) => String(n).split('').map((c) => SUP[c] ?? c).join('');
+function seg(id, cb) {
+  const el = $(id);
+  el.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    el.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b));
+    cb(b.dataset.v);
+  });
+  return () => el.querySelector('[aria-pressed=true]').dataset.v;
+}
+function fitCanvas(cv, aspect) {
+  const w = cv.clientWidth || 300, h = Math.round(w * aspect), d = window.devicePixelRatio || 1;
+  if (cv.width !== Math.round(w * d) || cv.height !== Math.round(h * d)) { cv.width = Math.round(w * d); cv.height = Math.round(h * d); cv.style.height = h + 'px'; }
+  const g = cv.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0); return { g, w, h };
+}
+function svgPoint(svg, e) {
+  const r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+  return [(e.clientX - r.left) / r.width * vb.width, (e.clientY - r.top) / r.height * vb.height];
+}
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function gauss(r) { let u = 0; while (u === 0) u = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r()); }
+function arrowSvg(x1, y1, x2, y2, col, w = 2.5) {
+  const a = Math.atan2(y2 - y1, x2 - x1), L = Math.hypot(x2 - x1, y2 - y1); if (L < 2) return '';
+  const h = Math.min(10, L * 0.5);
+  return `<line x1="${x1}" y1="${y1}" x2="${x2 - Math.cos(a) * h * 0.6}" y2="${y2 - Math.sin(a) * h * 0.6}" stroke="${col}" stroke-width="${w}"/>` +
+    `<path d="M${x2},${y2} L${x2 - h * Math.cos(a - 0.45)},${y2 - h * Math.sin(a - 0.45)} L${x2 - h * Math.cos(a + 0.45)},${y2 - h * Math.sin(a + 0.45)}Z" fill="${col}"/>`;
+}
+function arrowCv(g, x1, y1, x2, y2, col, w = 2) {
+  const a = Math.atan2(y2 - y1, x2 - x1), L = Math.hypot(x2 - x1, y2 - y1); if (L < 2) return;
+  const h = Math.min(9, L * 0.5);
+  g.strokeStyle = col; g.fillStyle = col; g.lineWidth = w;
+  g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2 - Math.cos(a) * h * 0.6, y2 - Math.sin(a) * h * 0.6); g.stroke();
+  g.beginPath(); g.moveTo(x2, y2); g.lineTo(x2 - h * Math.cos(a - 0.45), y2 - h * Math.sin(a - 0.45)); g.lineTo(x2 - h * Math.cos(a + 0.45), y2 - h * Math.sin(a + 0.45)); g.closePath(); g.fill();
+}
+// 等高线地形：按 log(f) 分层上色，越低越深。结果缓存成离屏画布。
+function terrain(w, h, dom, f, key) {
+  const k = key + '|' + w + '|' + h + '|' + css('--fg');
+  terrain.cache = terrain.cache || {};
+  if (terrain.cache[k]) return terrain.cache[k];
+  const d = window.devicePixelRatio || 1, off = document.createElement('canvas');
+  off.width = Math.round(w * d); off.height = Math.round(h * d);
+  const g = off.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0);
+  const cell = 3, nx = Math.ceil(w / cell), ny = Math.ceil(h / cell), vals = new Float64Array(nx * ny);
+  let lo = Infinity, hi = -Infinity;
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    const x = dom[0] + (i + 0.5) * cell / w * (dom[1] - dom[0]), y = dom[3] - (j + 0.5) * cell / h * (dom[3] - dom[2]);
+    const v = Math.log(f(x, y) + 1e-3); vals[j * nx + i] = v; if (v < lo) lo = v; if (v > hi) hi = v;
+  }
+  const nb = 16, fg = css('--fg');
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    const b = Math.min(nb - 1, Math.floor((vals[j * nx + i] - lo) / (hi - lo) * nb));
+    g.fillStyle = rgba(fg, 0.02 + 0.30 * Math.pow(1 - b / (nb - 1), 1.6));
+    g.fillRect(i * cell, j * cell, cell + 0.5, cell + 0.5);
+  }
+  terrain.cache[k] = off; return off;
+}
+const toPx = (dom, w, h) => [(x) => (x - dom[0]) / (dom[1] - dom[0]) * w, (y) => (dom[3] - y) / (dom[3] - dom[2]) * h];
+
+/* ---------- 01 一维 ---------- */
+const F1 = {
+  bowl: { f: (x) => x * x, d: (x) => 2 * x, y: [0, 9.6], start: 2.6 },
+  wavy: { f: (x) => 0.1 * x ** 4 - 0.8 * x * x + 0.3 * x + 2.5, d: (x) => 0.4 * x ** 3 - 1.6 * x + 0.3, y: [0, 4.6], start: 2.8 },
+};
+const s1 = { k: 'bowl', x: 2.6, trail: [], n: 0, timer: null, div: false };
+const lr1 = () => 0.01 * Math.pow(100, +$('#lr1').value / 100);
+const get1 = seg('#f1', (v) => { s1.k = v; reset1(F1[v].start); });
+function reset1(x) { stop1(); s1.x = x; s1.trail = [x]; s1.n = 0; s1.div = false; draw1(); }
+function step1() {
+  if (s1.div) return false;
+  const F = F1[s1.k], d = lr1() * F.d(s1.x);
+  s1.x -= d; s1.n++; s1.trail.push(s1.x);
+  if (!isFinite(s1.x) || Math.abs(s1.x) > 60) s1.div = true;
+  draw1(); return !s1.div && Math.abs(d) > 1e-5;
+}
+function stop1() { clearInterval(s1.timer); s1.timer = null; $('#run1').textContent = '自动'; }
+function draw1() {
+  $('#lr1v').textContent = lr1().toFixed(3);
+  const F = F1[s1.k], narrow = $('#fig1').clientWidth < 600, W = narrow ? 420 : 800, H = narrow ? 300 : 330, pl = narrow ? 28 : 40, pr = 16, pt = 16, pb = 34;
+  $('#fig1').setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const X = (x) => pl + (x + 3) / 6 * (W - pl - pr), Y = (y) => pt + (F.y[1] - y) / (F.y[1] - F.y[0]) * (H - pt - pb);
+  const fg = css('--fg'), mu = css('--muted'), li = css('--line'), ac = css('--accent'), wa = css('--warn');
+  let s = `<defs><clipPath id="c1"><rect x="${pl}" y="${pt}" width="${W - pl - pr}" height="${H - pt - pb}"/></clipPath></defs>`;
+  s += `<line x1="${pl}" y1="${H - pb}" x2="${W - pr}" y2="${H - pb}" stroke="${li}"/>`;
+  for (let t = -3; t <= 3; t++) s += `<text x="${X(t)}" y="${H - pb + 20}" font-size="13" fill="${mu}" text-anchor="middle">${t}</text>`;
+  let d = ''; for (let i = 0; i <= 300; i++) { const x = -3 + 6 * i / 300; d += (i ? 'L' : 'M') + X(x).toFixed(1) + ',' + Y(F.f(x)).toFixed(1); }
+  s += `<path d="${d}" fill="none" stroke="${fg}" stroke-width="2" clip-path="url(#c1)"/>`;
+  const tr = s1.trail.slice(-80).filter(isFinite);
+  for (let i = 1; i < tr.length; i++) {
+    if (Math.abs(tr[i]) > 3.2 || Math.abs(tr[i - 1]) > 3.2) continue;
+    s += `<line x1="${X(tr[i - 1])}" y1="${Y(F.f(tr[i - 1]))}" x2="${X(tr[i])}" y2="${Y(F.f(tr[i]))}" stroke="${rgba(ac, 0.45)}" stroke-width="1.5" stroke-dasharray="4 3" clip-path="url(#c1)"/>`;
+  }
+  tr.forEach((x, i) => { if (Math.abs(x) <= 3.2 && i < tr.length - 1) s += `<circle cx="${X(x)}" cy="${Y(F.f(x))}" r="3.5" fill="${rgba(ac, 0.5)}" clip-path="url(#c1)"/>`; });
+  const x = s1.x, ok = isFinite(x) && Math.abs(x) <= 3;
+  if (ok) {
+    const y = F.f(x), g = F.d(x), hw = 0.9;
+    s += `<line x1="${X(x - hw)}" y1="${Y(y - g * hw)}" x2="${X(x + hw)}" y2="${Y(y + g * hw)}" stroke="${mu}" stroke-width="1.5" clip-path="url(#c1)"/>`;
+    const nx = x - lr1() * g, ax = Math.max(-3.05, Math.min(3.05, nx));
+    s += `<line x1="${X(x)}" y1="${Y(y)}" x2="${X(x)}" y2="${H - pb}" stroke="${li}" stroke-dasharray="3 3"/>`;
+    s += arrowSvg(X(x), H - pb - 8, X(ax), H - pb - 8, wa, 3);
+    s += `<circle cx="${X(x)}" cy="${Y(y)}" r="7" fill="${ac}"/>`;
+  } else if (s1.div || !ok) {
+    s += `<text x="${W / 2}" y="${pt + 30}" font-size="18" fill="${wa}" text-anchor="middle">${s1.div ? '发散：每一步都冲得更远' : '跑出画面了'}</text>`;
+  }
+  $('#fig1').innerHTML = s;
+  const g = F.d(x);
+  $('#r1x').textContent = fmt(x); $('#r1l').textContent = fmt(F.f(x)); $('#r1g').textContent = fmt(g);
+  $('#r1d').textContent = s1.div ? '发散' : fmt(-lr1() * g); $('#r1n').textContent = s1.n;
+}
+$('#lr1').addEventListener('input', draw1);
+$('#step1').addEventListener('click', () => { stop1(); step1(); });
+$('#reset1').addEventListener('click', () => reset1(F1[s1.k].start));
+$('#run1').addEventListener('click', () => {
+  if (s1.timer) return stop1();
+  $('#run1').textContent = '暂停';
+  s1.timer = setInterval(() => { if (!step1() || s1.n > 300) stop1(); }, 220);
+});
+$('#fig1').addEventListener('click', (e) => {
+  const [px] = svgPoint($('#fig1'), e), W = $('#fig1').viewBox.baseVal.width, pl = W < 600 ? 28 : 40; const x = (px - pl) / (W - pl - 16) * 6 - 3;
+  if (x >= -3 && x <= 3) reset1(+x.toFixed(2));
+});
+
+/* ---------- 02 学习率 ---------- */
+function draw2() {
+  const eta = +$('#lr2').value, a = +$('#a2').value; $('#lr2v').textContent = eta.toFixed(2); $('#a2v').textContent = a.toFixed(1);
+  const r = 1 - eta * a, T = 30, xs = [1]; for (let t = 1; t <= T; t++) xs.push(xs[t - 1] * r);
+  const Ls = xs.map((x) => 0.5 * a * x * x);
+  const fg = css('--fg'), mu = css('--muted'), li = css('--line'), ac = css('--accent'), wa = css('--warn');
+  const W = 400, H = 260, pl = 40, pr = 10, pt = 12, pb = 28, X = (t) => pl + t / T * (W - pl - pr);
+  // x 随步数
+  const Ya = (v) => pt + (1.6 - v) / 3.2 * (H - pt - pb);
+  let s = `<line x1="${pl}" y1="${Ya(0)}" x2="${W - pr}" y2="${Ya(0)}" stroke="${li}"/>`;
+  [-1, 0, 1].forEach((v) => s += `<text x="${pl - 8}" y="${Ya(v) + 4}" font-size="12" fill="${mu}" text-anchor="end">${v}</text>`);
+  [0, 10, 20, 30].forEach((t) => s += `<text x="${X(t)}" y="${H - 8}" font-size="12" fill="${mu}" text-anchor="middle">${t}</text>`);
+  s += `<defs><clipPath id="c2"><rect x="${pl}" y="${pt}" width="${W - pl - pr}" height="${H - pt - pb}"/></clipPath></defs>`;
+  let p = ''; xs.forEach((x, t) => p += (t ? 'L' : 'M') + X(t).toFixed(1) + ',' + Ya(Math.max(-50, Math.min(50, x))).toFixed(1));
+  s += `<path d="${p}" fill="none" stroke="${ac}" stroke-width="1.5" clip-path="url(#c2)"/>`;
+  xs.forEach((x, t) => { if (Math.abs(x) < 1.6) s += `<circle cx="${X(t)}" cy="${Ya(x)}" r="2.8" fill="${ac}"/>`; });
+  $('#fig2a').innerHTML = s;
+  // log10 损失
+  const lo = -12, hi = 4, Yb = (v) => pt + (hi - v) / (hi - lo) * (H - pt - pb);
+  s = `<defs><clipPath id="c2b"><rect x="${pl}" y="${pt}" width="${W - pl - pr}" height="${H - pt - pb}"/></clipPath></defs>`;
+  [4, 0, -6, -12].forEach((v) => { s += `<line x1="${pl}" y1="${Yb(v)}" x2="${W - pr}" y2="${Yb(v)}" stroke="${li}"/><text x="${pl - 6}" y="${Yb(v) + 4}" font-size="12" fill="${mu}" text-anchor="end">10${sup(v)}</text>`; });
+  [0, 10, 20, 30].forEach((t) => s += `<text x="${X(t)}" y="${H - 8}" font-size="12" fill="${mu}" text-anchor="middle">${t}</text>`);
+  p = ''; let started = false;
+  Ls.forEach((L, t) => { const v = L > 0 ? Math.log10(L) : lo - 5; const c = Math.max(lo - 2, Math.min(hi + 2, v)); p += (started ? 'L' : 'M') + X(t).toFixed(1) + ',' + Yb(c).toFixed(1); started = true; });
+  s += `<path d="${p}" fill="none" stroke="${Math.abs(r) > 1 ? wa : ac}" stroke-width="2" clip-path="url(#c2b)"/>`;
+  $('#fig2b').innerHTML = s;
+  $('#r2m').textContent = r.toFixed(2);
+  const ar = Math.abs(r);
+  const st = ar < 1e-9 ? '一步到位' : r > 0 && r < 1 ? '单调收敛' : r < 0 && ar < 1 ? '震荡收敛' : Math.abs(ar - 1) < 1e-9 ? '原地来回' : '发散';
+  $('#r2s').textContent = st; $('#r2s').parentElement.className = 'ro ' + (st === '发散' || st === '原地来回' ? 'warn' : 'ok');
+  const L0 = 0.5 * a;
+  $('#r2t').textContent = ar < 1e-9 ? '1' : ar >= 1 ? '永远到不了' : Math.max(1, Math.ceil(Math.log(1e-6 / L0) / (2 * Math.log(ar))));
+  $('#r2c').textContent = (2 / a).toFixed(3);
+}
+$('#lr2').addEventListener('input', draw2); $('#a2').addEventListener('input', draw2);
+
+/* ---------- 03 二维：三种走法 ---------- */
+const L3 = {
+  bowl: { f: (x, y) => 0.5 * (x * x + y * y), g: (x, y) => [x, y], dom: [-3, 3, -1.86, 1.86], min: [0, 0], start: [-2.5, 1.4], lr: [0.1, 0.02, 0.1], max: 200 },
+  valley: { f: (x, y) => 0.5 * (x * x + 50 * y * y), g: (x, y) => [x, 50 * y], dom: [-3, 3, -1.86, 1.86], min: [0, 0], start: [-2.6, 1.2], lr: [0.035, 0.01, 0.1], max: 300 },
+  rosen: { f: (x, y) => (1 - x) ** 2 + 100 * (y - x * x) ** 2, g: (x, y) => [-2 * (1 - x) - 400 * x * (y - x * x), 200 * (y - x * x)], dom: [-2, 2, -0.7, 1.78], min: [1, 1], start: [-1.2, 1], lr: [0.0008, 0.0005, 0.02], max: 3000 },
+};
+const s3 = { k: 'valley', start: null, paths: null, n: 0, raf: 0 };
+const mult3 = () => Math.pow(2, +$('#m3').value);
+const get3 = seg('#f3', (v) => { s3.k = v; s3.start = L3[v].start.slice(); reset3(); });
+function init3() {
+  const L = L3[s3.k], m = mult3();
+  s3.paths = ['gd', 'mom', 'adam'].map((kind, i) => ({ kind, lr: L.lr[i] * m, p: [s3.start.slice()], x: s3.start[0], y: s3.start[1], vx: 0, vy: 0, mx: 0, my: 0, sx: 0, sy: 0, hit: -1, div: false }));
+  s3.n = 0;
+}
+function step3(o, t) {
+  if (o.div) return;
+  const L = L3[s3.k], [gx, gy] = L.g(o.x, o.y);
+  if (o.kind === 'gd') { o.x -= o.lr * gx; o.y -= o.lr * gy; }
+  else if (o.kind === 'mom') { o.vx = 0.9 * o.vx + gx; o.vy = 0.9 * o.vy + gy; o.x -= o.lr * o.vx; o.y -= o.lr * o.vy; }
+  else {
+    o.mx = 0.9 * o.mx + 0.1 * gx; o.my = 0.9 * o.my + 0.1 * gy; o.sx = 0.999 * o.sx + 0.001 * gx * gx; o.sy = 0.999 * o.sy + 0.001 * gy * gy;
+    const c1 = 1 - 0.9 ** t, c2 = 1 - 0.999 ** t;
+    o.x -= o.lr * (o.mx / c1) / (Math.sqrt(o.sx / c2) + 1e-8); o.y -= o.lr * (o.my / c1) / (Math.sqrt(o.sy / c2) + 1e-8);
+  }
+  if (!isFinite(o.x) || !isFinite(o.y) || Math.abs(o.x) > 50 || Math.abs(o.y) > 50) { o.div = true; return; }
+  o.p.push([o.x, o.y]);
+  if (o.hit < 0 && L.f(o.x, o.y) < 1e-3) o.hit = t;
+}
+function reset3() { cancelAnimationFrame(s3.raf); s3.raf = 0; $('#run3').textContent = '出发'; init3(); draw3(); }
+function run3() {
+  if (s3.raf) { cancelAnimationFrame(s3.raf); s3.raf = 0; $('#run3').textContent = '继续'; return; }
+  const L = L3[s3.k];
+  if (s3.n >= L.max) init3();
+  $('#run3').textContent = '暂停';
+  const per = Math.max(1, Math.round(L.max / 180));
+  const tick = () => {
+    for (let i = 0; i < per && s3.n < L.max; i++) { s3.n++; s3.paths.forEach((o) => step3(o, s3.n)); }
+    draw3();
+    if (s3.n < L.max && !s3.paths.every((o) => o.div || o.hit > 0)) s3.raf = requestAnimationFrame(tick);
+    else { s3.raf = 0; $('#run3').textContent = '出发'; }
+  };
+  s3.raf = requestAnimationFrame(tick);
+}
+function draw3() {
+  $('#m3v').textContent = '×' + (+mult3().toFixed(3));
+  const L = L3[s3.k], { g, w, h } = fitCanvas($('#cv3'), 0.62), [PX, PY] = toPx(L.dom, w, h);
+  g.clearRect(0, 0, w, h); g.fillStyle = css('--paper'); g.fillRect(0, 0, w, h);
+  g.drawImage(terrain(w, h, L.dom, L.f, s3.k), 0, 0, w, h);
+  const fg = css('--fg'), cols = [css('--warn'), css('--ok'), css('--accent')];
+  // 终点
+  g.strokeStyle = fg; g.lineWidth = 2; const mx = PX(L.min[0]), my = PY(L.min[1]);
+  g.beginPath(); g.moveTo(mx - 6, my); g.lineTo(mx + 6, my); g.moveTo(mx, my - 6); g.lineTo(mx, my + 6); g.stroke();
+  // 出发点与 −∇L
+  const [sx, sy] = s3.start, [gx, gy] = L.g(sx, sy);
+  // −∇L 换到屏幕坐标（y 轴向下，所以 y 分量变号）
+  const ux = -gx * w / (L.dom[1] - L.dom[0]), uy = gy * h / (L.dom[3] - L.dom[2]), ul = Math.hypot(ux, uy) || 1;
+  arrowCv(g, PX(sx), PY(sy), PX(sx) + ux / ul * 56, PY(sy) + uy / ul * 56, fg, 2);
+  s3.paths.forEach((o, i) => {
+    g.strokeStyle = cols[i]; g.lineWidth = 1.8; g.beginPath();
+    o.p.forEach(([x, y], j) => { const X = PX(x), Y = PY(y); j ? g.lineTo(X, Y) : g.moveTo(X, Y); }); g.stroke();
+    const [lx, ly] = o.p[o.p.length - 1]; g.fillStyle = cols[i]; g.beginPath(); g.arc(PX(lx), PY(ly), 4.5, 0, 7); g.fill();
+  });
+  g.fillStyle = fg; g.beginPath(); g.arc(PX(sx), PY(sy), 4, 0, 7); g.fill();
+  const lab = ['普通梯度下降', 'Momentum', 'Adam'];
+  ['#r3a', '#r3b', '#r3c'].forEach((id, i) => {
+    const o = s3.paths[i];
+    $(id).textContent = o.div ? '发散' : o.hit > 0 ? `${o.hit} 步到达` : fmt(L.f(o.x, o.y));
+    $(['#l3a', '#l3b', '#l3c'][i]).textContent = `${lab[i]} · η = ${+o.lr.toPrecision(3)}`;
+  });
+  $('#r3n').textContent = s3.n;
+}
+$('#m3').addEventListener('input', reset3);
+$('#run3').addEventListener('click', run3);
+$('#reset3').addEventListener('click', () => { s3.start = L3[s3.k].start.slice(); reset3(); });
+$('#cv3').addEventListener('click', (e) => {
+  const r = $('#cv3').getBoundingClientRect(), L = L3[s3.k];
+  const x = L.dom[0] + (e.clientX - r.left) / r.width * (L.dom[1] - L.dom[0]), y = L.dom[3] - (e.clientY - r.top) / r.height * (L.dom[3] - L.dom[2]);
+  s3.start = [x, y]; reset3(); run3();
+});
+
+/* ---------- 数据：y = 1.5x + 1 + 噪声 ---------- */
+function makeData(n, seed) { const r = rng(seed), xs = [], ys = []; for (let i = 0; i < n; i++) { const x = 4 * r(); xs.push(x); ys.push(1.5 * x + 1 + 0.6 * gauss(r)); } return { xs, ys, n }; }
+function stats(D) {
+  let sx = 0, sy = 0, sxx = 0, sxy = 0; for (let i = 0; i < D.n; i++) { sx += D.xs[i]; sy += D.ys[i]; sxx += D.xs[i] ** 2; sxy += D.xs[i] * D.ys[i]; }
+  const mx = sx / D.n, my = sy / D.n, vx = sxx / D.n - mx * mx, w = (sxy / D.n - mx * my) / vx;
+  const exx = sxx / D.n, tr = 2 * (exx + 1), det = 4 * (exx - mx * mx), lmax = (tr + Math.sqrt(tr * tr - 4 * det)) / 2;
+  return { w, b: my - w * mx, crit: 2 / lmax };
+}
+function mse(D, w, b, idx) { let s = 0; const I = idx || null, n = I ? I.length : D.n; for (let k = 0; k < n; k++) { const i = I ? I[k] : k, e = w * D.xs[i] + b - D.ys[i]; s += e * e; } return s / n; }
+function grad(D, w, b, idx) { let gw = 0, gb = 0; const I = idx || null, n = I ? I.length : D.n; for (let k = 0; k < n; k++) { const i = I ? I[k] : k, e = w * D.xs[i] + b - D.ys[i]; gw += e * D.xs[i]; gb += e; } return [2 * gw / n, 2 * gb / n]; }
+const DOMWB = [-1, 4, -1.5, 4.25], START = [-0.5, 3.8];
+
+/* ---------- 04 拟合直线 ---------- */
+const D4 = makeData(40, 7), O4 = stats(D4);
+const s4 = { w: START[0], b: START[1], p: [START.slice()], n: 0, raf: 0, div: false };
+function reset4() { cancelAnimationFrame(s4.raf); s4.raf = 0; $('#run4').textContent = '自动'; Object.assign(s4, { w: START[0], b: START[1], p: [START.slice()], n: 0, div: false }); draw4(); }
+function step4() {
+  if (s4.div) return false;
+  const [gw, gb] = grad(D4, s4.w, s4.b), eta = +$('#lr4').value;
+  s4.w -= eta * gw; s4.b -= eta * gb; s4.n++; s4.p.push([s4.w, s4.b]);
+  if (!isFinite(s4.w) || Math.abs(s4.w) > 1e3) s4.div = true;
+  return !s4.div && Math.hypot(gw, gb) > 1e-4;
+}
+function draw4() {
+  $('#lr4v').textContent = (+$('#lr4').value).toFixed(3);
+  const fg = css('--fg'), mu = css('--muted'), li = css('--line'), ac = css('--accent'), wa = css('--warn'), okc = css('--ok');
+  // 左：数据
+  let { g, w, h } = fitCanvas($('#cv4a'), 0.75);
+  g.clearRect(0, 0, w, h);
+  const pad = 26, X = (x) => pad + x / 4 * (w - pad - 8), Y = (y) => 8 + (9 - y) / 10 * (h - pad - 8);
+  g.strokeStyle = li; g.lineWidth = 1; g.beginPath(); g.moveTo(pad, Y(-1)); g.lineTo(w - 8, Y(-1)); g.moveTo(pad, 8); g.lineTo(pad, Y(-1)); g.stroke();
+  g.fillStyle = mu; g.font = '12px ' + css('--sans'); g.textAlign = 'center';
+  [0, 1, 2, 3, 4].forEach((t) => g.fillText(t, X(t), Y(-1) + 15)); g.textAlign = 'right'; [0, 4, 8].forEach((t) => g.fillText(t, pad - 5, Y(t) + 4));
+  g.save(); g.beginPath(); g.rect(pad, 8, w - pad - 8, Y(-1) - 8); g.clip();
+  if (!s4.div) {
+    g.strokeStyle = rgba(wa, 0.7); g.lineWidth = 1;
+    for (let i = 0; i < D4.n; i++) { const yh = s4.w * D4.xs[i] + s4.b; g.beginPath(); g.moveTo(X(D4.xs[i]), Y(D4.ys[i])); g.lineTo(X(D4.xs[i]), Y(yh)); g.stroke(); }
+    g.strokeStyle = ac; g.lineWidth = 2.5; g.beginPath(); g.moveTo(X(0), Y(s4.b)); g.lineTo(X(4), Y(s4.w * 4 + s4.b)); g.stroke();
+  }
+  g.fillStyle = fg; for (let i = 0; i < D4.n; i++) { g.beginPath(); g.arc(X(D4.xs[i]), Y(D4.ys[i]), 3, 0, 7); g.fill(); }
+  g.restore();
+  // 右：参数空间
+  ({ g, w, h } = fitCanvas($('#cv4b'), 0.75));
+  g.clearRect(0, 0, w, h);
+  const f = (a, b) => mse(D4, a, b); g.drawImage(terrain(w, h, DOMWB, f, 'mse40'), 0, 0, w, h);
+  const [PX, PY] = toPx(DOMWB, w, h);
+  g.fillStyle = mu; g.font = '12px ' + css('--sans'); g.textAlign = 'left'; g.fillText('w →', w - 30, h - 6); g.fillText('b ↑', 6, 14);
+  g.strokeStyle = okc; g.lineWidth = 2.5; const ox = PX(O4.w), oy = PY(O4.b);
+  g.beginPath(); g.moveTo(ox - 7, oy); g.lineTo(ox + 7, oy); g.moveTo(ox, oy - 7); g.lineTo(ox, oy + 7); g.stroke();
+  g.save(); g.beginPath(); g.rect(0, 0, w, h); g.clip();
+  g.strokeStyle = ac; g.lineWidth = 1.8; g.beginPath(); s4.p.forEach(([a, b], j) => j ? g.lineTo(PX(a), PY(b)) : g.moveTo(PX(a), PY(b))); g.stroke();
+  g.fillStyle = rgba(ac, 0.55); s4.p.forEach(([a, b]) => { g.beginPath(); g.arc(PX(a), PY(b), 2, 0, 7); g.fill(); });
+  if (!s4.div) { g.fillStyle = ac; g.beginPath(); g.arc(PX(s4.w), PY(s4.b), 5.5, 0, 7); g.fill(); }
+  g.restore();
+  const [gw, gb] = grad(D4, s4.w, s4.b);
+  $('#r4w').textContent = s4.div ? '发散' : s4.w.toFixed(3); $('#r4b').textContent = s4.div ? '发散' : s4.b.toFixed(3);
+  $('#r4l').textContent = s4.div ? '发散' : fmt(mse(D4, s4.w, s4.b), 4); $('#r4g').textContent = s4.div ? '发散' : fmt(Math.hypot(gw, gb));
+  $('#r4n').textContent = s4.n; $('#r4o').textContent = `${O4.w.toFixed(3)}, ${O4.b.toFixed(3)}`;
+  $('#crit4').textContent = O4.crit.toFixed(3);
+}
+$('#lr4').addEventListener('input', draw4);
+$('#step4').addEventListener('click', () => { cancelAnimationFrame(s4.raf); s4.raf = 0; $('#run4').textContent = '自动'; step4(); draw4(); });
+$('#reset4').addEventListener('click', reset4);
+$('#run4').addEventListener('click', () => {
+  if (s4.raf) { cancelAnimationFrame(s4.raf); s4.raf = 0; $('#run4').textContent = '自动'; return; }
+  $('#run4').textContent = '暂停'; let f = 0;
+  const tick = () => { let go = true; if (++f % 3 === 0) go = step4(); draw4(); if (go && s4.n < 600) s4.raf = requestAnimationFrame(tick); else { s4.raf = 0; $('#run4').textContent = '自动'; } };
+  s4.raf = requestAnimationFrame(tick);
+});
+
+/* ---------- 05 batch 大小 ---------- */
+const D5 = makeData(200, 11), O5 = stats(D5), BS = [1, 8, 32, 200];
+let seed5 = 1;
+function train5(bs, budget) {
+  const r = rng(seed5 * 1000 + bs), steps = Math.floor(budget / bs);
+  let w = START[0], b = START[1], order = [], pos = D5.n;
+  const path = [[w, b]], curve = [[0, mse(D5, w, b)]];
+  for (let s = 1; s <= steps; s++) {
+    const idx = [];
+    for (let k = 0; k < bs; k++) {
+      if (pos >= D5.n) { order = [...Array(D5.n).keys()]; for (let i = D5.n - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; } pos = 0; }
+      idx.push(order[pos++]);
+    }
+    const [gw, gb] = grad(D5, w, b, idx); w -= 0.01 * gw; b -= 0.01 * gb;
+    path.push([w, b]); curve.push([s * bs, mse(D5, w, b)]);
+  }
+  return { path, curve, steps, final: mse(D5, w, b) };
+}
+function draw5() {
+  const budget = +$('#bud5').value; $('#bud5v').textContent = budget;
+  const res = BS.map((bs) => train5(bs, budget)), cols = [css('--warn'), css('--ok'), css('--accent'), css('--c4')];
+  const mu = css('--muted'), li = css('--line');
+  let { g, w, h } = fitCanvas($('#cv5a'), 0.75);
+  g.clearRect(0, 0, w, h); g.drawImage(terrain(w, h, DOMWB, (a, b) => mse(D5, a, b), 'mse200'), 0, 0, w, h);
+  const [PX, PY] = toPx(DOMWB, w, h);
+  g.fillStyle = mu; g.font = '12px ' + css('--sans'); g.textAlign = 'left'; g.fillText('w →', w - 30, h - 6); g.fillText('b ↑', 6, 14);
+  g.strokeStyle = css('--fg'); g.lineWidth = 2; const ox = PX(O5.w), oy = PY(O5.b);
+  g.beginPath(); g.moveTo(ox - 7, oy); g.lineTo(ox + 7, oy); g.moveTo(ox, oy - 7); g.lineTo(ox, oy + 7); g.stroke();
+  res.forEach((R, i) => {
+    g.strokeStyle = cols[i]; g.lineWidth = i === 0 ? 1 : 1.8; g.beginPath();
+    R.path.forEach(([a, b], j) => j ? g.lineTo(PX(a), PY(b)) : g.moveTo(PX(a), PY(b))); g.stroke();
+    const [a, b] = R.path[R.path.length - 1]; g.fillStyle = cols[i]; g.beginPath(); g.arc(PX(a), PY(b), 4.5, 0, 7); g.fill();
+  });
+  ({ g, w, h } = fitCanvas($('#cv5b'), 0.75));
+  g.clearRect(0, 0, w, h);
+  const pl = 38, pb = 22, pt = 8, pr = 10, lo = Math.log10(Math.min(...res.map((R) => Math.min(...R.curve.map((c) => c[1]))))) - 0.1, hi = Math.log10(res[0].curve[0][1]) + 0.1;
+  const X = (s) => pl + s / budget * (w - pl - pr), Y = (v) => pt + (hi - Math.log10(v)) / (hi - lo) * (h - pt - pb);
+  g.strokeStyle = li; g.lineWidth = 1; g.fillStyle = mu; g.font = '12px ' + css('--sans');
+  for (let e = Math.ceil(lo); e <= Math.floor(hi); e++) { g.beginPath(); g.moveTo(pl, Y(10 ** e)); g.lineTo(w - pr, Y(10 ** e)); g.stroke(); g.textAlign = 'right'; g.fillText('10' + sup(e), pl - 5, Y(10 ** e) + 4); }
+  g.textAlign = 'center'; [0, budget / 2, budget].forEach((s) => g.fillText(s, Math.min(w - 18, Math.max(pl + 6, X(s))), h - 6));
+  const mL = mse(D5, O5.w, O5.b); g.setLineDash([4, 3]); g.strokeStyle = mu; g.beginPath(); g.moveTo(pl, Y(mL)); g.lineTo(w - pr, Y(mL)); g.stroke(); g.setLineDash([]);
+  res.forEach((R, i) => {
+    g.strokeStyle = i === 0 ? rgba(cols[0], 0.6) : cols[i]; g.lineWidth = i === 0 ? 1 : 2; g.beginPath();
+    R.curve.forEach(([s, v], j) => j ? g.lineTo(X(s), Y(v)) : g.moveTo(X(s), Y(v))); g.stroke();
+    if (R.steps < 40) { g.fillStyle = cols[i]; R.curve.forEach(([s, v]) => { g.beginPath(); g.arc(X(s), Y(v), 2.6, 0, 7); g.fill(); }); }
+  });
+  ['#r5a', '#r5b', '#r5c', '#r5d'].forEach((id, i) => $(id).textContent = `${res[i].steps} 步 · ${res[i].final.toFixed(3)}`);
+}
+$('#bud5').addEventListener('input', draw5);
+$('#shuf5').addEventListener('click', () => { seed5++; draw5(); });
+
+/* ---------- 启动与重绘 ---------- */
+s3.start = L3[s3.k].start.slice(); init3();
+s1.trail = [s1.x];
+const all = () => { terrain.cache = {}; draw1(); draw2(); draw3(); draw4(); draw5(); };
+all();
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { terrain.cache = {}; draw1(); draw3(); draw4(); draw5(); }, 120); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+</script>
+</body>
+</html>

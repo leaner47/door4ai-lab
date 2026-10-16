@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-16 01:37 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
+最后更新：2026-10-16 02:10 America/New_York · 更新者：Claude（会话 session_01DtRpz8yhq3r3wGB3CzgyrK）
 
 ---
 
@@ -135,7 +135,8 @@ door4ai-lab/
 - 网络讲的 DNS 污染部分直接点名「防火长城」（2026-10-15 本人决定），只讲原理和可观察的现象，不提供翻墙教程。
 - 课程顺序：Token 讲（tokenizer-llm，order 4）放在硬件讲（2）和注意力讲（5）之间：先知道文字怎么变成 token、模型整体怎么跑，再拆开注意力。
 - 需要大数据表的实验（如分词器词表）把打包好的 JS 放在实验页同目录（`public/labs/<slug>/xxx.js`），同源、受同样的门禁保护；不依赖外部 CDN，国内访问更稳。
-- 课程顺序：注意力 QKV（order 5）在前，KV Cache（order 10）在后，因为 KV cache 建立在 Q/K/V 概念上。课程目录的「第 N 讲」由 order 排序自动生成。
+- 课程顺序：注意力 QKV（order 5）在前，KV Cache（order 10）在后，因为 KV cache 建立在 Q/K/V 概念上。
+- 课程顺序：梯度下降（order 20）放在 KV Cache 之后：前面几讲讲推理，从这一讲开始讲训练（参数从哪来）；后续训练相关的讲（反向传播、LoRA 等）接在 20 之后。课程目录的「第 N 讲」由 order 排序自动生成。
 
 - **账号与计费（2026-10-14 本人确认）**：自建账号，D1 不用 PG；不设密码，Passkey 为主、邮箱验证码注册与兜底、TOTP 可选（未做）；每账号同一时间只允许 1 个会话，新登录踢掉旧会话；只做买断，不做订阅；买全套包含以后新增的讲；收款复用 door4ai.com 的 pay-api（接口文档待本人提供）；记录注册来源（首次/最后触达 UTM、ref 渠道码、来源问卷）。设计文档：https://claude.ai/code/artifact/9679fc7a-0fe4-4323-86f1-65cbb1cc005f
 - 两步验证只在「邮箱验证码登录」时要求；Passkey 登录不需要（Passkey 本身就是强认证）。新注册的第一次登录不要求（还没开）。
@@ -154,6 +155,7 @@ door4ai-lab/
 - [x] 新增入门讲《Git 和 GitHub：代码的时光机与云端仓库》+「Git 实验室」五个实验，排为 order 3（硬件讲之后、Token 讲之前）（2026-10-15）
 - [x] 新增入门讲《我们是怎么连上互联网的：IP、DNS、路由与 DNS 污染》+「网络实验室」七部分（00 比方 + 01–06 实验），order 2.5（2026-10-15）
 - [x] 新增纯文字讲《Cloudflare 是做什么的：一张全球网络上的五类功能》（order 3.5，网络讲(2.5)与 Git 讲之后、Token 讲之前；无实验页，正文内嵌一张请求路径 SVG 图）（2026-10-16）
+- [x] 新增《梯度下降是什么：模型是怎么把参数一点点调对的》+「梯度下降实验室」五个实验 + 两段 Manim 动画（Descent1D、Gradient2D），order 20，排在 KV Cache 之后，作为训练相关内容的第一讲（2026-10-16）
 - [ ] 下一讲：题目未定（候选见第 7 节）
 - [ ] 关于页只有两句话，待充实
 - [ ] 没有统计/分析（可考虑 Cloudflare Web Analytics，免费，一行脚本）
@@ -172,6 +174,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-16 · Claude** — 按本人「什么是梯度下降 → 写成教材」用 skill `write-lesson` 新增一讲：`src/content/blog/gradient-descent.md`（series ai-mastery，**order 20**，KV Cache 之后；公式用 HTML/Unicode 写，站点无 KaTeX，`Base.astro` 加 `.prose p.formula`）+ 实验页 `public/labs/gradient-descent/index.html`：01 一维曲线（碗 / 起伏两坑，切线 + 步子，可点选出发点）/ 02 ½ax² 上学习率 × 曲率，四种收敛情形与 2/a 上限（解析算步数）/ 03 圆碗、窄谷（κ=50）、Rosenbrock 上 GD、Momentum(β 0.9)、Adam 同时出发，各方法学习率在读数里标明，可调倍数 / 04 40 点拟合直线（种子固定的生成数据，MSE 梯度，最小二乘最优点与发散临界 2/λmax 由数据算出）/ 05 200 点、学习率 0.01、相同样本预算下 batch 1/8/32/200 的路线与损失曲线。Manim 源码 `manim-src/gradient-descent/scenes.py`，产物 `public/videos/gradient-descent/{Descent1D,Gradient2D}.{webm,png}`。本地 build 通过；headless Chromium 检查 1440 浅色 / 390 深色无横向滚动、无脚本错误。
 
 - **2026-10-16 · Claude** — 按本人要求：(1) 文字铺满版面——去掉 `Base.astro`、`WhatsAppJoin.astro`、六个实验页（含 `labs-src/computer-anatomy/build.mjs`）和实验页模板里的 68ch / 892px 限制，页边距统一 `clamp(16px,3vw,40px)`；(2) 科学单位改英文缩写——internet-basics 文章与实验（km/ms、ms、s）、computer-anatomy 实验与生成脚本（TB/s、GB/s、s/ms/μs、token/s）。两条规则写进第 4 节与 skill `write-lesson`。检查 7 讲 1440 / 390 宽左边线与页眉对齐、无横向滚动、实验页无脚本错误。
 
@@ -310,7 +314,7 @@ door4ai-lab/
 
 ## 7. 下一步建议（接手者可直接挑一个做）
 
-1. 下一篇实验文章。Attention、Tokenizer 已完成。Tokenizer 已完成。候选：LoRA 低秩微调为什么省参数（和 MLA 的低秩思想一脉相承）。
+1. 下一篇实验文章。Attention、Tokenizer、梯度下降已完成。候选：反向传播怎么算梯度（接梯度下降讲）；LoRA 低秩微调为什么省参数（和 MLA 的低秩思想一脉相承）。
 2. 给文章列表加按 tag 过滤。
 3. 加 Cloudflare Web Analytics。
 
