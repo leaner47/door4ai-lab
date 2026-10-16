@@ -29,6 +29,10 @@ export const POSTS: Record<string, PostAccess> = {
     "access": "paid",
     "series": "ai-mastery"
   },
+  "residual-connection": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
   "tokenizer-llm": {
     "access": "paid",
     "series": "ai-mastery"
@@ -41,5 +45,6 @@ export const LABS: Record<string, string> = {
   "labs/gradient-descent": "gradient-descent",
   "labs/internet-basics": "internet-basics",
   "labs/kv-cache": "kv-cache-quantization",
+  "labs/residual-connection": "residual-connection",
   "labs/tokenizer-llm": "tokenizer-llm"
 };
