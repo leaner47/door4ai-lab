@@ -42,6 +42,15 @@ const next = idx >= 0 && idx < series.length - 1 ? series[idx + 1] : null;
   </article>
   <script is:inline define:vars={{ slug: post.id }}>
     try { const k = 'd4a-read', r = JSON.parse(localStorage.getItem(k) || '[]'); if (!r.includes(slug)) { r.push(slug); localStorage.setItem(k, JSON.stringify(r)); } } catch (e) {}
+    // 学习记录（课程目录的学习面板用）：按本地日期记当天打开过哪些讲，只保留最近 400 天
+    try {
+      const d = new Date(), day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const k = 'd4a-activity', log = JSON.parse(localStorage.getItem(k) || '{}');
+      log[day] = log[day] || []; if (!log[day].includes(slug)) log[day].push(slug);
+      const cut = new Date(d.getTime() - 400 * 864e5).toISOString().slice(0, 10);
+      Object.keys(log).forEach((x) => { if (x < cut) delete log[x]; });
+      localStorage.setItem(k, JSON.stringify(log));
+    } catch (e) {}
   </script>
   <script is:inline>
     // 实验 iframe 随内容自动长高（同源，可直接量），页面里不再出现第二个滚动条

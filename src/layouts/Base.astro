@@ -129,10 +129,27 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     .postlist a.t{display:inline-block;font-size:22px;font-weight:700;line-height:1.4;text-decoration:none;color:var(--fg)}
     .postlist a.t:hover{color:var(--accent)}
     .postlist p{margin:6px 0 0;color:var(--muted)}
-    .progress{display:flex;align-items:center;gap:12px;margin-top:20px;font-size:14px;color:var(--muted)}
-    .progress[hidden]{display:none}
-    .progress .track{flex:0 1 220px;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
-    .progress .fill{display:block;height:100%;width:0;background:var(--accent);transition:width .4s}
+    /* 课程目录顶部的学习面板（GitHub 贡献图式） */
+    .act{margin-top:28px;padding:16px 18px 12px;border:1px solid var(--line);border-radius:10px;background:var(--paper)}
+    .act-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px 16px;flex-wrap:wrap;margin-bottom:10px}
+    .act-title{font-weight:700;font-size:16px}
+    .act-sum{font-size:14px;color:var(--muted)}
+    .act-scroll{overflow-x:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent;padding-bottom:4px}
+    .act-grid{display:flex;gap:3px;width:max-content;margin-left:auto}
+    .act-col{display:grid;grid-template-rows:16px repeat(7,11px);gap:3px}
+    .act-col b{font-weight:400;font-size:11px;line-height:16px;color:var(--muted);white-space:nowrap;width:11px;overflow:visible}
+    .act-wd{margin-right:4px}
+    .act-wd span{font-size:10px;line-height:11px;color:var(--muted);width:12px}
+    .act i,.act-legend i{display:block;width:11px;height:11px;border-radius:2px;background:var(--chip);outline:1px solid color-mix(in srgb,var(--fg) 6%,transparent);outline-offset:-1px}
+    .act i.future{background:none;outline:0}
+    .act i[data-l="1"]{background:color-mix(in srgb,var(--accent) 30%,var(--paper))}
+    .act i[data-l="2"]{background:color-mix(in srgb,var(--accent) 55%,var(--paper))}
+    .act i[data-l="3"]{background:color-mix(in srgb,var(--accent) 78%,var(--paper))}
+    .act i[data-l="4"]{background:var(--accent)}
+    .act i.today{outline:1.5px solid var(--fg);outline-offset:-1.5px}
+    .act-foot{display:flex;justify-content:space-between;align-items:center;gap:8px 16px;flex-wrap:wrap;margin-top:8px;font-size:12.5px;color:var(--muted)}
+    .act-legend{display:inline-flex;align-items:center;gap:3px}
+    .act-legend i{margin:0 1px}
     @media (max-width:520px){.postlist li{grid-template-columns:44px 1fr}.postlist .num{font-size:34px}.postlist a.t{font-size:20px}}
     .reshead{max-width:900px;margin:0 auto;padding:0 clamp(16px,3vw,40px);box-sizing:border-box}
     main.full .reshead:first-child{padding-top:40px}

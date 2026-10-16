@@ -12,9 +12,19 @@ const groups = PARTS.map((part) => ({ part, items: numbered.filter(({ p }) => pa
   <div class="eyebrow">Course</div>
   <h1>AI 从入门到精通</h1>
   <p class="prose" style="color:var(--muted)">按顺序读。大多数讲配有一个可以动手的实验，先玩实验再看文字，理解会快很多。</p>
-  <div class="progress" id="progress" hidden>
-    <span class="track"><span class="fill"></span></span><span class="txt"></span>
-  </div>
+  <section class="act" id="act" aria-label="学习记录">
+    <div class="act-top">
+      <span class="act-title">学习记录</span>
+      <span class="act-sum" id="act-sum">已读 0 / {posts.length} 讲</span>
+    </div>
+    <div class="act-scroll" id="act-scroll">
+      <div class="act-grid" id="act-grid" role="img" aria-label="过去一年每天读了几讲"></div>
+    </div>
+    <div class="act-foot">
+      <span>记录只保存在这台设备的浏览器里</span>
+      <span class="act-legend">少<i data-l="0"></i><i data-l="1"></i><i data-l="2"></i><i data-l="3"></i><i data-l="4"></i>多</span>
+    </div>
+  </section>
   {groups.map(({ part, items }, gi) => (
     <section class="part">
       <header class="part-head">
@@ -35,20 +45,55 @@ const groups = PARTS.map((part) => ({ part, items: numbered.filter(({ p }) => pa
     </section>
   ))}
   <script>
-    // 阅读进度只存在本机浏览器（localStorage）：已读的编号变灰，下一讲的编号高亮，顶部显示进度条
+    // 阅读进度只存在本机浏览器（localStorage）：
+    //   d4a-read      读过的讲（文章页打开即记）→ 已读编号变灰、下一讲编号高亮、「已读 N / M 讲」
+    //   d4a-activity  {日期: [讲]} → GitHub 贡献图式的学习面板（53 周 × 7 天，周一在上）
     (() => {
-      let read: string[] = [];
+      let read: string[] = [], log: Record<string, string[]> = {};
       try { read = JSON.parse(localStorage.getItem('d4a-read') || '[]'); } catch (e) {}
+      try { log = JSON.parse(localStorage.getItem('d4a-activity') || '{}'); } catch (e) {}
       const items = [...document.querySelectorAll<HTMLLIElement>('.postlist li')];
       const done = items.filter((li) => read.includes(li.dataset.slug!));
-      if (!done.length) return;
-      items.forEach((li) => li.classList.remove('next'));
-      done.forEach((li) => li.classList.add('read'));
-      items.find((li) => !li.classList.contains('read'))?.classList.add('next');
-      const bar = document.getElementById('progress')!;
-      bar.hidden = false;
-      (bar.querySelector('.fill') as HTMLElement).style.width = `${(done.length / items.length) * 100}%`;
-      bar.querySelector('.txt')!.textContent = `已读 ${done.length} / ${items.length} 讲`;
+      if (done.length) {
+        items.forEach((li) => li.classList.remove('next'));
+        done.forEach((li) => li.classList.add('read'));
+        items.find((li) => !li.classList.contains('read'))?.classList.add('next');
+      }
+
+      const key = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const dow = (today.getDay() + 6) % 7; // 周一 = 0
+      const WEEKS = 53;
+      const start = new Date(today); start.setDate(today.getDate() - dow - (WEEKS - 1) * 7);
+      const grid = document.getElementById('act-grid')!;
+      const frag = document.createDocumentFragment();
+      // 第一列：星期标签（一、三、五）
+      const wk = document.createElement('div'); wk.className = 'act-col act-wd';
+      wk.innerHTML = '<b></b>' + ['一', '', '三', '', '五', '', ''].map((t) => `<span>${t}</span>`).join('');
+      frag.append(wk);
+      let days = 0, lastMonth = -1;
+      for (let w = 0; w < WEEKS; w++) {
+        const col = document.createElement('div'); col.className = 'act-col';
+        const first = new Date(start); first.setDate(start.getDate() + w * 7);
+        const m = document.createElement('b');
+        if (first.getMonth() !== lastMonth && w < WEEKS - 1) { m.textContent = `${first.getMonth() + 1}月`; lastMonth = first.getMonth(); }
+        col.append(m);
+        for (let d = 0; d < 7; d++) {
+          const day = new Date(first); day.setDate(first.getDate() + d);
+          const c = document.createElement('i');
+          if (day > today) { c.className = 'future'; col.append(c); continue; }
+          const n = (log[key(day)] || []).length;
+          if (n) days++;
+          c.dataset.l = String(Math.min(n, 4));
+          c.title = `${day.getMonth() + 1}月${day.getDate()}日：${n ? `读了 ${n} 讲` : '没有学习记录'}`;
+          if (+day === +today) c.classList.add('today');
+          col.append(c);
+        }
+        frag.append(col);
+      }
+      grid.append(frag);
+      document.getElementById('act-sum')!.textContent = `已读 ${done.length} / ${items.length} 讲 · 过去一年学习 ${days} 天`;
+      const sc = document.getElementById('act-scroll')!; sc.scrollLeft = sc.scrollWidth; // 手机上默认显示最近几周
     })();
   </script>
 </Base>
