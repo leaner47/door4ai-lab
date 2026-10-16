@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-15 22:20 America/New_York · 更新者：Claude（会话 session_01BMYreMHGsorAx7NqQQo6vN）
+最后更新：2026-10-16 00:30 America/New_York · 更新者：Claude（会话 session_01ANkCBJ5aw14gCXeBLRXwdA）
 
 ---
 
@@ -140,6 +140,7 @@ door4ai-lab/
 - [x] 新增《Token 是什么：一句话是怎么进出大模型的》+「Token 实验室」七个实验（00–06），排为第 2 讲（order 4，在硬件讲与注意力讲之间）（2026-10-14）
 - [x] 新增入门讲《Git 和 GitHub：代码的时光机与云端仓库》+「Git 实验室」五个实验，排为 order 3（硬件讲之后、Token 讲之前）（2026-10-15）
 - [x] 新增入门讲《我们是怎么连上互联网的：IP、DNS、路由与 DNS 污染》+「网络实验室」七部分（00 比方 + 01–06 实验），order 2.5（2026-10-15）
+- [x] 新增纯文字讲《Cloudflare 是做什么的：一张全球网络上的五类功能》（order 3.5，网络讲(2.5)与 Git 讲之后、Token 讲之前；无实验页，正文内嵌一张请求路径 SVG 图）（2026-10-16）
 - [ ] 下一讲：题目未定（候选见第 7 节）
 - [ ] 关于页只有两句话，待充实
 - [ ] 没有统计/分析（可考虑 Cloudflare Web Analytics，免费，一行脚本）
@@ -158,6 +159,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-16 · Claude** — 按本人要求把「Cloudflare 入门教材」（先在 Claude 文档里写成）加到网站：新增 `src/content/blog/cloudflare-basics.md`（series ai-mastery，order 3.5，无 lab，五大类模块 + 场景选型 + 大陆访问注意 + 练习（答案用 `<details>` 折叠）+ 术语表；导读里内嵌竖排请求路径 SVG，颜色用站点 token）；`Base.astro` 给 `.prose` 加 `figure.cf-flow` / `figcaption` / `details` 样式。本地临时副本 build 通过；headless Chromium 检查 1280 浅色 / 390 深色无横向滚动、图在深浅色下可读。注：order 用了小数 3.5，schema 是 z.number()，排序正常。
 
 - **2026-10-15 · Claude** — 按本人要求把聊天里讲的「DNS 污染 / 路由 / 怎么连上互联网」做成课程一讲：`src/content/blog/internet-basics.md`（series ai-mastery，order 2.5）+ 实验页 `public/labs/internet-basics/index.html`：00 四个比方 / 01 出发地→服务器的环节链与距离延迟（真实城市坐标 + 光纤 204 km/ms + 绕远系数滑块）/ 02 IPv4 位串与地址段分类 + NAT 表（示例公网 IP 203.0.113.7）/ 03 DNS 逐级查询分步演示（含缓存命中）/ 04 十个城市的路由网络，Dijkstra 最短路径，可点线挖断、点节点看路由表、traceroute 输出 / 05 DNS 污染时序图（运营商 DNS、8.8.8.8、DoH、代理 fake-ip 四种方式 × 普通/被封域名；时间取自 04 的图）/ 06 打开网页的来回次数（TLS1.2/1.3/HTTP3、DNS 缓存、对比 CDN）。窄屏下路由图用单独的竖排坐标。本地 build 通过；headless Chromium 检查 1000 浅色 / 390 深色、无横向滚动、无脚本错误，文章页 iframe 自动长高。直接推 main（本人同意）。
 

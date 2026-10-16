@@ -87,6 +87,11 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     .prose img{max-width:100%}
     .prose table{border-collapse:collapse;width:100%;font-size:15px}
     .prose th,.prose td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+    .prose figure.cf-flow{margin:28px auto;max-width:420px}
+    .prose figure.cf-flow svg{display:block;width:100%;height:auto;font-family:inherit}
+    .prose figcaption{font-size:14px;color:var(--muted);margin-top:8px;text-align:center}
+    .prose details{margin:16px 0;padding:10px 14px;border:1px solid var(--line);border-radius:6px;background:var(--paper)}
+    .prose summary{cursor:pointer;font-weight:700}
     /* 文章页里的实验：不加边框，整宽嵌入，看起来和单独打开实验页一样 */
     .lab-embed{display:block;width:100%;height:600px;border:0;overflow:hidden;background:transparent}
     .post-body{width:100%;max-width:892px;margin:0 auto;padding:0 16px 80px;box-sizing:border-box}
