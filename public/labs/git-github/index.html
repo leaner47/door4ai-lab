@@ -492,7 +492,7 @@ function rInit(){
   R={c:[],k:{you:0,friend:0}};
   const a=rNew('初始化项目',[],'you'),b=rNew('加 README',[a],'you');
   R.you=b;R.origin=b;R.friend=null;
-  R.out='<span class="m">你的 Mac</span> '+P+'git push -u origin main\nTo github.com:leaner47/demo.git\n * [new branch]      main -> main';
+  R.out='<span class="m">你的 Mac</span> '+P+'git push -u origin main\nTo github.com:your-name/demo.git\n * [new branch]      main -> main';
 }
 function rLog(tip,cmp){
   if(tip==null)return '<li style="color:var(--muted);font-size:13px">（还没有这个仓库）</li>';
@@ -515,20 +515,20 @@ function rCard(who){
   return `<div class="repo"><h3><span class="dot" style="width:9px;height:9px;border-radius:50%;background:${WHO[who].col};display:inline-block"></span>${WHO[who].name}</h3><div class="st">${rStat(tip)}</div><ul class="rlog">${rLog(tip,R.origin)}</ul><div class="zbar">${btns}</div></div>`;
 }
 function rRender(){
-  $('#repos').innerHTML=rCard('you')+`<div class="repo gh"><h3>GitHub · origin</h3><div class="st">leaner47/demo · 远程仓库</div><ul class="rlog">${rLog(R.origin,null)}</ul><div class="st" style="margin-top:8px">只能靠 push 改变它</div></div>`+rCard('friend');
+  $('#repos').innerHTML=rCard('you')+`<div class="repo gh"><h3>GitHub · origin</h3><div class="st">your-name/demo · 远程仓库</div><ul class="rlog">${rLog(R.origin,null)}</ul><div class="st" style="margin-top:8px">只能靠 push 改变它</div></div>`+rCard('friend');
   $('#rTerm').innerHTML=R.out;
 }
 $('#repos').addEventListener('click',e=>{
   const t=e.target.closest('[data-r]');if(!t)return;
   const w=t.dataset.w,a=t.dataset.r,pre='<span class="m">'+WHO[w].name+'</span> ';
   if(R.c.length>=40&&(a==='commit'||a==='pull')){R.out='<span class="m"># 实验提交数到上限了，点「重置」</span>';rRender();return}
-  if(a==='clone'){R[w]=R.origin;R.out=pre+P+'git clone https://github.com/leaner47/demo.git\nCloning into \'demo\'...\nReceiving objects: 100% ('+rAnc(R.origin).size+'/'+rAnc(R.origin).size+'), done.'}
+  if(a==='clone'){R[w]=R.origin;R.out=pre+P+'git clone https://github.com/your-name/demo.git\nCloning into \'demo\'...\nReceiving objects: 100% ('+rAnc(R.origin).size+'/'+rAnc(R.origin).size+'), done.'}
   else if(a==='commit'){const list=RM[w];const msg=list[R.k[w]++%list.length];R[w]=rNew(msg,[R[w]],w);R.out=pre+P+'git commit -am "'+msg+'"\n[main '+R.c[R[w]].h+'] '+msg}
   else if(a==='push'){
     const t1=R[w],o=R.origin;
     if(t1===o||rAnc(o).has(t1))R.out=pre+P+'git push\nEverything up-to-date';
-    else if(rAnc(t1).has(o)){R.origin=t1;R.out=pre+P+'git push\nTo github.com:leaner47/demo.git\n   '+R.c[o].h+'..'+R.c[t1].h+'  main -> main'}
-    else R.out=pre+P+'git push\nTo github.com:leaner47/demo.git\n<span class="r"> ! [rejected]        main -> main (fetch first)\nerror: failed to push some refs to \'github.com:leaner47/demo.git\'</span>\n<span class="y">hint: GitHub 上有你本地没有的提交。先 git pull 把它们合进来，再 push。</span>';
+    else if(rAnc(t1).has(o)){R.origin=t1;R.out=pre+P+'git push\nTo github.com:your-name/demo.git\n   '+R.c[o].h+'..'+R.c[t1].h+'  main -> main'}
+    else R.out=pre+P+'git push\nTo github.com:your-name/demo.git\n<span class="r"> ! [rejected]        main -> main (fetch first)\nerror: failed to push some refs to \'github.com:your-name/demo.git\'</span>\n<span class="y">hint: GitHub 上有你本地没有的提交。先 git pull 把它们合进来，再 push。</span>';
   }
   else if(a==='pull'){
     const t1=R[w],o=R.origin;
@@ -543,7 +543,7 @@ rInit();rRender();
 
 /* ================= 05 Pull Request ================= */
 const STEPS=[
-  {t:'起点',cmd:'git clone https://github.com/leaner47/demo.git',d:'GitHub 上的 main 已经有 3 个提交，你把仓库 clone 到本地。',f:g=>{}},
+  {t:'起点',cmd:'git clone https://github.com/your-name/demo.git',d:'GitHub 上的 main 已经有 3 个提交，你把仓库 clone 到本地。',f:g=>{}},
   {t:'开分支',cmd:'git switch -c fix-typo',d:'不直接动 main，先开一条自己的分支。',f:g=>gBranch(g,'fix-typo')},
   {t:'提交',cmd:'git commit -am "修正 README 错别字"',d:'在分支上改好、提交。此时这个提交只在你电脑上。',f:g=>gCommit(g,'修正 README 错别字')},
   {t:'推送分支',cmd:'git push -u origin fix-typo',d:'把分支推到 GitHub。GitHub 会提示：要不要为它开一个 Pull Request？',f:g=>{}},
