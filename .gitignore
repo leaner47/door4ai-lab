@@ -10,3 +10,8 @@ labs-src/*/shots/
 
 # 本地测试临时生成，线上绑定以 Cloudflare 控制台为准（见 HANDOFF）
 wrangler.toml
+
+# Manim 渲染缓存
+manim-src/**/media/
+manim-src/media/
+__pycache__/

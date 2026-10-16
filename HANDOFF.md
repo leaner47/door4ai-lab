@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-16 01:08 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
+最后更新：2026-10-16 01:25 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7，写教材 skill + Manim）
 
 ---
 
@@ -39,6 +39,8 @@ Astro 5 静态站，无 UI 框架，无 Tailwind。依赖只有 `astro`、`@astr
 ```
 door4ai-lab/
 ├── HANDOFF.md              ← 本文件
+├── .claude/skills/write-lesson/ ← 项目专用 skill「写一讲教材」：SKILL.md + templates/（lab.html、scene.py、article.md）
+├── manim-src/              ← Manim 动画源码：door4ai_style.py（统一配色/字体/工具函数）、manim.cfg、<slug>/scenes.py；渲染缓存 media/ 不入库
 ├── CLAUDE.md / AGENTS.md   ← 指向本文件的强制说明（给各家 AI 工具读）
 ├── README.md               ← 面向人的简短说明
 ├── astro.config.mjs        ← site: https://lab.door4ai.com, sitemap（排除 /login/ /account/）
@@ -80,6 +82,7 @@ door4ai-lab/
 ```
 
 ### 写一篇新文章的标准流程
+**本人提出一个问题要写成教材时，按项目 skill `.claude/skills/write-lesson/SKILL.md` 做**（文章 + 实验页 + Manim 动画 + 上线 + 更新本文件）。下面是简版：
 1. 实验页：写成单文件 HTML（内联 CSS/JS，可用 cdnjs 等 CDN 加载库），放到 `public/labs/<slug>/index.html`。
 2. 文章：`src/content/blog/<slug>.md`，frontmatter 写 `lab: /labs/<slug>/`；属于课程的写 `series: ai-mastery` 和 `order: <数字>`（10、20、30… 留空隙便于插入）。不写 series 的文章不会出现在课程目录里。
    - 加资源：编辑 `src/data/resources.ts`，不需要新建页面。**Resource 页只放本人明确指定的条目，AI 不得自行添加。**
@@ -97,6 +100,7 @@ door4ai-lab/
 
 ## 4. 已做的关键决定（不要反复讨论）
 
+- **Manim 可视化（2026-10-16）**：动画源码放 `manim-src/<slug>/scenes.py`，统一导入 `manim-src/door4ai_style.py`（背景 `#111214`、强调色 `#6f9cf0`、中文苹方/Noto CJK、数字 Times New Roman）。产物 `public/videos/<slug>/<Scene>.webm` + 同名 `.png` 海报，用 `<figure class="clip"><video …>` 嵌入文章或实验页（`Base.astro` 与实验页模板都有 `.clip` 样式）。渲染在云端工作区装 Manim（Python 3.12 + `libpango1.0-dev` + `dvisvgm`，步骤见 skill）；本人 Mac 的 `~/.venvs/manim` 不在可用 shell 里。参考文档：claude.ai 项目里的 `manim/使用说明.md`。
 - **【总规矩】教材里不出现指向本人的个人信息**（2026-10-16 本人要求）：不用本人所在/家乡城市（如扬州、高邮、波士顿）、学校、真名、GitHub 用户名、邮箱、自家设备/服务器等做例子。需要城市就用北京、上海、合肥、纽约这类中性城市；需要用户名用 `your-name`；本站域名 `lab.door4ai.com` 作为课程网站自身的例子可以用。
 - **【总规矩】保持简洁，不要主动加说明性小字**（2026-10-16 本人明确要求）：不加 eyebrow 小标签、副标题、导语/说明句、计数（如「第一篇 · 4 讲」）、注释类灰字，除非本人要求进一步补充说明。新页面、新组件默认只放标题和必要内容。
 - `door4ai-lab.pages.dev` 及预览地址一律跳转到 `lab.door4ai.com`（代码里的中间件实现，不在控制台配置），避免绕过登录。
@@ -167,6 +171,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-16 · Claude** — 按本人要求新建项目专用 skill `.claude/skills/write-lesson/`（问题 → 文章 + 实验页 + Manim 动画 → 上线 + 更新 HANDOFF，含三份模板）；新增 `manim-src/door4ai_style.py`、`manim-src/manim.cfg`；`Base.astro` 加 `.prose figure.clip` 视频样式；`.gitignore` 忽略 Manim 缓存。在云端装 Manim v0.22.0 实测：模板动画（中文、公式、配色）与实验页模板（深浅色、390px）均正常。
 
 - **2026-10-16 · Claude** — 按本人要求隐去教材中的个人信息：网络实验「你在」改为 北京 / 合肥 / 纽约（默认北京，坐标同步，路由图节点扬州→合肥），文中「扬州到洛杉矶」改「上海到洛杉矶」（北京往返约 99 ms 会与「100 ms 以上」矛盾）；Git 实验示例仓库 `leaner47/demo` → `your-name/demo`。全量检索 src/content、public/labs、labs-src 已无扬州/波士顿/leaner47。第 4 节加「不出现个人信息」总规矩。
 
