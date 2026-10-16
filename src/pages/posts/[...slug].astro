@@ -40,16 +40,17 @@ const next = idx >= 0 && idx < series.length - 1 ? series[idx + 1] : null;
       )}
     </div>
   </article>
-  <script is:inline define:vars={{ slug: post.id }}>
-    try { const k = 'd4a-read', r = JSON.parse(localStorage.getItem(k) || '[]'); if (!r.includes(slug)) { r.push(slug); localStorage.setItem(k, JSON.stringify(r)); } } catch (e) {}
-    // 学习记录（课程目录的学习面板用）：按本地日期记当天打开过哪些讲，只保留最近 400 天
+  <script is:inline>
+    // 学习记录（课程目录的学习面板用）：按本地日期计数，每打开一次文章 +1，重复读也算；只保留最近 400 天
     try {
       const d = new Date(), day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       const k = 'd4a-activity', log = JSON.parse(localStorage.getItem(k) || '{}');
-      log[day] = log[day] || []; if (!log[day].includes(slug)) log[day].push(slug);
+      Object.keys(log).forEach((x) => { if (Array.isArray(log[x])) log[x] = log[x].length; }); // 旧格式（当天读过的讲）换算成次数
+      log[day] = (+log[day] || 0) + 1;
       const cut = new Date(d.getTime() - 400 * 864e5).toISOString().slice(0, 10);
       Object.keys(log).forEach((x) => { if (x < cut) delete log[x]; });
       localStorage.setItem(k, JSON.stringify(log));
+      localStorage.removeItem('d4a-read'); // 不再记「已读」
     } catch (e) {}
   </script>
   <script is:inline>

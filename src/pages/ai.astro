@@ -15,10 +15,10 @@ const groups = PARTS.map((part) => ({ part, items: numbered.filter(({ p }) => pa
   <section class="act" id="act" aria-label="学习记录">
     <div class="act-top">
       <span class="act-title">学习记录</span>
-      <span class="act-sum" id="act-sum">已读 0 / {posts.length} 讲</span>
+      <span class="act-sum" id="act-sum">还没有学习记录</span>
     </div>
     <div class="act-scroll" id="act-scroll">
-      <div class="act-grid" id="act-grid" role="img" aria-label="过去一年每天读了几讲"></div>
+      <div class="act-grid" id="act-grid" role="img" aria-label="过去一年每天的学习次数"></div>
     </div>
     <div class="act-foot">
       <span>记录只保存在这台设备的浏览器里</span>
@@ -34,7 +34,7 @@ const groups = PARTS.map((part) => ({ part, items: numbered.filter(({ p }) => pa
       </header>
       <ul class="postlist">
         {items.map(({ p, n }) => (
-          <li data-slug={p.id} class:list={[{ next: n === 1 }]}>
+          <li data-slug={p.id}>
             <div class="num" aria-hidden="true">{String(n).padStart(2, '0')}</div>
             <div>
               <a class="t" href={`/posts/${p.id}/`}>{p.data.title}</a>
@@ -45,20 +45,13 @@ const groups = PARTS.map((part) => ({ part, items: numbered.filter(({ p }) => pa
     </section>
   ))}
   <script>
-    // 阅读进度只存在本机浏览器（localStorage）：
-    //   d4a-read      读过的讲（文章页打开即记）→ 已读编号变灰、下一讲编号高亮、「已读 N / M 讲」
-    //   d4a-activity  {日期: [讲]} → GitHub 贡献图式的学习面板（53 周 × 7 天，周一在上）
+    // 学习记录只存在本机浏览器（localStorage 的 d4a-activity = {日期: 次数}，文章页每打开一次 +1，重复读也算）
+    // → GitHub 贡献图式的学习面板（53 周 × 7 天，周一在上）
     (() => {
-      let read: string[] = [], log: Record<string, string[]> = {};
-      try { read = JSON.parse(localStorage.getItem('d4a-read') || '[]'); } catch (e) {}
+      let log: Record<string, number | string[]> = {};
       try { log = JSON.parse(localStorage.getItem('d4a-activity') || '{}'); } catch (e) {}
-      const items = [...document.querySelectorAll<HTMLLIElement>('.postlist li')];
-      const done = items.filter((li) => read.includes(li.dataset.slug!));
-      if (done.length) {
-        items.forEach((li) => li.classList.remove('next'));
-        done.forEach((li) => li.classList.add('read'));
-        items.find((li) => !li.classList.contains('read'))?.classList.add('next');
-      }
+      const count = (v: unknown) => (Array.isArray(v) ? v.length : +(v as number) || 0);
+      const level = (n: number) => (n === 0 ? 0 : n === 1 ? 1 : n <= 3 ? 2 : n <= 6 ? 3 : 4);
 
       const key = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -71,7 +64,7 @@ const groups = PARTS.map((part) => ({ part, items: numbered.filter(({ p }) => pa
       const wk = document.createElement('div'); wk.className = 'act-col act-wd';
       wk.innerHTML = '<b></b>' + ['一', '', '三', '', '五', '', ''].map((t) => `<span>${t}</span>`).join('');
       frag.append(wk);
-      let days = 0, lastMonth = -1;
+      let days = 0, total = 0, lastMonth = -1;
       for (let w = 0; w < WEEKS; w++) {
         const col = document.createElement('div'); col.className = 'act-col';
         const first = new Date(start); first.setDate(start.getDate() + w * 7);
@@ -82,17 +75,23 @@ const groups = PARTS.map((part) => ({ part, items: numbered.filter(({ p }) => pa
           const day = new Date(first); day.setDate(first.getDate() + d);
           const c = document.createElement('i');
           if (day > today) { c.className = 'future'; col.append(c); continue; }
-          const n = (log[key(day)] || []).length;
-          if (n) days++;
-          c.dataset.l = String(Math.min(n, 4));
-          c.title = `${day.getMonth() + 1}月${day.getDate()}日：${n ? `读了 ${n} 讲` : '没有学习记录'}`;
+          const n = count(log[key(day)]);
+          if (n) { days++; total += n; }
+          c.dataset.l = String(level(n));
+          c.title = `${day.getMonth() + 1}月${day.getDate()}日：${n ? `学习 ${n} 次` : '没有学习记录'}`;
           if (+day === +today) c.classList.add('today');
           col.append(c);
         }
         frag.append(col);
       }
       grid.append(frag);
-      document.getElementById('act-sum')!.textContent = `已读 ${done.length} / ${items.length} 讲 · 过去一年学习 ${days} 天`;
+      // 连续天数：从今天往前数（今天还没学就从昨天开始数）
+      let streak = 0; const cur = new Date(today);
+      if (!count(log[key(cur)])) cur.setDate(cur.getDate() - 1);
+      while (count(log[key(cur)])) { streak++; cur.setDate(cur.getDate() - 1); }
+      document.getElementById('act-sum')!.textContent = total
+        ? `过去一年学习 ${total} 次 · ${days} 天${streak > 1 ? ` · 连续 ${streak} 天` : ''}`
+        : '还没有学习记录';
       const sc = document.getElementById('act-scroll')!; sc.scrollLeft = sc.scrollWidth; // 手机上默认显示最近几周
     })();
   </script>

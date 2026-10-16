@@ -121,8 +121,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     .postlist li{display:grid;grid-template-columns:72px 1fr;align-items:center;gap:0 8px;padding:20px 0;border-top:1px solid var(--line)}
     .postlist li:last-child{border-bottom:1px solid var(--line)}
     .postlist .num{font-size:44px;line-height:1;color:var(--line);font-variant-numeric:lining-nums;transition:color .2s}
-    .postlist li:hover .num,.postlist li.next .num{color:var(--accent)}
-    .postlist li.read .num{color:var(--muted)}
+    .postlist li:hover .num{color:var(--accent)}
     .postlist .meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
     .postlist .badge{font-size:12px;line-height:1;padding:4px 8px;border-radius:999px;background:var(--accent);color:var(--bg);letter-spacing:.04em}
     .postlist .badge.done{background:transparent;color:var(--muted);border:1px solid var(--line)}
