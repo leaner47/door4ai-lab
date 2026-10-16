@@ -27,12 +27,7 @@ const groups = PARTS.map((part) => ({ part, items: numbered.filter(({ p }) => pa
           <li data-slug={p.id} class:list={[{ next: n === 1 }]}>
             <div class="num" aria-hidden="true">{String(n).padStart(2, '0')}</div>
             <div>
-              <div class="meta">
-                <span class="eyebrow">第 {n} 讲 · {p.data.lab ? '含实验' : '图文'}</span>
-                {n === 1 && <span class="badge" data-start>从这里开始</span>}
-              </div>
               <a class="t" href={`/posts/${p.id}/`}>{p.data.title}</a>
-              {p.data.tags.length > 0 && <div class="tags">{p.data.tags.map((t) => <span class="tag">{t}</span>)}</div>}
             </div>
           </li>
         ))}
@@ -40,26 +35,16 @@ const groups = PARTS.map((part) => ({ part, items: numbered.filter(({ p }) => pa
     </section>
   ))}
   <script>
-    // 阅读进度只存在本机浏览器（localStorage），打开过的文章记为「已读」
+    // 阅读进度只存在本机浏览器（localStorage）：已读的编号变灰，下一讲的编号高亮，顶部显示进度条
     (() => {
       let read: string[] = [];
       try { read = JSON.parse(localStorage.getItem('d4a-read') || '[]'); } catch (e) {}
       const items = [...document.querySelectorAll<HTMLLIElement>('.postlist li')];
       const done = items.filter((li) => read.includes(li.dataset.slug!));
       if (!done.length) return;
-      document.querySelector('[data-start]')?.remove();
       items.forEach((li) => li.classList.remove('next'));
-      done.forEach((li) => {
-        li.classList.add('read');
-        const b = document.createElement('span'); b.className = 'badge done'; b.textContent = '已读';
-        li.querySelector('.meta')!.append(b);
-      });
-      const nxt = items.find((li) => !li.classList.contains('read'));
-      if (nxt) {
-        nxt.classList.add('next');
-        const b = document.createElement('span'); b.className = 'badge'; b.textContent = '下一讲';
-        nxt.querySelector('.meta')!.append(b);
-      }
+      done.forEach((li) => li.classList.add('read'));
+      items.find((li) => !li.classList.contains('read'))?.classList.add('next');
       const bar = document.getElementById('progress')!;
       bar.hidden = false;
       (bar.querySelector('.fill') as HTMLElement).style.width = `${(done.length / items.length) * 100}%`;

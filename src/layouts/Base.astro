@@ -118,15 +118,15 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     .part-title span{font-size:17px;font-weight:400;color:var(--muted)}
     .part-desc{margin:4px 0 0;color:var(--muted);font-size:15.5px}
     .postlist{list-style:none;padding:0;margin:0}
-    .postlist li{display:grid;grid-template-columns:72px 1fr;gap:0 8px;padding:22px 0;border-top:1px solid var(--line)}
+    .postlist li{display:grid;grid-template-columns:72px 1fr;align-items:center;gap:0 8px;padding:20px 0;border-top:1px solid var(--line)}
     .postlist li:last-child{border-bottom:1px solid var(--line)}
-    .postlist .num{font-size:48px;line-height:1;color:var(--line);font-variant-numeric:lining-nums;padding-top:4px;transition:color .2s}
+    .postlist .num{font-size:44px;line-height:1;color:var(--line);font-variant-numeric:lining-nums;transition:color .2s}
     .postlist li:hover .num,.postlist li.next .num{color:var(--accent)}
     .postlist li.read .num{color:var(--muted)}
     .postlist .meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
     .postlist .badge{font-size:12px;line-height:1;padding:4px 8px;border-radius:999px;background:var(--accent);color:var(--bg);letter-spacing:.04em}
     .postlist .badge.done{background:transparent;color:var(--muted);border:1px solid var(--line)}
-    .postlist a.t{display:inline-block;margin-top:2px;font-size:22px;font-weight:700;line-height:1.4;text-decoration:none;color:var(--fg)}
+    .postlist a.t{display:inline-block;font-size:22px;font-weight:700;line-height:1.4;text-decoration:none;color:var(--fg)}
     .postlist a.t:hover{color:var(--accent)}
     .postlist p{margin:6px 0 0;color:var(--muted)}
     .progress{display:flex;align-items:center;gap:12px;margin-top:20px;font-size:14px;color:var(--muted)}
