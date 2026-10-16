@@ -1,33 +1,44 @@
 ---
 import Base from '../layouts/Base.astro';
 import { getCollection } from 'astro:content';
+import { PARTS, partOf } from '../data/course';
 const posts = (await getCollection('blog'))
   .filter((p) => p.data.series === 'ai-mastery')
   .sort((a, b) => (a.data.order ?? 999) - (b.data.order ?? 999));
-const fmt = (d: Date) => d.toISOString().slice(0, 10);
+const numbered = posts.map((p, i) => ({ p, n: i + 1 }));
+const groups = PARTS.map((part) => ({ part, items: numbered.filter(({ p }) => partOf(p.data.order).key === part.key) })).filter((g) => g.items.length);
 ---
 <Base title="AI 从入门到精通 · Door4AI Lab" description="系统课程：从模型怎么算到推理怎么省，每一讲配可交互实验。">
   <div class="eyebrow">Course</div>
   <h1>AI 从入门到精通</h1>
-  <p class="prose" style="color:var(--muted)">按顺序读。每一讲都有一个实验页，先玩实验再看文字，理解会快很多。</p>
+  <p class="prose" style="color:var(--muted)">按顺序读。大多数讲配有一个可以动手的实验，先玩实验再看文字，理解会快很多。</p>
   <div class="progress" id="progress" hidden>
     <span class="track"><span class="fill"></span></span><span class="txt"></span>
   </div>
-  <ul class="postlist">
-    {posts.map((p, i) => (
-      <li data-slug={p.id} class:list={[{ next: i === 0 }]}>
-        <div class="num" aria-hidden="true">{String(i + 1).padStart(2, '0')}</div>
-        <div>
-          <div class="meta">
-            <span class="eyebrow">第 {i + 1} 讲 · {fmt(p.data.pubDate)}{p.data.lab && ' · 含实验'}</span>
-            {i === 0 && <span class="badge" data-start>从这里开始</span>}
-          </div>
-          <a class="t" href={`/posts/${p.id}/`}>{p.data.title}</a>
-          {p.data.tags.length > 0 && <div class="tags">{p.data.tags.map((t) => <span class="tag">{t}</span>)}</div>}
-        </div>
-      </li>
-    ))}
-  </ul>
+  {groups.map(({ part, items }, gi) => (
+    <section class="part">
+      <header class="part-head">
+        <div class="part-kicker">第 {['一', '二', '三', '四', '五', '六'][gi] ?? gi + 1} 篇 · {items.length} 讲</div>
+        <h2 class="part-title">{part.title}<span>{part.sub}</span></h2>
+        <p class="part-desc">{part.desc}</p>
+      </header>
+      <ul class="postlist">
+        {items.map(({ p, n }) => (
+          <li data-slug={p.id} class:list={[{ next: n === 1 }]}>
+            <div class="num" aria-hidden="true">{String(n).padStart(2, '0')}</div>
+            <div>
+              <div class="meta">
+                <span class="eyebrow">第 {n} 讲 · {p.data.lab ? '含实验' : '图文'}</span>
+                {n === 1 && <span class="badge" data-start>从这里开始</span>}
+              </div>
+              <a class="t" href={`/posts/${p.id}/`}>{p.data.title}</a>
+              {p.data.tags.length > 0 && <div class="tags">{p.data.tags.map((t) => <span class="tag">{t}</span>)}</div>}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
   <script>
     // 阅读进度只存在本机浏览器（localStorage），打开过的文章记为「已读」
     (() => {

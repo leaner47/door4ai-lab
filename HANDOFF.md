@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-16 00:30 America/New_York · 更新者：Claude（会话 session_01ANkCBJ5aw14gCXeBLRXwdA）
+最后更新：2026-10-16 00:36 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7，整体排版统一）
 
 ---
 
@@ -50,6 +50,7 @@ door4ai-lab/
 │   ├── content/blog/*.md   ← 文章正文（markdown）
 │   ├── components/HoloCard.astro ← 全息卡片（移植自 React Bits HoloCard，MIT + Commons Clause）；卡面是由 props 生成的 SVG
 │   ├── scripts/holo-card.js / .css ← HoloCard 的 WebGL 着色器与交互（原版去 React 化）
+│   ├── data/course.ts      ← 课程分篇（基础篇 / 模型篇），按 order 区间自动归篇；新开一篇在这里加
 │   ├── data/community.ts   ← WhatsApp 交流群名称与邀请链接（url 置空 = 全站隐藏入口）
 │   ├── components/WhatsAppJoin.astro ← 群入口：menu（头像下拉菜单里的可展开项，电脑端带二维码，登录后才显示）/ inline（课程文章末尾一行）
 │   ├── data/resources.ts   ← Resource 页的条目（link.dl = 镜像 id 走 /dl/，link.url = 外链）
@@ -117,6 +118,11 @@ door4ai-lab/
 - **右上角账号区（2026-10-14 本人要求，仿常见 SaaS 样式）**：导航链接之后只有一个圆角方形头像按钮（**不要「支持」入口**，本人已明确去掉）；点开下拉菜单：已登录时顶部显示邮箱，下面「个人资料」（仅自建账号启用时显示，链 /account/）、「Resource」（链 /resources/，登录与否都显示）、「AI账号申请」（链 /ai/apply/）、「WhatsApp 交流群 ›」（登录后才显示）、「外观 ›」（展开为 跟随系统 / 浅色 / 深色）、分隔线、「退出登录」；未登录时首项为「登录」。截图里的 Language / View mode 没做（站点只有中文、无其他视图），需要时再加。Esc 和点外部关闭。
 - **外观切换**：存 localStorage `d4a-theme`（light / dark，缺省 = 跟随系统），`<head>` 里内联脚本在渲染前设 `<html data-theme>`，避免闪烁。CSS token 写法：`@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){…} }` + `:root[data-theme="dark"]{…}`，**新增的深色样式都要照此两段写**。实验页同源，加载时读同一个键；切换时父页面直接改 iframe 的 `data-theme`（实验页已有 MutationObserver 重绘画布）。
 - **AI账号申请（2026-10-14 本人要求）**：学员申请 ChatGPT / Claude 等账号（选项：ChatGPT Plus / ChatGPT Pro / Claude Pro / Claude Max / Gemini Advanced / 其他，选项列表在 `functions/ai/apply/api.ts` 与 `src/pages/ai/apply.astro` 两处，改时同步）。必填：账号、用途（≥10 字）、WhatsApp 或微信；备注可选；邮箱取登录身份（Access 的 `cf-access-authenticated-user-email` 头，自建账号启用后取会话）。同一邮箱 24h 最多 5 条。状态：待处理 / 已开通 / 未通过 + 一句回复（学员可见）。**管理员 = Pages 环境变量 `ADMIN_EMAILS` 里的邮箱**，同一页面看到全部申请并改状态；（已随账号系统启用设好）；也可在 R2 桶 `door4ai-lab-dl` 的 `apply/` 前缀下直接看 JSON。路径放在 `/ai/` 下是为了直接受现有 Access 保护；`gate.ts` 加了 `ai/apply → 需登录`。D1 开通后可把 R2 记录迁成表。没有邮件通知（Resend 未配置）。
+- **排版统一（2026-10-16 本人要求「新章节多了，优化整体排版」）**：
+  - 全站版心：内容列 860px（容器 `max-width:892px` + 左右 16px），`Base` 的 `main`、文章页 `.post-body`、所有实验页 `.wrap` 都是这条左边线。**新实验页必须用 `.wrap{max-width:892px;box-sizing:border-box;padding-inline:16px;padding-block:40px 80px}`，开头 = `.eyebrow`（大写英文/关键词，`·` 分隔）+ `h1`（`clamp(28px,5vw,40px)`，700）+ `.lede`，都带 `lab-intro` 类。**
+  - 课程目录按篇分组：`src/data/course.ts` 的 `PARTS`（order < 4 基础篇：电脑、网络、Git、Cloudflare；其余模型篇）。讲号全课程连续编号；每讲元信息为「第 N 讲 · 含实验 / 图文」，不再显示日期。
+  - 文章页：有实验 → 整宽实验（自带标题）+ 正文；没实验 → 同一版心的标题区（eyebrow = 标签用 · 连接，h1 冒号后换行，lede = description）+ 正文。两种都不显示日期。
+  - 每讲末尾：WhatsApp 一行 + 「← 上一讲 / 下一讲 →」翻页卡（同 series 按 order）。
 - 课程目录 /ai：每讲左侧大号编号；**目录里不显示文章 description 小字**（本人要求，只留编号、元信息、标题、标签；description 仍用于文章页与 SEO）；第一讲标「从这里开始」；阅读进度只存本机浏览器 localStorage（键 `d4a-read`，文章页打开即记为已读），有已读时显示进度条、「已读」与「下一讲」标记。不做账号级进度。
 - 课程顺序：网络讲（internet-basics，order 2.5）放在硬件讲之后、Git 讲之前：先懂电脑，再懂电脑怎么连网，再讲 Git/GitHub。order 可以用小数插队。
 - 网络讲的 DNS 污染部分直接点名「防火长城」（2026-10-15 本人决定），只讲原理和可观察的现象，不提供翻墙教程。
@@ -159,6 +165,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-16 · Claude** — 整体排版统一：新增 `src/data/course.ts`（分篇），`ai.astro` 按篇分组；`posts/[...slug].astro` 统一 full 布局，无实验文章改为与实验页一致的标题区，加上一讲/下一讲；`Base.astro` 的 `main` 版心改 892/16，新增 `.part*`、`.post-head`、`.pager` 样式；五个实验页 `.wrap` 改 892 border-box；computer-anatomy（含 `labs-src/.../build.mjs`）版心 860、h1 统一到 40px、补 eyebrow。本地检查 7 讲标题左边线全部 290px（1440 宽）、390px 无横向滚动、深浅色。
 
 - **2026-10-16 · Claude** — 按本人要求把「Cloudflare 入门教材」（先在 Claude 文档里写成）加到网站：新增 `src/content/blog/cloudflare-basics.md`（series ai-mastery，order 3.5，无 lab，五大类模块 + 场景选型 + 大陆访问注意 + 练习（答案用 `<details>` 折叠）+ 术语表；导读里内嵌竖排请求路径 SVG，颜色用站点 token）；`Base.astro` 给 `.prose` 加 `figure.cf-flow` / `figcaption` / `details` 样式。本地临时副本 build 通过；headless Chromium 检查 1280 浅色 / 390 深色无横向滚动、图在深浅色下可读。注：order 用了小数 3.5，schema 是 z.number()，排序正常。
 

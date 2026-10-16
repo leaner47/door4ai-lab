@@ -5,6 +5,10 @@ export const POSTS: Record<string, PostAccess> = {
     "access": "paid",
     "series": "ai-mastery"
   },
+  "cloudflare-basics": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
   "computer-anatomy": {
     "access": "paid",
     "series": "ai-mastery"

@@ -71,7 +71,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     header.site nav a{color:var(--muted);text-decoration:none;font-size:15px}
     @media (max-width:560px){header.site{padding-top:12px;padding-bottom:10px;row-gap:4px}}
     header.site nav a:hover{color:var(--fg)}
-    main{flex:1;display:flex;flex-direction:column;width:100%;max-width:900px;margin:0 auto;padding:40px clamp(16px,3vw,40px) 80px;box-sizing:border-box}
+    main{flex:1;display:flex;flex-direction:column;width:100%;max-width:892px;margin:0 auto;padding:40px 16px 80px;box-sizing:border-box}
     main.full{max-width:none;padding:0}
     footer.site{border-top:1px solid var(--line);padding:20px clamp(16px,3vw,40px) 28px;color:var(--muted);font-size:14px}
     .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
@@ -95,12 +95,29 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     /* 文章页里的实验：不加边框，整宽嵌入，看起来和单独打开实验页一样 */
     .lab-embed{display:block;width:100%;height:600px;border:0;overflow:hidden;background:transparent}
     .post-body{width:100%;max-width:892px;margin:0 auto;padding:0 16px 80px;box-sizing:border-box}
+    .post-head{padding-top:40px;padding-bottom:0;margin-bottom:0}
+    .post-head h1{margin:8px 0 12px}
+    .post-head .lede{color:var(--muted);max-width:68ch;margin:0}
+    .post-head + .post-body .prose > :first-child{margin-top:36px}
+    .pager{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:56px;padding-top:24px;border-top:1px solid var(--line);max-width:68ch}
+    .pager a{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--paper);text-decoration:none;color:var(--fg);transition:border-color .15s}
+    .pager a:hover{border-color:var(--accent)}
+    .pager a small{font-size:13px;color:var(--muted)}
+    .pager a span{font-weight:700;line-height:1.45}
+    .pager .next{grid-column:2;text-align:right}
+    @media (max-width:520px){.pager{grid-template-columns:1fr}.pager .next{grid-column:1}}
     .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
     .motto-only{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:40px 16px;min-height:100dvh;color:inherit;text-decoration:none;cursor:pointer}
     .motto-only:focus-visible{outline:2px solid var(--accent);outline-offset:-8px}
     .motto{margin:0;font-family:"Times New Roman",Times,serif;font-size:clamp(32px,6.5vw,96px);font-weight:400;letter-spacing:.02em;line-height:1.25;text-wrap:balance}
     .motto em{font-style:italic;color:var(--accent)}
-    .postlist{list-style:none;padding:0;margin:28px 0 0}
+    .part{margin-top:48px}
+    .part-head{padding-bottom:14px}
+    .part-kicker{font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--accent)}
+    .part-title{font-size:28px;line-height:1.3;margin:4px 0 0;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 14px}
+    .part-title span{font-size:17px;font-weight:400;color:var(--muted)}
+    .part-desc{margin:4px 0 0;color:var(--muted);font-size:15.5px}
+    .postlist{list-style:none;padding:0;margin:0}
     .postlist li{display:grid;grid-template-columns:72px 1fr;gap:0 8px;padding:22px 0;border-top:1px solid var(--line)}
     .postlist li:last-child{border-bottom:1px solid var(--line)}
     .postlist .num{font-size:48px;line-height:1;color:var(--line);font-variant-numeric:lining-nums;padding-top:4px;transition:color .2s}

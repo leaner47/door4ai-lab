@@ -23,8 +23,9 @@ ${k.ISO_CSS}
 html{color-scheme:dark light}
 body{margin:0;background:var(--bg);color:var(--fg);
   font:16px/1.85 "Times New Roman",Times,"PingFang SC","Heiti SC","Microsoft YaHei","Noto Sans SC",serif;-webkit-font-smoothing:antialiased}
-main{width:min(760px,100% - 32px);margin:56px auto 120px}
-h1{font-size:clamp(30px,6vw,44px);line-height:1.2;margin:0 0 10px;letter-spacing:.02em;font-weight:600}
+main{width:min(860px,100% - 32px);margin:40px auto 120px}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 h2{font-size:24px;margin:72px 0 6px;font-weight:600}
 h2 .n{color:var(--accent);margin-right:10px;font-variant-numeric:tabular-nums}
 h3{font-size:17px;margin:28px 0 4px}
@@ -90,6 +91,7 @@ b{font-weight:600}
 const sec = (id, n, title, html) => `<section id="${id}"><h2><span class="n">${n}</span>${title}</h2>${html}</section>`;
 
 const intro = `
+<div class="eyebrow lab-intro">CPU · GPU · 内存 · 显存 · Docker · 服务器</div>
 <h1 class="lab-intro">电脑里到底有什么</h1>
 <p class="lede lab-intro">CPU、GPU、内存、显存、统一内存、Docker、服务器——一次讲清。每张图都是一台可以「动手」的小机器：点按钮、拖滑块，看它怎么干活。</p>
 <ul class="toc">

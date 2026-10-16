@@ -8,28 +8,38 @@ export async function getStaticPaths() {
 }
 const post = Astro.props;
 const { Content } = await render(post);
-const fmt = (d: Date) => d.toISOString().slice(0, 10);
+const series = post.data.series
+  ? (await getCollection('blog')).filter((p) => p.data.series === post.data.series).sort((a, b) => (a.data.order ?? 999) - (b.data.order ?? 999))
+  : [];
+const idx = series.findIndex((p) => p.id === post.id);
+const prev = idx > 0 ? series[idx - 1] : null;
+const next = idx >= 0 && idx < series.length - 1 ? series[idx + 1] : null;
 ---
-<Base title={`${post.data.title} · Door4AI Lab`} description={post.data.description} full={!!post.data.lab}>
-  {post.data.lab ? (
-    <article class="with-lab">
-      <h1 class="sr-only">{post.data.title}</h1>
-      <iframe class="lab-embed" src={post.data.lab} title={post.data.title} scrolling="no" data-autosize></iframe>
-      <div class="post-body">
-        <div class="prose"><Content /></div>
-        {post.data.series && <WhatsAppJoin variant="inline" />}
-      </div>
-    </article>
-  ) : (
-    <article>
-      <div class="eyebrow">{fmt(post.data.pubDate)}{post.data.updatedDate && ` · 更新 ${fmt(post.data.updatedDate)}`}</div>
-      <h1>{post.data.title}</h1>
-      <p class="prose" style="color:var(--muted);margin-top:0">{post.data.description}</p>
-      {post.data.tags.length > 0 && <div class="tags">{post.data.tags.map((t) => <span class="tag">{t}</span>)}</div>}
+<Base title={`${post.data.title} · Door4AI Lab`} description={post.data.description} full>
+  <article>
+    {post.data.lab ? (
+      <>
+        <h1 class="sr-only">{post.data.title}</h1>
+        <iframe class="lab-embed" src={post.data.lab} title={post.data.title} scrolling="no" data-autosize></iframe>
+      </>
+    ) : (
+      <header class="post-body post-head">
+        <div class="eyebrow">{post.data.tags.join(' · ')}</div>
+        <h1>{post.data.title.includes('：') ? (<>{post.data.title.split('：')[0]}：<br />{post.data.title.split('：').slice(1).join('：')}</>) : post.data.title}</h1>
+        <p class="lede">{post.data.description}</p>
+      </header>
+    )}
+    <div class="post-body">
       <div class="prose"><Content /></div>
       {post.data.series && <WhatsAppJoin variant="inline" />}
-    </article>
-  )}
+      {(prev || next) && (
+        <nav class="pager" aria-label="上一讲 / 下一讲">
+          {prev && <a class="prev" href={`/posts/${prev.id}/`}><small>← 上一讲</small><span>{prev.data.title}</span></a>}
+          {next && <a class="next" href={`/posts/${next.id}/`}><small>下一讲 →</small><span>{next.data.title}</span></a>}
+        </nav>
+      )}
+    </div>
+  </article>
   <script is:inline define:vars={{ slug: post.id }}>
     try { const k = 'd4a-read', r = JSON.parse(localStorage.getItem(k) || '[]'); if (!r.includes(slug)) { r.push(slug); localStorage.setItem(k, JSON.stringify(r)); } } catch (e) {}
   </script>
