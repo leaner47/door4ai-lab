@@ -88,7 +88,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     .prose figure.cf-flow{margin:28px auto;max-width:420px}
     .prose figure.cf-flow svg{display:block;width:100%;height:auto;font-family:inherit}
     .prose figure.clip{margin:28px 0;max-width:none}
-    .prose figure.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+    .prose figure.clip video{display:block;width:100%;max-width:min(100%,calc(min(62vh,620px) * 16 / 9));margin-inline:auto;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
     .prose figcaption{font-size:14px;color:var(--muted);margin-top:8px;text-align:center}
     .prose p.formula{font-size:20px;text-align:center;margin:18px 0;letter-spacing:.02em}
     .prose details{margin:16px 0;padding:10px 14px;border:1px solid var(--line);border-radius:6px;background:var(--paper)}

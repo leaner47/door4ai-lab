@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-16 02:45 America/New_York · 更新者：Claude（会话 session_01DtRpz8yhq3r3wGB3CzgyrK）
+最后更新：2026-10-16 22:55 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
 
 ---
 
@@ -126,6 +126,7 @@ door4ai-lab/
 - **外观切换**：存 localStorage `d4a-theme`（light / dark，缺省 = 跟随系统），`<head>` 里内联脚本在渲染前设 `<html data-theme>`，避免闪烁。CSS token 写法：`@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){…} }` + `:root[data-theme="dark"]{…}`，**新增的深色样式都要照此两段写**。实验页同源，加载时读同一个键；切换时父页面直接改 iframe 的 `data-theme`（实验页已有 MutationObserver 重绘画布）。
 - **AI账号申请（2026-10-14 本人要求）**：学员申请 ChatGPT / Claude 等账号（选项：ChatGPT Plus / ChatGPT Pro / Claude Pro / Claude Max / Gemini Advanced / 其他，选项列表在 `functions/ai/apply/api.ts` 与 `src/pages/ai/apply.astro` 两处，改时同步）。必填：账号、用途（≥10 字）、WhatsApp 或微信；备注可选；邮箱取登录身份（Access 的 `cf-access-authenticated-user-email` 头，自建账号启用后取会话）。同一邮箱 24h 最多 5 条。状态：待处理 / 已开通 / 未通过 + 一句回复（学员可见）。**管理员 = Pages 环境变量 `ADMIN_EMAILS` 里的邮箱**，同一页面看到全部申请并改状态；（已随账号系统启用设好）；也可在 R2 桶 `door4ai-lab-dl` 的 `apply/` 前缀下直接看 JSON。路径放在 `/ai/` 下是为了直接受现有 Access 保护；`gate.ts` 加了 `ai/apply → 需登录`。D1 开通后可把 R2 记录迁成表。没有邮件通知（Resend 未配置）。
 - **排版统一（2026-10-16 本人要求「新章节多了，优化整体排版」）**：
+  - **图形不能比屏幕大（2026-10-16 本人反馈 14 寸 MacBook Pro 上实验占比太大）**：所有实验页 `</body>` 前有一段「图形尺寸上限」脚本——每张图按宽高比收窄居中，高度 ≤ 视口 62%（最多 620px；在文章 iframe 里取外层视口），画布尺寸变了会触发一次 `resize` 让实验重画。文章正文里的 `.clip` 视频用 CSS 同样封顶。文字仍铺满。新实验页从 skill 模板起步自带这段，不要删。
   - **版面铺满（2026-10-16 本人要求）**：文字从左到右铺满，不设 max-width（不要 68ch / 892px 之类），只留左右页边距 `clamp(16px,3vw,40px)`，与页眉「Door4AI Lab」左边线对齐。`Base` 的 `main`、文章页 `.post-body`、所有实验页 `.wrap`（computer-anatomy 是 `main`）都按此。**新实验页 `.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}`，开头 = `.eyebrow` + `h1`（`clamp(28px,5vw,40px)`，700）+ `.lede`，都带 `lab-intro` 类。** 表单页（登录、账号、购买、AI账号申请的表单）保留自己的窄宽度。
   - 课程目录按篇分组（**每篇只显示篇名**，没有「第 N 篇 · M 讲」、副标题和说明；页面顶部也没有 COURSE 和导语，只有大标题 + 学习记录面板）：`src/data/course.ts` 的 `PARTS`（order < 4 基础篇：电脑、网络、Git、Cloudflare；其余模型篇）。讲号全课程连续编号。
   - 文章页：有实验 → 整宽实验（自带标题）+ 正文；没实验 → 同一版心的标题区（eyebrow = 标签用 · 连接，h1 冒号后换行，lede = description）+ 正文。两种都不显示日期。
@@ -176,6 +177,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-16 · Claude** — 按本人反馈（14 寸屏上实验图过大）给 8 个实验页（含 `labs-src/computer-anatomy/build.mjs` 与 skill 模板）加「图形尺寸上限」脚本，`Base.astro` 的 `.clip` 视频加同样上限；skill 与第 3 节写入规则。1512 × 860 下各讲最大图高 ≤ 533px（原来最高 1134px），390 宽无横向滚动、无脚本错误。
 
 - **2026-10-16 · Claude** — 按本人「什么是残差连接 → 写成教材」新增一讲：`src/content/blog/residual-connection.md`（series ai-mastery，**order 25**）+ 实验页 `public/labs/residual-connection/index.html`。实验里内嵌一个手写的小型 MLP（宽 16，按批前向/反向 + Adam，普通 = ReLU(Wh+b) He 初始化；残差 = h + W·ReLU(h) + b，分支按 1/√L 缩小），任务拟合 sin 5x + 0.5 sin 13x：00 两种网络 / 01 初始化时各层梯度大小（100 层普通网络第 1 层约为最后一层的 1e-5）/ 02 各层不同输入的平均余弦相似度 + 最后一层热力图（普通趋于 1）/ 03 6 / 30 / 100 层实时训练对比（100 层普通网络误差停在目标方差 0.728）/ 04 训练两个 30 层网络后逐层跳过看误差（页面加载后自动在后台分块训练）。这些数字先在 node 里用同一份代码验证过。Manim：`manim-src/residual-connection/scenes.py` → `public/videos/residual-connection/`。梯度下降一讲末尾改为衔接本讲。本地 build 通过；headless Chromium 检查 1440 浅色 / 390 深色无横向滚动、无脚本错误。
 

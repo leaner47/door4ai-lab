@@ -38,6 +38,7 @@ description: 把本人提出的一个问题（如「X 是什么」「为什么 Y
 单文件 HTML（内联 CSS/JS，库只从 cdnjs 等 CDN 加载）。从 `templates/lab.html` 复制起步，它已经包含：
 
 - 设计 token（`--bg --paper --fg --muted --line --accent --warn --ok`，深色 `#000` / 卡片 `#111214`，浅色 `#f7f3ea` / 卡片 `#fffdf8`），跟随 `<html data-theme>` 与系统深浅色。
+- 图形尺寸上限脚本（`</body>` 前那段「图形尺寸上限」）：每张图（`.lab` 里的 svg/canvas、figure 里的图、`.clip` 视频）按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px，嵌在文章 iframe 里时取外层页面的视口），文字、控件、读数照样铺满。**不要删**；画布高度若由代码按宽度计算，要监听 `resize` 重画（脚本改了尺寸会触发一次 resize）。在 1512 × 860（MacBook Pro 14 寸）下检查每张图都不超过一屏的 62%。
 - 嵌入检测与主题同步脚本（`html.embedded`、读 `localStorage` 的 `d4a-theme`）。**不要删。**
 - 版心 `.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px)}`（不设 max-width，随窗口铺满），开头 `header.lab-intro`。
 
