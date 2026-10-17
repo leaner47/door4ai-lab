@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-16 23:30 America/New_York · 更新者：Claude（会话 session_01HXmwuvnq8Z7skbnkunsKCy）
+最后更新：2026-10-17 05:51 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
 
 ---
 
@@ -131,7 +131,7 @@ door4ai-lab/
   - 课程目录按篇分组（**每篇只显示篇名**，没有「第 N 篇 · M 讲」、副标题和说明；页面顶部也没有 COURSE 和导语，只有大标题 + 学习记录面板）：`src/data/course.ts` 的 `PARTS`（order < 4 基础篇：电脑、网络、Git、Cloudflare；其余模型篇）。讲号全课程连续编号。
   - 文章页：有实验 → 整宽实验（自带标题）+ 正文；没实验 → 同一版心的标题区（eyebrow = 标签用 · 连接，h1 冒号后换行，lede = description）+ 正文。两种都不显示日期。
   - 每讲末尾：WhatsApp 一行 + 「← 上一讲 / 下一讲 →」翻页卡（同 series 按 order）。
-- 课程目录 /ai：**每讲只显示大号编号 + 标题**（2026-10-16 本人要求：不要「第 N 讲 · 日期 · 含实验」元信息行、不要「从这里开始 / 已读 / 下一讲」标签、不要文章标签，也不要 description）。**不再有「已读」概念**（不记 d4a-read、编号不变灰不高亮）。顶部是 GitHub 贡献图式的「学习记录」面板：localStorage `d4a-activity` = {本地日期: 次数}，文章页每打开一次 +1，**重复读也算**；格子深浅 0 / 1 / 2–3 / 4–6 / 7+；汇总「过去一年学习 X 次 · Y 天 · 连续 Z 天」。只存本机浏览器，不做账号级记录。
+- 课程目录 /ai：**每讲只显示大号编号 + 标题**（2026-10-16 本人要求：不要「第 N 讲 · 日期 · 含实验」元信息行、不要「从这里开始 / 已读 / 下一讲」标签、不要文章标签，也不要 description）。**不再有「已读」概念**（不记 d4a-read、编号不变灰不高亮）。顶部是 GitHub 贡献图式的「学习记录」面板：localStorage `d4a-activity` = {本地日期: 次数}，文章页每打开一次 +1，**重复读也算**；格子深浅 0 / 1 / 2–3 / 4–6 / 7+；汇总「过去一年学习 X 次 · Y 天 · 连续 Z 天」。只存本机浏览器，不做账号级记录。 面板宽度 = 格子宽度（`width:fit-content`），不铺满整行。
 - 课程顺序：网络讲（internet-basics，order 2.5）放在硬件讲之后、Git 讲之前：先懂电脑，再懂电脑怎么连网，再讲 Git/GitHub。order 可以用小数插队。
 - 网络讲的 DNS 污染部分直接点名「防火长城」（2026-10-15 本人决定），只讲原理和可观察的现象，不提供翻墙教程。
 - 课程顺序：Token 讲（tokenizer-llm，order 4）放在硬件讲（2）和注意力讲（5）之间：先知道文字怎么变成 token、模型整体怎么跑，再拆开注意力。
@@ -179,6 +179,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-17 · Claude** — 按本人反馈学习记录面板太宽：`.act` 改为 `width:fit-content`（正好包住 53 周格子，约 796px，左对齐；窄屏仍可横向滑动）。改 `Base.astro`。
 
 - **2026-10-16 · Claude** — 模型篇补齐四讲（四个子任务并行写，主会话统一检查上线）：`backpropagation`（order 30：页内标量 autograd，00 计算图逐步流动 / 01 单链三法一致 / 02 两层网络 13 个梯度与中心差分逐项对照 / 03 数值微分 vs 反向传播代价 / 04 深链连乘；动画 ChainRule、Backward2Layer）、`layernorm`（35：00 归一化不变性 / 01 残差流范数随层数 / 02 token 范数分布 / 03 LN vs RMSNorm / 04 三种设计真实反向梯度 / 05 可用学习率范围；动画 NormalizeVector、PrePostNorm；小网络里 Post-Norm 并不吃亏，文章如实写并引 Xiong 2020）、`lora`（40：00 秩 / 01 参数计数器 / 02 真实微调 ΔW 的 SVD / 03 全量 vs LoRA r=1,2,4 / 04 合并与切换 / 05 Llama-3-8B 逐矩阵 LoRA 参数表；动画 LowRankUpdate、RankIntuition）、`model-evaluation`（45：00 困惑度 / 01 n-gram 困惑度 / 02 pass@k / 03 数据污染 / 04 Elo / 05 小 eval 集；动画 Perplexity、Goodhart；首个在课程文章里用 markdown 表格的讲）。关键数字都在 node 里用同一份页内逻辑核对过（见各讲 note）。四个实验页补上了同日另一会话加的「图形尺寸上限」脚本。本地 build 22 页通过；headless Chromium 检查 /ai 与四个文章页 1440 浅色 / 390 深色无横向滚动、iframe 自动长高、无脚本错误；个人信息检索 0。
 
