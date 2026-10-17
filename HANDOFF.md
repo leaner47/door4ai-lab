@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-16 22:55 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
+最后更新：2026-10-16 23:05 America/New_York · 更新者：Claude（会话 session_01HXmwuvnq8Z7skbnkunsKCy）
 
 ---
 
@@ -139,6 +139,7 @@ door4ai-lab/
 - 课程顺序：注意力 QKV（order 5）在前，KV Cache（order 10）在后，因为 KV cache 建立在 Q/K/V 概念上。
 - 课程顺序：残差连接（order 25）紧接梯度下降（20）：讲深网络为什么训不动。
 - 课程顺序：梯度下降（order 20）放在 KV Cache 之后：前面几讲讲推理，从这一讲开始讲训练（参数从哪来）；后续训练相关的讲（反向传播、LoRA 等）接在 20 之后。课程目录的「第 N 讲」由 order 排序自动生成。
+- **课程三篇结构（2026-10-16 本人决定）**：基础篇（order < 4）→ 模型篇（4 ≤ order < 100）→ **Agent 篇（order ≥ 100）**。Agent 篇的骨架参考了市面上一门 Agent 工程课的目录顺序（工具调用 → Loop → 上下文/记忆 → RAG → MCP → 流式 → Trace/Eval → 网关与编排 → 框架全景），采用的是"先手写、后看框架"的顺序，**不吸收**它的 Node/前端工程内容。本人决定：先立项写出全部讲，缺什么等他自学时发现再补；模型篇先补齐（反向传播 30、LayerNorm 35、LoRA 40、模型评测 45）再写 Agent 篇。
 
 - **账号与计费（2026-10-14 本人确认）**：自建账号，D1 不用 PG；不设密码，Passkey 为主、邮箱验证码注册与兜底、TOTP 可选（未做）；每账号同一时间只允许 1 个会话，新登录踢掉旧会话；只做买断，不做订阅；买全套包含以后新增的讲；收款复用 door4ai.com 的 pay-api（接口文档待本人提供）；记录注册来源（首次/最后触达 UTM、ref 渠道码、来源问卷）。设计文档：https://claude.ai/code/artifact/9679fc7a-0fe4-4323-86f1-65cbb1cc005f
 - 两步验证只在「邮箱验证码登录」时要求；Passkey 登录不需要（Passkey 本身就是强认证）。新注册的第一次登录不要求（还没开）。
@@ -177,6 +178,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-16 · Claude** — 课程立项：`src/data/course.ts` 的 PARTS 加「Agent 篇」（order ≥ 100，模型篇改为 < 100）；第 4 节记录三篇结构的决定，第 7 节写入 14 讲的 slug / order 规划（基础篇 1、模型篇 4、Agent 篇 9）。各讲正在分批写，写完逐讲追加日志。
 
 - **2026-10-16 · Claude** — 按本人反馈（14 寸屏上实验图过大）给 8 个实验页（含 `labs-src/computer-anatomy/build.mjs` 与 skill 模板）加「图形尺寸上限」脚本，`Base.astro` 的 `.clip` 视频加同样上限；skill 与第 3 节写入规则。1512 × 860 下各讲最大图高 ≤ 533px（原来最高 1134px），390 宽无横向滚动、无脚本错误。
 
@@ -321,7 +324,11 @@ door4ai-lab/
 
 ## 7. 下一步建议（接手者可直接挑一个做）
 
-1. 下一篇实验文章。Attention、Tokenizer、梯度下降已完成。候选：反向传播怎么算梯度；LayerNorm 为什么必需；LoRA 低秩微调为什么省参数（和 MLA 的低秩思想一脉相承）。
+1. **课程规划（2026-10-16 立项，slug / order 固定，写完一讲在第 5 节勾掉）**：
+   - 基础篇：`ai-coding-tools` 3.8 AI Coding 入门（Claude Code / Codex 怎么用，接 Resource 页）
+   - 模型篇：`backpropagation` 30 反向传播 · `layernorm` 35 LayerNorm · `lora` 40 LoRA · `model-evaluation` 45 模型评测
+   - Agent 篇：`tool-calling` 100 工具调用 · `agent-loop` 105 Agent Loop 与 ReAct · `context-window` 110 上下文与记忆 · `rag-embedding` 115 Embedding 与 RAG · `mcp` 120 MCP · `streaming` 125 流式输出（SSE）· `trace-eval` 130 Trace 与 Eval · `gateway-orchestration` 135 多模型网关与多 Agent 编排 · `agent-frameworks` 140 框架全景（纯文字）
+   - 之后可补：多头/分组注意力细节、MoE、量化（接 KV Cache 讲）、强化学习与 RLHF。
 2. 给文章列表加按 tag 过滤。
 3. 加 Cloudflare Web Analytics。
 

@@ -2,6 +2,7 @@
 // 新加一讲只要 order 落在对应区间就会自动归篇；要新开一篇，在这里加一项。页面上每篇只显示篇名（本人要求不加副标题/说明）。
 export const PARTS = [
   { key: 'basics', title: '基础篇', until: 4 },
-  { key: 'models', title: '模型篇', until: Infinity },
+  { key: 'models', title: '模型篇', until: 100 },
+  { key: 'agents', title: 'Agent 篇', until: Infinity },
 ];
 export const partOf = (order = 999) => PARTS.find((p) => order < p.until) ?? PARTS[PARTS.length - 1];
