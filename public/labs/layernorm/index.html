@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>LayerNorm 实验室</title>
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c; --ok-soft:#dcefe3;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --ok-soft:#1d3b2c; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --ok-soft:#1d3b2c; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+.formula{font-size:20px;text-align:center;margin:18px 0;letter-spacing:.02em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl b{font-variant-numeric:tabular-nums;min-width:2.6em}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+input[type=range]{accent-color:var(--accent);max-width:200px}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+@media (max-width:640px){.two,.three{grid-template-columns:1fr}}
+.cap{font-size:12px;color:var(--muted);margin:4px 0 0;text-align:center}
+.key{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;margin:0 0 8px}
+.key i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn{border-color:var(--warn)} .ro.warn b{color:var(--warn)}
+.ro.acc{border-color:var(--accent)} .ro.acc b{color:var(--accent)}
+.ro.ok{border-color:var(--ok)} .ro.ok b{color:var(--ok)}
+.ro.sm b{font-size:16px}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:6px;font-variant-numeric:tabular-nums}
+th,td{text-align:center;padding:7px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td:first-child,th:first-child{text-align:left}
+td.ok{background:var(--ok-soft)} td.bad{background:var(--warn-soft);color:var(--warn)} td.so{color:var(--muted)}
+.tw{overflow-x:auto}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">LayerNorm · RMSNorm · Pre-Norm · 尺度漂移</div>
+  <h1>LayerNorm 实验室</h1>
+  <p class="lede">深网络里每一层的数字大小会随层数漂移。下面每个向量、每个梯度都是浏览器里真实算出来的。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>把一个向量拉回同一把尺子</h2>
+  <p>一个 token 在某一层是一个向量，这里取 8 维。LayerNorm 对它做三件事：减去这 8 个数的均值，除以它们的标准差，再逐维乘 <i>γ</i> 加 <i>β</i>。拖动「整体放大」和「整体平移」改变输入，看输出动不动。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="a0">整体放大 ×</label><input id="a0" type="range" min="-1" max="1" step="0.05" value="0"><b id="a0v"></b></div>
+      <div class="ctrl"><label for="c0">整体平移 +</label><input id="c0" type="range" min="-5" max="5" step="0.1" value="0"><b id="c0v"></b></div>
+      <div class="ctrl"><label for="g0">γ</label><input id="g0" type="range" min="0.2" max="3" step="0.1" value="1"><b id="g0v"></b></div>
+      <div class="ctrl"><label for="b0">β</label><input id="b0" type="range" min="-2" max="2" step="0.1" value="0"><b id="b0v"></b></div>
+    </div>
+    <div class="two">
+      <div><svg id="fig0a" viewBox="0 0 400 200" role="img" aria-label="输入向量的 8 个分量"></svg><p class="cap">输入 <i>x</i>（纵轴随数据缩放）</p></div>
+      <div><svg id="fig0b" viewBox="0 0 400 200" role="img" aria-label="LayerNorm 输出的 8 个分量"></svg><p class="cap">输出 <i>γ</i> · (<i>x</i> − <i>μ</i>) / <i>σ</i> + <i>β</i></p></div>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r0a">–</b><span>输入均值 μ</span></div>
+      <div class="ro"><b id="r0b">–</b><span>输入标准差 σ</span></div>
+      <div class="ro acc"><b id="r0c">–</b><span>输出均值</span></div>
+      <div class="ro acc"><b id="r0d">–</b><span>输出标准差</span></div>
+    </div>
+    <p class="note">不管输入整体放大多少倍、平移多少，输出一动不动：均值永远是 <i>β</i>，标准差永远是 <i>γ</i>。放大和平移这两个自由度被抹掉了，网络要表达的信息都在各分量的相对大小里。</p>
+  </div>
+  <figure class="clip"><video src="/videos/layernorm/NormalizeVector.webm" poster="/videos/layernorm/NormalizeVector.png" controls loop muted playsinline preload="metadata"></video></figure>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>残差流越加越大</h2>
+  <p>残差那一讲说过，Transformer 的每一层都往主干上加一个修正量：<i>h</i> ← <i>h</i> + <i>F</i>(<i>h</i>)。这里用随机矩阵真实地算 64 维向量一路往下走的范数（长度）：<i>F</i>(<i>h</i>) = <i>W</i> · ReLU(<i>h</i>)，<i>W</i> 的大小用「分支增益」控制，增益 1 表示分支输出和输入差不多长。三种做法：不做 Norm；Pre-Norm 把 Norm 放在分支里（<i>h</i> + <i>F</i>(Norm(<i>h</i>))）；Post-Norm 把 Norm 放在主干上（Norm(<i>h</i> + <i>F</i>(<i>h</i>))）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="L1">层数 L</label><input id="L1" type="range" min="1" max="64" value="32"><b id="L1v"></b></div>
+      <div class="ctrl"><label for="g1">分支增益</label><input id="g1" type="range" min="0.25" max="2" step="0.25" value="1"><b id="g1v"></b></div>
+      <div class="btns"><button class="btn" id="seed1">重新随机</button></div>
+    </div>
+    <div class="key"><span><i style="background:var(--warn)"></i>不做 Norm</span><span><i style="background:var(--accent)"></i>Pre-Norm</span><span><i style="background:var(--ok)"></i>Post-Norm</span></div>
+    <svg id="fig1" viewBox="0 0 800 300" role="img" aria-label="向量范数随层数的变化（对数坐标）"></svg>
+    <p class="cap">横轴：第几层；纵轴：‖<i>h</i>‖（对数坐标）</p>
+    <div class="readout">
+      <div class="ro warn"><b id="r1a">–</b><span>不做 Norm：第 L 层 ÷ 第 0 层</span></div>
+      <div class="ro acc"><b id="r1b">–</b><span>Pre-Norm：第 L 层 ÷ 第 0 层</span></div>
+      <div class="ro ok"><b id="r1c">–</b><span>Post-Norm：第 L 层 ÷ 第 0 层</span></div>
+    </div>
+    <p class="note">不做 Norm 时，分支的输出跟着输入一起变大，于是范数按指数增长：增益 1 时每层乘约 √2，32 层后是几万倍。Pre-Norm 让每层分支看到的都是一样长的向量，加上去的量固定，主干只按 √<i>L</i> 慢慢长。Post-Norm 每层都把主干重新拉回来，范数不变。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>不同的 token，长度差几十倍</h2>
+  <p>同一层里的不同 token 也不在一把尺子上。把 256 个随机初始化的 token 向量（64 维）送进同一个不做 Norm 的残差流，看走到第 <i>L</i> 层时它们的范数分布；第二张图是同一批向量经过 LayerNorm 之后、真正送进分支的长度。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="L2">层数 L</label><input id="L2" type="range" min="1" max="32" value="32"><b id="L2v"></b></div>
+      <div class="btns"><button class="btn" id="seed2">重新随机</button></div>
+    </div>
+    <div class="two">
+      <div><svg id="fig2a" viewBox="0 0 400 220" role="img" aria-label="Norm 之前各 token 范数的直方图"></svg><p class="cap">Norm 之前：256 个 token 的 ‖<i>h</i>‖（对数坐标）</p></div>
+      <div><svg id="fig2b" viewBox="0 0 400 220" role="img" aria-label="Norm 之后各 token 范数的直方图"></svg><p class="cap">LayerNorm 之后：‖Norm(<i>h</i>)‖</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro warn"><b id="r2a">–</b><span>Norm 之前：最长 ÷ 最短</span></div>
+      <div class="ro warn"><b id="r2b">–</b><span>Norm 之前：中位数</span></div>
+      <div class="ro acc"><b id="r2c">–</b><span>Norm 之后：最长 ÷ 最短</span></div>
+      <div class="ro acc"><b id="r2d">–</b><span>Norm 之后：全部等于 √64</span></div>
+    </div>
+    <p class="note">每个 token 走的 ReLU 路径不一样，范数像随机游走一样越走越散：32 层后最长和最短的差几十倍。同一个矩阵 <i>W</i> 要同时伺候这些长短悬殊的向量，没法用同一组参数做好；LayerNorm 之后它们长度全部相等，只剩方向不同。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>LayerNorm 还是 RMSNorm</h2>
+  <p>RMSNorm 比 LayerNorm 少做一步：不减均值，直接除以均方根 RMS = √(mean(<i>x</i>²))，也没有 <i>β</i>。还是实验 00 那个 8 维向量，拖动它的均值，看两种结果差多少。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="m3">把均值移到</label><input id="m3" type="range" min="-4" max="4" step="0.1" value="1.5"><b id="m3v"></b></div>
+    </div>
+    <div class="three">
+      <div><svg id="fig3a" viewBox="0 0 260 200" role="img" aria-label="输入向量"></svg><p class="cap">输入 <i>x</i></p></div>
+      <div><svg id="fig3b" viewBox="0 0 260 200" role="img" aria-label="LayerNorm 结果"></svg><p class="cap">LayerNorm：(<i>x</i> − <i>μ</i>) / <i>σ</i></p></div>
+      <div><svg id="fig3c" viewBox="0 0 260 200" role="img" aria-label="RMSNorm 结果"></svg><p class="cap">RMSNorm：<i>x</i> / RMS(<i>x</i>)</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r3a">–</b><span>均值 μ</span></div>
+      <div class="ro"><b id="r3b">–</b><span>标准差 σ</span></div>
+      <div class="ro"><b id="r3c">–</b><span>均方根 RMS</span></div>
+      <div class="ro warn"><b id="r3d">–</b><span>两种结果最大差异</span></div>
+    </div>
+    <p class="note">RMS² = σ² + μ²。均值为 0 时两者一模一样；均值越偏，RMSNorm 的输出被整体压得越小，但各分量的相对大小不变。Llama、Qwen、Gemma 这些模型用 RMSNorm：少算一次均值，效果不差。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>Norm 放在哪：梯度的量级</h2>
+  <p>反向传播那一讲说过，学习率乘的是梯度。这里用一个 16 维、<i>L</i> 层的小残差网络真实反向传播一次（刚初始化，任务和残差那讲一样是拟合一条曲线），比较三种设计里每一层权重 <i>W</i> 的梯度有多大。「分支增益」和实验 01 相同。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="L4">层数 L</label><input id="L4" type="range" min="2" max="64" value="32"><b id="L4v"></b></div>
+      <div class="ctrl"><label for="g4">分支增益</label><input id="g4" type="range" min="0.25" max="2" step="0.25" value="1"><b id="g4v"></b></div>
+      <div class="btns"><button class="btn" id="seed4">重新初始化</button></div>
+    </div>
+    <div class="key"><span><i style="background:var(--warn)"></i>不做 Norm</span><span><i style="background:var(--accent)"></i>Pre-Norm</span><span><i style="background:var(--ok)"></i>Post-Norm</span></div>
+    <svg id="fig4" viewBox="0 0 800 300" role="img" aria-label="每一层权重梯度的大小（对数坐标）"></svg>
+    <p class="cap">横轴：第几层；纵轴：‖∂<i>L</i>/∂<i>W</i><sub><i>l</i></sub>‖（对数坐标）</p>
+    <div class="readout">
+      <div class="ro warn"><b id="r4a">–</b><span>不做 Norm：第 1 层梯度</span></div>
+      <div class="ro acc"><b id="r4b">–</b><span>Pre-Norm：第 1 层梯度</span></div>
+      <div class="ro ok"><b id="r4c">–</b><span>Post-Norm：第 1 层梯度</span></div>
+      <div class="ro"><b id="r4d">–</b><span>Post-Norm 直达通路的增益 ∏ 1/σ</span></div>
+    </div>
+    <p class="note">不做 Norm 时，梯度跟着实验 01 里的范数一起漂：层数或增益一变，梯度就差几个数量级，昨天调好的学习率今天就不能用。两种 Norm 都把梯度压回同一个量级。区别在直达通路：Pre-Norm 的主干不经过任何变换，从输出到第 1 层始终有一条增益为 1 的路；Post-Norm 的主干每层都被除以一次 σ，这条路的增益是 ∏ 1/σ，层数一多就指数级消失，梯度只能靠一层层分支接力。</p>
+  </div>
+  <figure class="clip"><video src="/videos/layernorm/PrePostNorm.webm" poster="/videos/layernorm/PrePostNorm.png" controls loop muted playsinline preload="metadata"></video></figure>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>没有 Norm 时，学习率的可用范围</h2>
+  <p>同一个小网络、同一个任务，用带动量的 SGD 训练 200 步，7 档学习率各试一遍。换层数和分支增益，看哪些学习率能把误差压到 0.1 以下，哪些直接发散。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>层数 L</label><div class="seg" id="L5"><button data-v="8" aria-pressed="true">8</button><button data-v="16" aria-pressed="false">16</button></div></div>
+      <div class="ctrl"><label>分支增益</label><div class="seg" id="g5"><button data-v="0.25" aria-pressed="false">0.25</button><button data-v="0.5" aria-pressed="false">0.5</button><button data-v="1" aria-pressed="true">1</button><button data-v="2" aria-pressed="false">2</button></div></div>
+      <div class="btns"><button class="btn pri" id="run5">开始训练</button></div>
+      <div class="ctrl"><label id="p5"></label></div>
+    </div>
+    <div class="tw"><table id="tab5"></table></div>
+    <div class="readout">
+      <div class="ro warn sm"><b id="r5a">–</b><span>不做 Norm：可用学习率</span></div>
+      <div class="ro acc sm"><b id="r5b">–</b><span>Pre-Norm：可用学习率</span></div>
+      <div class="ro ok sm"><b id="r5c">–</b><span>Post-Norm：可用学习率</span></div>
+    </div>
+    <p class="note">不做 Norm 时，可用的学习率范围随层数和分支增益剧烈移动，增益 1、16 层时一档都不剩；有 Norm 时，不管分支多大、多少层，可用范围基本停在同一个位置。这就是「同一把尺子」的意思：学习率可以统一定，不用每换一种网络就重新摸索。这个小网络里 Post-Norm 并不吃亏，它的麻烦出在几十层以上的大模型里（见实验 04）。</p>
+  </div>
+</section>
+
+</div>
+<script>
+// ========== 计算核心（与 node 核对用的是同一份） ==========
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function gauss(r) { let u = 0; while (u === 0) u = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r()); }
+const mean = (a) => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i]; return s / a.length; };
+const vnorm = (a) => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * a[i]; return Math.sqrt(s); };
+const EPS = 1e-5;
+function layerNorm(x, g, b) { const m = mean(x); let v = 0; for (let i = 0; i < x.length; i++) v += (x[i] - m) ** 2; v /= x.length; const inv = 1 / Math.sqrt(v + EPS); return Array.from(x, (t, i) => (t - m) * inv * (g ? g[i] : 1) + (b ? b[i] : 0)); }
+function rmsNorm(x, g) { let ms = 0; for (let i = 0; i < x.length; i++) ms += x[i] * x[i]; ms /= x.length; const inv = 1 / Math.sqrt(ms + EPS); return Array.from(x, (t, i) => t * inv * (g ? g[i] : 1)); }
+const stats = (x) => { const m = mean(x); let v = 0, ms = 0; for (const t of x) { v += (t - m) ** 2; ms += t * t; } return { mean: m, std: Math.sqrt(v / x.length), rms: Math.sqrt(ms / x.length) }; };
+function streamNorms(d, L, g, mode, seed, inputs) {
+  const r = rng(seed), sd = g * Math.sqrt(2 / d), Ws = [];
+  for (let l = 0; l < L; l++) { const W = new Float64Array(d * d); for (let i = 0; i < d * d; i++) W[i] = gauss(r) * sd; Ws.push(W); }
+  const a = new Float64Array(d), y = new Float64Array(d);
+  return inputs.map((h0) => {
+    let h = Float64Array.from(h0); const ns = [vnorm(h)];
+    for (let l = 0; l < L; l++) {
+      const u = mode === 'pre' ? layerNorm(h) : h;
+      for (let j = 0; j < d; j++) a[j] = u[j] > 0 ? u[j] : 0;
+      const W = Ws[l];
+      for (let i = 0; i < d; i++) { let s = 0; const row = i * d; for (let j = 0; j < d; j++) s += W[row + j] * a[j]; y[i] = s; }
+      for (let i = 0; i < d; i++) h[i] += y[i];
+      if (mode === 'post') h = Float64Array.from(layerNorm(h));
+      ns.push(vnorm(h));
+    }
+    return { ns, h };
+  });
+}
+function makeNet(mode, L, d, seed, g, N) {
+  const r = rng(seed); const mat = (n, sd) => { const a = new Float64Array(n); for (let i = 0; i < n; i++) a[i] = gauss(r) * sd; return a; };
+  const net = { mode, L, d, N, win: mat(d, 1), bin: mat(d, 0.5), Ws: [], bs: [], gs: [], bes: [], wout: mat(d, 1 / Math.sqrt(d)), bout: new Float64Array(1), t: 0 };
+  const sd = g * Math.sqrt(2 / d);
+  for (let l = 0; l < L; l++) { net.Ws.push(mat(d * d, sd)); net.bs.push(new Float64Array(d)); net.gs.push(new Float64Array(d).fill(1)); net.bes.push(new Float64Array(d)); }
+  net.params = [net.win, net.bin, ...net.Ws, ...net.bs, ...net.gs, ...net.bes, net.wout, net.bout];
+  net.grads = net.params.map((p) => new Float64Array(p.length));
+  net.vel = net.params.map((p) => new Float64Array(p.length));
+  const nd = () => new Float64Array(N * d);
+  net.H = Array.from({ length: L + 1 }, nd); net.U = Array.from({ length: L }, nd); net.A = Array.from({ length: L }, nd); net.S = Array.from({ length: L }, nd);
+  net.XH = Array.from({ length: L }, nd); net.INV = Array.from({ length: L }, () => new Float64Array(N));
+  net.D = nd(); net.D2 = nd(); net.Y = new Float64Array(N); net.gn = new Float64Array(L + 1); net.pg = new Float64Array(L); net.sig = new Float64Array(L);
+  return net;
+}
+function lnRow(x, o, d, g, b, out, xh, invArr, k) {
+  let m = 0; for (let i = 0; i < d; i++) m += x[o + i]; m /= d;
+  let v = 0; for (let i = 0; i < d; i++) v += (x[o + i] - m) ** 2; v /= d;
+  const inv = 1 / Math.sqrt(v + EPS); invArr[k] = inv;
+  for (let i = 0; i < d; i++) { const t = (x[o + i] - m) * inv; xh[o + i] = t; out[o + i] = t * g[i] + b[i]; }
+}
+function lnRowBwd(dyArr, o, d, g, xh, inv, dg, db, dx) {
+  let s1 = 0, s2 = 0;
+  for (let i = 0; i < d; i++) { const dy = dyArr[o + i]; dg[i] += dy * xh[o + i]; db[i] += dy; const t = dy * g[i]; s1 += t; s2 += t * xh[o + i]; }
+  for (let i = 0; i < d; i++) dx[o + i] = inv * (dyArr[o + i] * g[i] - s1 / d - xh[o + i] * s2 / d);
+}
+function forward(net, xs) {
+  const { d, L, mode } = net, n = xs.length, H0 = net.H[0];
+  for (let k = 0; k < n; k++) for (let i = 0; i < d; i++) H0[k * d + i] = net.win[i] * xs[k] + net.bin[i];
+  for (let l = 0; l < L; l++) {
+    const Hin = net.H[l], Ho = net.H[l + 1], U = net.U[l], A = net.A[l], S = net.S[l], W = net.Ws[l], b = net.bs[l], g = net.gs[l], be = net.bes[l];
+    let sig = 0;
+    for (let k = 0; k < n; k++) {
+      const o = k * d;
+      if (mode === 'pre') lnRow(Hin, o, d, g, be, U, net.XH[l], net.INV[l], k); else for (let j = 0; j < d; j++) U[o + j] = Hin[o + j];
+      for (let j = 0; j < d; j++) { const v = U[o + j]; A[o + j] = v > 0 ? v : 0; }
+      for (let i = 0; i < d; i++) { let s = b[i]; const row = i * d; for (let j = 0; j < d; j++) s += W[row + j] * A[o + j]; S[o + i] = Hin[o + i] + s; }
+      if (mode === 'post') { lnRow(S, o, d, g, be, Ho, net.XH[l], net.INV[l], k); sig += 1 / net.INV[l][k]; }
+      else for (let i = 0; i < d; i++) Ho[o + i] = S[o + i];
+    }
+    net.sig[l] = mode === 'post' ? sig / n : 1;
+  }
+  const HL = net.H[L];
+  for (let k = 0; k < n; k++) { let y = net.bout[0]; for (let i = 0; i < d; i++) y += net.wout[i] * HL[k * d + i]; net.Y[k] = y; }
+  return net.Y;
+}
+function backward(net, xs, ys) {
+  const { d, L, mode } = net, n = xs.length, Y = forward(net, xs), g = net.grads;
+  g.forEach((a) => a.fill(0)); net.gn.fill(0);
+  let D = net.D, D2 = net.D2, lossv = 0;
+  const gwout = g[g.length - 2], gbout = g[g.length - 1], HL = net.H[L];
+  for (let k = 0; k < n; k++) { const e = Y[k] - ys[k]; lossv += e * e; const dy = 2 * e / n; gbout[0] += dy; for (let i = 0; i < d; i++) { gwout[i] += dy * HL[k * d + i]; D[k * d + i] = dy * net.wout[i]; } }
+  const gnorm = (l, X) => { let t = 0; for (let k = 0; k < n; k++) { let s = 0; for (let i = 0; i < d; i++) s += X[k * d + i] ** 2; t += Math.sqrt(s); } net.gn[l] = t; };
+  gnorm(L, D);
+  const T = new Float64Array(n * d);
+  for (let l = L - 1; l >= 0; l--) {
+    const W = net.Ws[l], gW = g[2 + l], gb = g[2 + L + l], gg = g[2 + 2 * L + l], gbe = g[2 + 3 * L + l], U = net.U[l], A = net.A[l], XH = net.XH[l], INV = net.INV[l], gm = net.gs[l];
+    let dS = D;
+    if (mode === 'post') { for (let k = 0; k < n; k++) lnRowBwd(D, k * d, d, gm, XH, INV[k], gg, gbe, T); dS = T; }
+    D2.fill(0, 0, n * d);
+    for (let k = 0; k < n; k++) {
+      const o = k * d;
+      for (let i = 0; i < d; i++) { const v = dS[o + i]; gb[i] += v; const row = i * d; for (let j = 0; j < d; j++) { gW[row + j] += v * A[o + j]; D2[o + j] += W[row + j] * v; } }
+      for (let j = 0; j < d; j++) D2[o + j] = U[o + j] > 0 ? D2[o + j] : 0;
+      if (mode === 'pre') { lnRowBwd(D2, o, d, gm, XH, INV[k], gg, gbe, D2); }
+      for (let j = 0; j < d; j++) D2[o + j] += dS[o + j];
+    }
+    const tmp = D; D = D2; D2 = tmp;
+    gnorm(l, D);
+    let s = 0; for (let i = 0; i < d * d; i++) s += gW[i] * gW[i]; net.pg[l] = Math.sqrt(s);
+  }
+  for (let k = 0; k < n; k++) for (let i = 0; i < d; i++) { g[0][i] += D[k * d + i] * xs[k]; g[1][i] += D[k * d + i]; }
+  net.D = D; net.D2 = D2;
+  return lossv / n;
+}
+function sgdStep(net, lr, mom = 0.9) { net.params.forEach((p, k) => { const v = net.vel[k], gk = net.grads[k]; for (let i = 0; i < p.length; i++) { v[i] = mom * v[i] + gk[i]; p[i] -= lr * v[i]; } }); }
+const TASK = (() => { const xs = [], ys = []; for (let i = 0; i < 32; i++) { const x = -1 + 2 * i / 31; xs.push(x); ys.push(Math.sin(5 * x) + 0.5 * Math.sin(13 * x)); } return { xs, ys }; })();
+
+// ========== 画图工具 ==========
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const SUP = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
+const sup = (n) => String(n).split('').map((c) => SUP[c] ?? c).join('');
+const sci = (v) => { if (!isFinite(v)) return '–'; if (v === 0) return '0'; if (v >= 0.01 && v < 1000) return v < 1 ? v.toFixed(3) : v < 10 ? v.toFixed(2) : v.toFixed(1); const [m, e] = v.toExponential(1).split('e'); return `${m}×10${sup(+e)}`; };
+const f2 = (v) => (Math.abs(v) < 0.005 ? 0 : v).toFixed(2);
+function seg(id, cb) { const el = $(id); el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; el.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); cb(b.dataset.v); }); return () => el.querySelector('[aria-pressed=true]').dataset.v; }
+function vb(id, w, h, nw, nh) { const el = $(id), n = el.clientWidth > 0 && el.clientWidth < 600, W = n ? nw : w, H = n ? nh : h; el.setAttribute('viewBox', `0 0 ${W} ${H}`); return [W, H, n ? 16 : 13]; }
+function polyline(pts, col, w = 2, extra = '') { if (!pts.length) return ''; return `<path d="${pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('')}" fill="none" stroke="${col}" stroke-width="${w}" ${extra}/>`; }
+function logAxis(lo, hi, X0, X1, Y, mu, li, fs) { let s = ''; const span = hi - lo, step = span > 24 ? 8 : span > 12 ? 4 : span > 6 ? 2 : 1; for (let e = Math.ceil(lo / step) * step; e <= hi; e += step) s += `<line x1="${X0}" y1="${Y(e)}" x2="${X1}" y2="${Y(e)}" stroke="${li}"/><text x="${X0 - 6}" y="${Y(e) + 4}" font-size="${fs}" fill="${mu}" text-anchor="end">10${sup(e)}</text>`; return s; }
+// 条形图：values 画在 [W×H] 里，纵轴范围 [lo,hi]，带 0 线与均值虚线
+function bars(id, values, col, lo, hi, opts = {}) {
+  const W = +$(id).viewBox.baseVal.width, H = +$(id).viewBox.baseVal.height, pl = 34, pr = 8, pt = 10, pb = 22, mu = css('--muted'), li = css('--line');
+  const Y = (v) => pt + (hi - v) / (hi - lo) * (H - pt - pb), n = values.length, bw = (W - pl - pr) / n;
+  let s = '';
+  const ticks = [lo, (lo + hi) / 2, hi].concat(lo < 0 && hi > 0 ? [0] : []);
+  ticks.forEach((v) => s += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/><text x="${pl - 5}" y="${Y(v) + 4}" font-size="11" fill="${mu}" text-anchor="end">${+v.toFixed(1)}</text>`);
+  values.forEach((v, i) => { const x = pl + i * bw + bw * 0.2, y0 = Y(0), y1 = Y(Math.max(lo, Math.min(hi, v))); s += `<rect x="${x}" y="${Math.min(y0, y1)}" width="${bw * 0.6}" height="${Math.abs(y1 - y0)}" rx="2" fill="${col}"/><text x="${x + bw * 0.3}" y="${H - 7}" font-size="11" fill="${mu}" text-anchor="middle">${i + 1}</text>`; });
+  if (opts.mean !== undefined) s += `<line x1="${pl}" y1="${Y(opts.mean)}" x2="${W - pr}" y2="${Y(opts.mean)}" stroke="${css('--warn')}" stroke-dasharray="4 3"/><text x="${W - pr}" y="${Y(opts.mean) - 4}" font-size="11" fill="${css('--warn')}" text-anchor="end">μ = ${f2(opts.mean)}</text>`;
+  $(id).innerHTML = s;
+}
+const X0 = [2.1, -0.4, 3.7, 0.9, -1.2, 5.3, 0.2, 1.6];
+const range = (vals, min = 3) => { const m = Math.max(min, ...vals.map((v) => Math.abs(v))) * 1.1; return [-m, m]; };
+
+/* ---------- 00 ---------- */
+function draw0() {
+  const a = Math.pow(10, +$('#a0').value), c = +$('#c0').value, g = +$('#g0').value, b = +$('#b0').value;
+  $('#a0v').textContent = a.toFixed(2); $('#c0v').textContent = f2(c); $('#g0v').textContent = g.toFixed(1); $('#b0v').textContent = f2(b);
+  const x = X0.map((v) => v * a + c), st = stats(x);
+  const y = layerNorm(x, X0.map(() => g), X0.map(() => b)), sy = stats(y);
+  bars('#fig0a', x, css('--warn'), ...range(x), { mean: st.mean });
+  bars('#fig0b', y, css('--accent'), ...range(y), { mean: sy.mean });
+  $('#r0a').textContent = f2(st.mean); $('#r0b').textContent = f2(st.std); $('#r0c').textContent = f2(sy.mean); $('#r0d').textContent = f2(sy.std);
+}
+['#a0', '#c0', '#g0', '#b0'].forEach((id) => $(id).addEventListener('input', draw0));
+
+/* ---------- 01 ---------- */
+let seed1 = 1;
+const H01 = (() => { const r = rng(42); return [Array.from({ length: 64 }, () => gauss(r))]; })();
+function draw1() {
+  const L = +$('#L1').value, g = +$('#g1').value; $('#L1v').textContent = L; $('#g1v').textContent = g.toFixed(2);
+  const modes = ['none', 'pre', 'post'], cols = [css('--warn'), css('--accent'), css('--ok')];
+  const runs = modes.map((m) => streamNorms(64, L, g, m, seed1, H01)[0].ns);
+  const mu = css('--muted'), li = css('--line');
+  const [W, H, fs] = vb('#fig1', 800, 300, 420, 300), pl = 60, pr = 14, pt = 12, pb = 30;
+  const logs = runs.flatMap((ns) => ns.map((v) => Math.log10(v)));
+  const lo = Math.floor(Math.min(...logs)), hi = Math.max(lo + 1, Math.ceil(Math.max(...logs)));
+  const X = (l) => pl + l / L * (W - pl - pr), Y = (e) => pt + (hi - e) / (hi - lo) * (H - pt - pb);
+  let s = logAxis(lo, hi, pl, W - pr, Y, mu, li, fs);
+  [0, Math.round(L / 2), L].forEach((l) => s += `<text x="${X(l)}" y="${H - 8}" font-size="${fs}" fill="${mu}" text-anchor="middle">${l}</text>`);
+  runs.forEach((ns, i) => { s += polyline(ns.map((v, l) => [X(l), Y(Math.log10(v))]), cols[i], 2.5); if (L <= 24) ns.forEach((v, l) => s += `<circle cx="${X(l)}" cy="${Y(Math.log10(v))}" r="2.5" fill="${cols[i]}"/>`); });
+  $('#fig1').innerHTML = s;
+  ['#r1a', '#r1b', '#r1c'].forEach((id, i) => $(id).textContent = sci(runs[i][L] / runs[i][0]));
+}
+['#L1', '#g1'].forEach((id) => $(id).addEventListener('input', draw1)); $('#seed1').addEventListener('click', () => { seed1++; draw1(); });
+
+/* ---------- 02 ---------- */
+let seed2 = 1;
+const TOK = (() => { const r = rng(11); return Array.from({ length: 256 }, () => Array.from({ length: 64 }, () => gauss(r))); })();
+function hist(id, vals, col, logScale, fixed) {
+  const [W, H, fs] = vb(id, 400, 220, 400, 220), pl = 10, pr = 10, pt = 14, pb = 26, mu = css('--muted'), li = css('--line');
+  const xs = logScale ? vals.map((v) => Math.log10(v)) : vals;
+  let lo = Math.min(...xs), hi = Math.max(...xs); if (fixed) { lo = fixed[0]; hi = fixed[1]; } if (hi - lo < 1e-9) { lo -= 0.5; hi += 0.5; }
+  const nb = 24, cnt = new Array(nb).fill(0); xs.forEach((v) => { const k = Math.min(nb - 1, Math.max(0, Math.floor((v - lo) / (hi - lo) * nb))); cnt[k]++; });
+  const mx = Math.max(...cnt), bw = (W - pl - pr) / nb; let s = `<line x1="${pl}" y1="${H - pb}" x2="${W - pr}" y2="${H - pb}" stroke="${li}"/>`;
+  cnt.forEach((c, k) => { const h = c / mx * (H - pt - pb); s += `<rect x="${pl + k * bw + 1}" y="${H - pb - h}" width="${bw - 2}" height="${h}" fill="${col}"/>`; });
+  const ticks = logScale ? [] : [lo, (lo + hi) / 2, hi];
+  if (logScale) for (let e = Math.ceil(lo); e <= Math.floor(hi); e++) ticks.push(e);
+  ticks.forEach((v) => { const x = pl + (v - lo) / (hi - lo) * (W - pl - pr); s += `<text x="${x}" y="${H - 8}" font-size="${fs - 1}" fill="${mu}" text-anchor="middle">${logScale ? '10' + sup(v) : +v.toFixed(1)}</text>`; });
+  $(id).innerHTML = s;
+}
+function draw2() {
+  const L = +$('#L2').value; $('#L2v').textContent = L;
+  const runs = streamNorms(64, L, 1, 'none', seed2, TOK);
+  const before = runs.map((o) => o.ns[L]);
+  const after = runs.map((o) => vnorm(layerNorm(o.h)));   // 真正送进第 L+1 层分支的向量：LN(h)
+  const srt = [...before].sort((a, b) => a - b), sa = [...after].sort((a, b) => a - b);
+  hist('#fig2a', before, css('--warn'), true);
+  hist('#fig2b', after, css('--accent'), false, [0, 16]);
+  $('#r2a').textContent = sci(srt[255] / srt[0]) + '×'; $('#r2b').textContent = sci((srt[127] + srt[128]) / 2);
+  $('#r2c').textContent = (sa[255] / sa[0]).toFixed(2) + '×'; $('#r2d').textContent = sa[128].toFixed(2);
+}
+$('#L2').addEventListener('input', draw2); $('#seed2').addEventListener('click', () => { seed2++; draw2(); });
+
+/* ---------- 03 ---------- */
+function draw3() {
+  const m = +$('#m3').value; $('#m3v').textContent = f2(m);
+  const s0 = stats(X0), x = X0.map((v) => v - s0.mean + m), st = stats(x);
+  const a = layerNorm(x), b = rmsNorm(x);
+  const rg = range(x);
+  bars('#fig3a', x, css('--warn'), ...rg, { mean: st.mean });
+  bars('#fig3b', a, css('--accent'), -2.5, 2.5);
+  bars('#fig3c', b, css('--ok'), -2.5, 2.5);
+  $('#r3a').textContent = f2(st.mean); $('#r3b').textContent = f2(st.std); $('#r3c').textContent = f2(st.rms);
+  $('#r3d').textContent = f2(Math.max(...a.map((v, i) => Math.abs(v - b[i]))));
+}
+$('#m3').addEventListener('input', draw3);
+
+/* ---------- 04 ---------- */
+let seed4 = 1;
+function draw4() {
+  const L = +$('#L4').value, g = +$('#g4').value; $('#L4v').textContent = L; $('#g4v').textContent = g.toFixed(2);
+  const modes = ['none', 'pre', 'post'], cols = [css('--warn'), css('--accent'), css('--ok')];
+  const nets = modes.map((m) => { const n = makeNet(m, L, 16, seed4, g, TASK.xs.length); backward(n, TASK.xs, TASK.ys); return n; });
+  const mu = css('--muted'), li = css('--line');
+  const [W, H, fs] = vb('#fig4', 800, 300, 420, 300), pl = 60, pr = 14, pt = 12, pb = 30;
+  const lg = (v) => Math.log10(Math.max(v, 1e-30));
+  const logs = nets.flatMap((n) => [...n.pg].map(lg));
+  const lo = Math.min(-1, Math.floor(Math.min(...logs))), hi = Math.max(lo + 2, Math.ceil(Math.max(...logs)));
+  const X = (l) => pl + (l + 0.5) / L * (W - pl - pr), Y = (e) => pt + (hi - e) / (hi - lo) * (H - pt - pb);
+  let s = logAxis(lo, hi, pl, W - pr, Y, mu, li, fs);
+  [1, Math.round(L / 2), L].forEach((l) => s += `<text x="${X(l - 1)}" y="${H - 8}" font-size="${fs}" fill="${mu}" text-anchor="middle">${l}</text>`);
+  nets.forEach((n, i) => { const pts = [...n.pg].map((v, l) => [X(l), Y(lg(v))]); s += polyline(pts, cols[i], 2.5); if (L <= 24) pts.forEach((p) => s += `<circle cx="${p[0]}" cy="${p[1]}" r="2.5" fill="${cols[i]}"/>`); });
+  $('#fig4').innerHTML = s;
+  ['#r4a', '#r4b', '#r4c'].forEach((id, i) => $(id).textContent = sci(nets[i].pg[0]));
+  let direct = 1; for (let l = 0; l < L; l++) direct /= nets[2].sig[l];
+  $('#r4d').textContent = sci(direct);
+}
+['#L4', '#g4'].forEach((id) => $(id).addEventListener('input', draw4)); $('#seed4').addEventListener('click', () => { seed4++; draw4(); });
+
+/* ---------- 05 ---------- */
+const LRS = [0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3], STEPS5 = 200, GOOD = 0.1;
+const s5 = { L: 8, g: 1, res: null, busy: false, token: 0 };
+const getL5 = seg('#L5', (v) => { s5.L = +v; s5.res = null; draw5(); });
+const getG5 = seg('#g5', (v) => { s5.g = +v; s5.res = null; draw5(); });
+const MODES5 = [['none', '不做 Norm'], ['pre', 'Pre-Norm'], ['post', 'Post-Norm']];
+function run5() {
+  if (s5.busy) return; s5.busy = true; $('#run5').disabled = true; const token = ++s5.token;
+  const res = MODES5.map(() => LRS.map(() => null)); s5.res = res; draw5();
+  const jobs = []; MODES5.forEach(([m], i) => LRS.forEach((lr, j) => jobs.push([i, j, m, lr])));
+  let k = 0;
+  const step = () => {
+    if (token !== s5.token) return;
+    const t0 = performance.now();
+    while (k < jobs.length && performance.now() - t0 < 40) {
+      const [i, j, m, lr] = jobs[k]; const net = makeNet(m, s5.L, 16, 1, s5.g, TASK.xs.length); let l = 0, bad = false;
+      for (let t = 0; t < STEPS5; t++) { l = backward(net, TASK.xs, TASK.ys); if (!isFinite(l) || l > 1e3) { bad = true; break; } sgdStep(net, lr); }
+      res[i][j] = bad ? Infinity : l; k++;
+    }
+    $('#p5').textContent = k < jobs.length ? `训练中 ${k} / ${jobs.length}` : '';
+    draw5();
+    if (k < jobs.length) setTimeout(step, 0); else { s5.busy = false; $('#run5').disabled = false; $('#run5').textContent = '再训练一次'; }
+  };
+  setTimeout(step, 0);
+}
+function draw5() {
+  const fmtLr = (v) => v >= 0.001 ? String(v) : v.toString();
+  let h = `<tr><th>设计</th>${LRS.map((v) => `<th>${fmtLr(v)}</th>`).join('')}</tr>`;
+  MODES5.forEach(([m, name], i) => { h += `<tr><td>${name}</td>${LRS.map((_, j) => { const v = s5.res ? s5.res[i][j] : undefined; if (v === undefined) return '<td class="so">·</td>'; if (v === null) return '<td class="so">…</td>'; if (!isFinite(v)) return '<td class="bad">发散</td>'; return `<td class="${v < GOOD ? 'ok' : 'so'}">${sci(v)}</td>`; }).join('')}</tr>`; });
+  $('#tab5').innerHTML = h;
+  ['#r5a', '#r5b', '#r5c'].forEach((id, i) => { if (!s5.res || s5.res[i].some((v) => v === null)) { $(id).textContent = '–'; return; } const ok = LRS.filter((_, j) => s5.res[i][j] < GOOD); $(id).textContent = ok.length ? `${fmtLr(ok[0])} – ${fmtLr(ok[ok.length - 1])} · ${ok.length} 档` : '一档都没有'; });
+}
+$('#run5').addEventListener('click', run5);
+
+/* ---------- 启动与重绘 ---------- */
+const all = () => { draw0(); draw1(); draw2(); draw3(); draw4(); draw5(); };
+all();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { draw1(); draw2(); draw4(); }, 150); });
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-16 23:05 America/New_York · 更新者：Claude（会话 session_01HXmwuvnq8Z7skbnkunsKCy）
+最后更新：2026-10-16 23:30 America/New_York · 更新者：Claude（会话 session_01HXmwuvnq8Z7skbnkunsKCy）
 
 ---
 
@@ -160,7 +160,8 @@ door4ai-lab/
 - [x] 新增纯文字讲《Cloudflare 是做什么的：一张全球网络上的五类功能》（order 3.5，网络讲(2.5)与 Git 讲之后、Token 讲之前；无实验页，正文内嵌一张请求路径 SVG 图）（2026-10-16）
 - [x] 新增《梯度下降是什么：模型是怎么把参数一点点调对的》+「梯度下降实验室」五个实验 + 两段 Manim 动画（Descent1D、Gradient2D），order 20，排在 KV Cache 之后，作为训练相关内容的第一讲（2026-10-16）
 - [x] 新增《残差连接为什么必不可少：深网络是怎么训得动的》+「残差连接实验室」00–04 + 两段 Manim 动画（GradientHighway、ResidualStream），order 25，梯度下降之后（2026-10-16）
-- [ ] 下一讲：题目未定（候选见第 7 节）
+- [x] 模型篇补齐 4 讲（2026-10-16）：《反向传播是怎么算梯度的》(order 30，5 实验 + 2 动画)、《LayerNorm 为什么必需》(35，6 实验 + 2 动画)、《LoRA 为什么省参数》(40，6 实验 + 2 动画)、《模型怎么评测》(45，6 实验 + 2 动画)
+- [ ] Agent 篇 9 讲 + 基础篇 AI Coding 入门（规划见第 7 节）
 - [ ] 关于页只有两句话，待充实
 - [ ] 没有统计/分析（可考虑 Cloudflare Web Analytics，免费，一行脚本）
 - [x] 账号系统第 0 期代码完成并推送（默认关闭，线上行为不变）：邮箱验证码注册/登录、Passkey、单会话、注册来源、门禁、登录/账号/购买占位页；本地端到端 22/22 通过（2026-10-14）
@@ -178,6 +179,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-16 · Claude** — 模型篇补齐四讲（四个子任务并行写，主会话统一检查上线）：`backpropagation`（order 30：页内标量 autograd，00 计算图逐步流动 / 01 单链三法一致 / 02 两层网络 13 个梯度与中心差分逐项对照 / 03 数值微分 vs 反向传播代价 / 04 深链连乘；动画 ChainRule、Backward2Layer）、`layernorm`（35：00 归一化不变性 / 01 残差流范数随层数 / 02 token 范数分布 / 03 LN vs RMSNorm / 04 三种设计真实反向梯度 / 05 可用学习率范围；动画 NormalizeVector、PrePostNorm；小网络里 Post-Norm 并不吃亏，文章如实写并引 Xiong 2020）、`lora`（40：00 秩 / 01 参数计数器 / 02 真实微调 ΔW 的 SVD / 03 全量 vs LoRA r=1,2,4 / 04 合并与切换 / 05 Llama-3-8B 逐矩阵 LoRA 参数表；动画 LowRankUpdate、RankIntuition）、`model-evaluation`（45：00 困惑度 / 01 n-gram 困惑度 / 02 pass@k / 03 数据污染 / 04 Elo / 05 小 eval 集；动画 Perplexity、Goodhart；首个在课程文章里用 markdown 表格的讲）。关键数字都在 node 里用同一份页内逻辑核对过（见各讲 note）。四个实验页补上了同日另一会话加的「图形尺寸上限」脚本。本地 build 22 页通过；headless Chromium 检查 /ai 与四个文章页 1440 浅色 / 390 深色无横向滚动、iframe 自动长高、无脚本错误；个人信息检索 0。
 
 - **2026-10-16 · Claude** — 课程立项：`src/data/course.ts` 的 PARTS 加「Agent 篇」（order ≥ 100，模型篇改为 < 100）；第 4 节记录三篇结构的决定，第 7 节写入 14 讲的 slug / order 规划（基础篇 1、模型篇 4、Agent 篇 9）。各讲正在分批写，写完逐讲追加日志。
 

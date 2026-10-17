@@ -5,6 +5,10 @@ export const POSTS: Record<string, PostAccess> = {
     "access": "paid",
     "series": "ai-mastery"
   },
+  "backpropagation": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
   "cloudflare-basics": {
     "access": "paid",
     "series": "ai-mastery"
@@ -29,6 +33,18 @@ export const POSTS: Record<string, PostAccess> = {
     "access": "paid",
     "series": "ai-mastery"
   },
+  "layernorm": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
+  "lora": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
+  "model-evaluation": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
   "residual-connection": {
     "access": "paid",
     "series": "ai-mastery"
@@ -40,11 +56,15 @@ export const POSTS: Record<string, PostAccess> = {
 };
 export const LABS: Record<string, string> = {
   "labs/attention-qkv": "attention-qkv",
+  "labs/backpropagation": "backpropagation",
   "labs/computer-anatomy": "computer-anatomy",
   "labs/git-github": "git-github",
   "labs/gradient-descent": "gradient-descent",
   "labs/internet-basics": "internet-basics",
   "labs/kv-cache": "kv-cache-quantization",
+  "labs/layernorm": "layernorm",
+  "labs/lora": "lora",
+  "labs/model-evaluation": "model-evaluation",
   "labs/residual-connection": "residual-connection",
   "labs/tokenizer-llm": "tokenizer-llm"
 };

@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>模型评测实验室</title>
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+p code,li code,td code{font-size:.88em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+.formula{font-size:20px;text-align:center;margin:18px 0;letter-spacing:.02em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl b{font-variant-numeric:tabular-nums;min-width:2.4em}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+input[type=range]{accent-color:var(--accent);max-width:200px}
+.toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px}
+.toggle input{accent-color:var(--accent)}
+textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14px;line-height:1.7;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:8px;resize:vertical}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.two{grid-template-columns:1fr}}
+.cap{font-size:12px;color:var(--muted);margin:4px 0 0;text-align:center}
+.key{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;margin:0 0 8px}
+.key i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn{border-color:var(--warn)} .ro.warn b{color:var(--warn)}
+.ro.acc{border-color:var(--accent)} .ro.acc b{color:var(--accent)}
+.ro.ok{border-color:var(--ok)} .ro.ok b{color:var(--ok)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.strip{display:flex;flex-wrap:wrap;gap:2px;margin-top:10px;font-size:15px;line-height:1.3}
+.strip span{display:inline-block;padding:2px 3px;border-radius:3px;font-variant-numeric:tabular-nums}
+table{border-collapse:collapse;width:100%;min-width:600px;font-size:14px;margin-top:14px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.ok{color:var(--ok);font-weight:600} td.bad{color:var(--warn);font-weight:600}
+.tw{overflow-x:auto}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">困惑度 · Benchmark · pass@k · 数据污染 · Elo · 自建 Eval</div>
+  <h1>模型评测实验室</h1>
+  <p class="lede">分数是怎么算出来的、会怎么骗人、以及怎么给自己的任务做一套小评测。下面的 n-gram 模型、采样和对战都在浏览器里真实计算。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>困惑度：模型在多少个选项里犹豫</h2>
+  <p>模型预测下一个 token 时给出一个概率分布。分布越集中，它越「确定」；越平，它越「困惑」。困惑度（perplexity）把这种困惑程度折算成一个直观的数：<b>相当于在多少个等概率的选项里瞎猜</b>。拖动「集中程度」，看熵和困惑度怎么变。</p>
+  <p class="formula">PPL = 2<sup><i>H</i></sup>，　<i>H</i> = −Σ <i>p</i><sub><i>i</i></sub> log<sub>2</sub> <i>p</i><sub><i>i</i></sub>（bit）</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="v0">候选个数 V</label><input id="v0" type="range" min="2" max="64" value="16"><b id="v0v"></b></div>
+      <div class="ctrl"><label for="b0">集中程度 β</label><input id="b0" type="range" min="0" max="6" step="0.1" value="1.2"><b id="b0v"></b></div>
+      <div class="btns"><button class="btn" id="seed0">换一组分布</button></div>
+    </div>
+    <div class="two">
+      <div><svg id="fig0a" viewBox="0 0 400 220" role="img" aria-label="当前概率分布"></svg><p class="cap">当前分布（按概率从高到低排）</p></div>
+      <div><svg id="fig0b" viewBox="0 0 400 220" role="img" aria-label="等效的均匀分布"></svg><p class="cap">困惑度相同的均匀分布：PPL 个等概率选项</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r0a">–</b><span>熵 H（bit）</span></div>
+      <div class="ro acc"><b id="r0b">–</b><span>困惑度 PPL = 2<sup>H</sup></span></div>
+      <div class="ro"><b id="r0c">–</b><span>最高的一个概率</span></div>
+      <div class="ro"><b id="r0d">–</b><span>PPL 的取值范围</span></div>
+    </div>
+    <p class="note">β = 0 时分布完全均匀，PPL 正好等于 V；β 很大时几乎只剩一个选项，PPL 趋向 1。PPL 永远在 1 和 V 之间。语言模型报告的 PPL 就是把这个数在整段文本上取几何平均。</p>
+  </div>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>在一段文本上比较几个模型的困惑度</h2>
+  <p>这里在浏览器里训练四个字符级 n-gram 模型（看前 n−1 个字预测下一个字，加 k 平滑），用训练语料学，在另一段没见过的测试文本上算困惑度。两段文字都可以改。</p>
+  <p class="formula">PPL = 2<sup>−(1/<i>T</i>) Σ<sub><i>t</i></sub> log<sub>2</sub> <i>P</i>(<i>c</i><sub><i>t</i></sub> | 前 <i>n</i>−1 个字)</sup></p>
+  <div class="lab">
+    <div class="two">
+      <div><label class="cap" for="tr1" style="text-align:left;display:block;margin-bottom:4px">训练语料</label><textarea id="tr1" rows="6">春天的雨下得细而密，街道两旁的梧桐抽出新叶，早晨的空气带着泥土的味道。夏天的午后常有雷阵雨，雨前闷热，雨后凉快，傍晚的天边会出现一道彩虹。秋天的风把落叶吹到路边，人们开始穿上外套，早晚的温差越来越大。冬天的雪下得安静，屋顶和树枝上积起一层白，街上的行人走得很慢。一年四季就这样轮回，雨、雷、风、雪各有各的脾气，城市也跟着换了四种样子。</textarea></div>
+      <div><label class="cap" for="te1" style="text-align:left;display:block;margin-bottom:4px">测试文本（模型没见过）</label><textarea id="te1" rows="6">秋天的雨下得很慢，街道两旁的树叶落了一地，早晚的风越来越凉，人们走得比夏天快一些。</textarea></div>
+    </div>
+    <div class="ctrls" style="margin-top:14px">
+      <div class="ctrl"><label>看哪个模型</label><div class="seg" id="n1"><button data-v="1" aria-pressed="false">1-gram</button><button data-v="2" aria-pressed="true">2-gram</button><button data-v="3" aria-pressed="false">3-gram</button><button data-v="4" aria-pressed="false">4-gram</button></div></div>
+      <div class="ctrl"><label for="k1">平滑 k</label><input id="k1" type="range" min="-2" max="0" step="0.1" value="-1"><b id="k1v"></b></div>
+    </div>
+    <svg id="fig1" viewBox="0 0 800 220" role="img" aria-label="四个模型在训练集与测试集上的困惑度"></svg>
+    <p class="cap">每个模型两根柱：在训练语料上（浅）和在测试文本上（深）的困惑度，对数坐标</p>
+    <div class="strip" id="strip1"></div>
+    <p class="cap">测试文本逐字的「意外程度」−log<sub>2</sub> <i>P</i>：颜色越深，模型越没想到这个字</p>
+    <div class="readout">
+      <div class="ro acc"><b id="r1a">–</b><span>选中模型：测试困惑度</span></div>
+      <div class="ro"><b id="r1b">–</b><span>选中模型：训练困惑度</span></div>
+      <div class="ro"><b id="r1c">–</b><span>测试文本平均每字 bit</span></div>
+      <div class="ro"><b id="r1d">–</b><span>字表大小 V（瞎猜的 PPL）</span></div>
+    </div>
+    <p class="note">训练困惑度随 n 变大一路下降，把平滑 k 调小，4-gram 几乎把语料背下来了；测试困惑度却往往在 2-gram 或 3-gram 最低，再大就上升，因为语料太小，长上下文大多没见过。只看训练集上的分数，会选错模型。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>同一道题多跑几次：pass@k 与采样方差</h2>
+  <p>模型是采样生成的，同一道题跑两次可能一次对一次错。代码类 benchmark 用 pass@<i>k</i>：采 <i>k</i> 个答案，只要有一个通过就算过。公开的做法是每题采 <i>n</i> 次、数出通过数 <i>c</i>，再用无偏估计：</p>
+  <p class="formula">pass@<i>k</i> = 1 − C(<i>n</i>−<i>c</i>, <i>k</i>) / C(<i>n</i>, <i>k</i>)</p>
+  <p>下面用蒙特卡洛真实模拟：一个 <i>Q</i> 道题的 benchmark，每道题有自己的真实通过率（平均为 <i>p</i>），每次评测给每题采 <i>n</i> 个答案。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="p2">平均单次通过率 p</label><input id="p2" type="range" min="0.05" max="0.95" step="0.05" value="0.3"><b id="p2v"></b></div>
+      <div class="ctrl"><label for="k2">k</label><input id="k2" type="range" min="1" max="20" value="5"><b id="k2v"></b></div>
+      <div class="ctrl"><label for="n2">每题采样 n</label><input id="n2" type="range" min="1" max="50" value="10"><b id="n2v"></b></div>
+      <div class="ctrl"><label for="q2">题数 Q</label><input id="q2" type="range" min="20" max="500" step="20" value="100"><b id="q2v"></b></div>
+    </div>
+    <div class="two">
+      <div><div class="key"><span><i style="background:var(--muted)"></i>真实 pass@k</span><span><i style="background:var(--accent)"></i>200 次评测的估计值（均值 ± 1 标准差）</span></div><svg id="fig2a" viewBox="0 0 400 240" role="img" aria-label="pass@k 随 k 的曲线"></svg><p class="cap">横轴 k，纵轴 pass@k</p></div>
+      <div><svg id="fig2b" viewBox="0 0 400 240" role="img" aria-label="重复评测得到的 benchmark 分数分布"></svg><p class="cap">同一个模型、同一套题，重复评测 200 次得到的 pass@1 分数</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r2a">–</b><span>真实 pass@k</span></div>
+      <div class="ro acc"><b id="r2b">–</b><span>估计值均值 ± 标准差</span></div>
+      <div class="ro warn"><b id="r2c">–</b><span>pass@1 分数的 95% 波动区间</span></div>
+      <div class="ro"><b id="r2d">–</b><span>n = 1 时分数标准差（理论）</span></div>
+    </div>
+    <p class="note">k 越大 pass@k 越高，这是允许多次尝试，不是模型变强。右图更要紧：同一个模型重复评测，分数自己就会晃好几个百分点；题数 Q 小、每题只采 1 次时晃得最厉害。榜单上差 1 分的两个模型，往往分不出高下。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>数据污染：测试题混进了训练集</h2>
+  <p>benchmark 的题目公开在网上，很容易被爬进训练语料。这里用一个字符级 3-gram 模型演示：训练集 20 句，公开测试集 8 句，另留 8 句从没公开过的私有测试集。拖滑块，把公开测试集的一部分句子混进训练集，看两套测试集上的分数各怎么变。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="c3">混入训练集的公开测试题</label><input id="c3" type="range" min="0" max="8" value="0"><b id="c3v"></b></div>
+    </div>
+    <div class="key"><span><i style="background:var(--warn)"></i>公开测试集（被污染）</span><span><i style="background:var(--accent)"></i>私有测试集（干净）</span></div>
+    <div class="two">
+      <div><svg id="fig3a" viewBox="0 0 400 240" role="img" aria-label="下一字预测准确率随污染程度"></svg><p class="cap">下一字预测准确率</p></div>
+      <div><svg id="fig3b" viewBox="0 0 400 240" role="img" aria-label="困惑度随污染程度"></svg><p class="cap">困惑度（越低越好）</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro warn"><b id="r3a">–</b><span>公开测试集：准确率</span></div>
+      <div class="ro acc"><b id="r3b">–</b><span>私有测试集：准确率</span></div>
+      <div class="ro warn"><b id="r3c">–</b><span>公开测试集：困惑度</span></div>
+      <div class="ro acc"><b id="r3d">–</b><span>私有测试集：困惑度</span></div>
+    </div>
+    <p class="note">混入的题越多，公开测试集上的分数越漂亮，私有测试集上几乎不动：模型没有变强，只是见过答案。这就是为什么新 benchmark 都强调「题目在模型训练截止日期之后出」，以及为什么要保留一套自己不公开的题。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>Arena 对战：Elo 怎么从一场场胜负里长出来</h2>
+  <p>Chatbot Arena 这类榜单不出题，而是让两个匿名模型回答同一个 prompt，由人投票谁更好。设模型 A 对 B 的真实胜率为 <i>p</i>，模拟若干场对战，每场按 Elo 规则更新分数：</p>
+  <p class="formula"><i>E</i><sub>A</sub> = 1 / (1 + 10<sup>(<i>R</i><sub>B</sub> − <i>R</i><sub>A</sub>)/400</sup>)，　<i>R</i><sub>A</sub> ← <i>R</i><sub>A</sub> + <i>K</i>(<i>S</i> − <i>E</i><sub>A</sub>)</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="p4">A 的真实胜率 p</label><input id="p4" type="range" min="0.5" max="0.95" step="0.01" value="0.6"><b id="p4v"></b></div>
+      <div class="ctrl"><label for="g4">对战场数</label><input id="g4" type="range" min="50" max="3000" step="50" value="500"><b id="g4v"></b></div>
+      <div class="ctrl"><label for="kf4">K</label><input id="kf4" type="range" min="4" max="64" step="4" value="16"><b id="kf4v"></b></div>
+      <div class="btns"><button class="btn" id="seed4">重新对战</button></div>
+    </div>
+    <div class="key"><span><i style="background:var(--muted)"></i>真实分差 400·log<sub>10</sub>(p/(1−p))</span><span><i style="background:var(--accent)"></i>第 1 次模拟</span><span><i style="background:var(--accent);opacity:.3"></i>40 次模拟的 10%–90% 范围</span></div>
+    <svg id="fig4" viewBox="0 0 800 280" role="img" aria-label="Elo 分差随对战场数"></svg>
+    <p class="cap">横轴：已对战场数；纵轴：A − B 的 Elo 分差</p>
+    <div class="readout">
+      <div class="ro"><b id="r4a">–</b><span>真实分差</span></div>
+      <div class="ro acc"><b id="r4b">–</b><span>第 1 次模拟最终分差</span></div>
+      <div class="ro"><b id="r4c">–</b><span>40 次模拟最终分差的标准差</span></div>
+      <div class="ro warn"><b id="r4d">–</b><span>按胜场数算的 95% 置信区间</span></div>
+    </div>
+    <p class="note">两个模型胜率 0.6 : 0.4 对应约 70 分的差距，但要对战几百场置信区间才收窄到几十分；K 越大收敛越快、也晃得越厉害。榜单上两个模型差 10 分而对战只有几十场，等于没差。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>给自己的任务建一套小 eval</h2>
+  <p>公开榜单不回答「这个模型在<b>我的</b>任务上行不行」。自己建一套只要三样东西：几十道题 + 参考答案、一条判分规则、每次换模型或改 prompt 后重跑一遍。下面是 10 道题和两个「模型」的答案，勾选不同的判分规则，看总分和结论怎么变。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <label class="toggle"><input type="checkbox" id="ru1">归一化后比较（忽略大小写、空格、标点）</label>
+      <label class="toggle"><input type="checkbox" id="ru2">包含参考答案就算对</label>
+      <label class="toggle"><input type="checkbox" id="ru3">数值题允许 ±1% 误差</label>
+      <label class="toggle"><input type="checkbox" id="ru4">超过 20 字判错（要求简洁）</label>
+    </div>
+    <div class="tw"><table id="tab5"></table></div>
+    <div class="readout">
+      <div class="ro acc"><b id="r5a">–</b><span>模型 A 得分</span></div>
+      <div class="ro warn"><b id="r5b">–</b><span>模型 B 得分</span></div>
+      <div class="ro"><b id="r5c">–</b><span>结论</span></div>
+    </div>
+    <p class="note">同样 10 道题，换一条判分规则，赢家就换人：严格匹配偏向答得短的 A，「包含即算对」偏向答得长的 B（第 3 题 B 答 3.1416 也因为包含 3.14 被放过）。A 第 8 题用科学记数法，四条规则都判错。判分规则是 eval 的一部分，它决定了你在奖励什么。</p>
+  </div>
+</section>
+
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function gauss(r) { let u = 0; while (u === 0) u = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r()); }
+function seg(id, cb) {
+  const el = $(id);
+  el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; el.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); cb(b.dataset.v); });
+  return () => el.querySelector('[aria-pressed=true]').dataset.v;
+}
+function vb(id, w, h, nw, nh) { const el = $(id), n = el.clientWidth > 0 && el.clientWidth < 600, W = n ? nw : w, H = n ? nh : h; el.setAttribute('viewBox', `0 0 ${W} ${H}`); return [W, H]; }
+function polyline(pts, col, w = 2, extra = '') { if (!pts.length) return ''; return `<path d="${pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('')}" fill="none" stroke="${col}" stroke-width="${w}" ${extra}/>`; }
+const fmt = (v, d = 2) => isFinite(v) ? v.toFixed(d) : '–';
+const pct = (v, d = 1) => isFinite(v) ? (100 * v).toFixed(d) + '%' : '–';
+const log2 = (x) => Math.log(x) / Math.LN2;
+
+/* ---------- 00 困惑度直觉 ---------- */
+let seed0 = 7;
+function entropyBits(p) { let h = 0; for (const x of p) if (x > 0) h -= x * log2(x); return h; }
+function draw0() {
+  const V = +$('#v0').value, beta = +$('#b0').value; $('#v0v').textContent = V; $('#b0v').textContent = beta.toFixed(1);
+  const r = rng(seed0), z = []; for (let i = 0; i < V; i++) z.push(gauss(r));
+  const m = Math.max(...z.map((x) => beta * x)); let s = 0; const p = z.map((x) => { const e = Math.exp(beta * x - m); s += e; return e; }).map((e) => e / s).sort((a, b) => b - a);
+  const H = entropyBits(p), ppl = Math.pow(2, H);
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent');
+  const W = 400, Hh = 220, pl = 36, pr = 8, pt = 10, pb = 24, ymax = Math.max(0.25, Math.ceil(p[0] * 4) / 4);
+  const Y = (v) => pt + (1 - v / ymax) * (Hh - pt - pb);
+  let g = '';
+  [0, ymax / 2, ymax].forEach((v) => g += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/><text x="${pl - 5}" y="${Y(v) + 4}" font-size="11" fill="${mu}" text-anchor="end">${v.toFixed(2)}</text>`);
+  const bw = (W - pl - pr) / V;
+  p.forEach((v, i) => g += `<rect x="${pl + i * bw + bw * 0.1}" y="${Y(v)}" width="${bw * 0.8}" height="${Hh - pb - Y(v)}" fill="${ac}"/>`);
+  g += `<text x="${(pl + W - pr) / 2}" y="${Hh - 6}" font-size="11" fill="${mu}" text-anchor="middle">V = ${V} 个候选</text>`;
+  $('#fig0a').innerHTML = g;
+  // 等效均匀分布：ppl 根柱，每根 1/ppl；最后一根按小数部分截断
+  g = '';
+  [0, ymax / 2, ymax].forEach((v) => g += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/><text x="${pl - 5}" y="${Y(v) + 4}" font-size="11" fill="${mu}" text-anchor="end">${v.toFixed(2)}</text>`);
+  const nb = Math.ceil(ppl), hgt = Math.min(1 / ppl, ymax);
+  for (let i = 0; i < nb; i++) { const frac = i < nb - 1 ? 1 : ppl - (nb - 1); g += `<rect x="${pl + i * bw + bw * 0.1}" y="${Y(hgt)}" width="${bw * 0.8 * frac}" height="${Hh - pb - Y(hgt)}" fill="${ac}" fill-opacity="${i < nb - 1 ? 1 : 0.5}"/>`; }
+  g += `<text x="${(pl + W - pr) / 2}" y="${Hh - 6}" font-size="11" fill="${mu}" text-anchor="middle">PPL = ${ppl.toFixed(2)} 个等概率选项</text>`;
+  $('#fig0b').innerHTML = g;
+  $('#r0a').textContent = fmt(H, 3); $('#r0b').textContent = fmt(ppl, 2); $('#r0c').textContent = pct(p[0]); $('#r0d').textContent = `1 – ${V}`;
+}
+['#v0', '#b0'].forEach((id) => $(id).addEventListener('input', draw0)); $('#seed0').addEventListener('click', () => { seed0++; draw0(); });
+
+/* ---------- n-gram 工具（01、03 共用） ---------- */
+// 训练：返回 {n, ctx: Map(上下文 → Map(字 → 次数)), tot: Map(上下文 → 总次数), vocab}
+function trainNgram(texts, n, vocab) {
+  const ctx = new Map(), tot = new Map();
+  for (const t of texts) {
+    const s = '^'.repeat(n - 1) + t + '$';
+    for (let i = n - 1; i < s.length; i++) {
+      const c = s.slice(i - n + 1, i), ch = s[i];
+      if (!ctx.has(c)) ctx.set(c, new Map());
+      const m = ctx.get(c); m.set(ch, (m.get(ch) || 0) + 1); tot.set(c, (tot.get(c) || 0) + 1);
+    }
+  }
+  return { n, ctx, tot, V: vocab.size };
+}
+function probNgram(model, c, ch, k) { const m = model.ctx.get(c), cnt = m ? (m.get(ch) || 0) : 0, t = model.tot.get(c) || 0; return (cnt + k) / (t + k * model.V); }
+// 对一段文本逐字算 -log2 P；返回 {bits:[...], chars:[...]}
+function surprise(model, text, k) {
+  const n = model.n, s = '^'.repeat(n - 1) + text + '$', bits = [], chars = [];
+  for (let i = n - 1; i < s.length; i++) { const c = s.slice(i - n + 1, i), ch = s[i]; bits.push(-log2(probNgram(model, c, ch, k))); chars.push(ch); }
+  return { bits, chars };
+}
+const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+const vocabOf = (texts) => { const v = new Set(['$']); for (const t of texts) for (const ch of t) v.add(ch); return v; };
+
+/* ---------- 01 n-gram 困惑度对比 ---------- */
+const get1 = seg('#n1', draw1);
+function draw1() {
+  const tr = $('#tr1').value.replace(/\s+/g, ''), te = $('#te1').value.replace(/\s+/g, ''), k = Math.pow(10, +$('#k1').value), sel = +get1();
+  $('#k1v').textContent = k.toFixed(2);
+  if (!tr.length || !te.length) return;
+  const vocab = vocabOf([tr, te]);
+  const res = [1, 2, 3, 4].map((n) => { const m = trainNgram([tr], n, vocab); const a = surprise(m, tr, k), b = surprise(m, te, k); return { n, trainPPL: Math.pow(2, mean(a.bits)), testBits: mean(b.bits), testPPL: Math.pow(2, mean(b.bits)), s: b }; });
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent'), wa = css('--warn');
+  const [W, H] = vb('#fig1', 800, 220, 420, 260), pl = 46, pr = 10, pt = 12, pb = 28;
+  const allv = res.flatMap((r) => [r.trainPPL, r.testPPL]), lo = 0, hi = Math.max(1, Math.ceil(Math.log10(Math.max(...allv, vocab.size))));
+  const Y = (v) => pt + (hi - Math.max(lo, Math.log10(Math.max(v, 1)))) / (hi - lo) * (H - pt - pb);
+  let g = '';
+  for (let e = lo; e <= hi; e++) g += `<line x1="${pl}" y1="${Y(10 ** e)}" x2="${W - pr}" y2="${Y(10 ** e)}" stroke="${li}"/><text x="${pl - 5}" y="${Y(10 ** e) + 4}" font-size="${W < 600 ? 14 : 12}" fill="${mu}" text-anchor="end">${10 ** e}</text>`;
+  g += `<line x1="${pl}" y1="${Y(vocab.size)}" x2="${W - pr}" y2="${Y(vocab.size)}" stroke="${mu}" stroke-dasharray="4 3"/><text x="${W - pr}" y="${Y(vocab.size) - 4}" font-size="${W < 600 ? 13 : 11}" fill="${mu}" text-anchor="end">瞎猜 = V</text>`;
+  const gw = (W - pl - pr) / 4;
+  res.forEach((r, i) => {
+    const x0 = pl + i * gw, bw = gw * 0.28, on = r.n === sel;
+    g += `<rect x="${x0 + gw * 0.18}" y="${Y(r.trainPPL)}" width="${bw}" height="${H - pb - Y(r.trainPPL)}" fill="${on ? ac : mu}" fill-opacity="0.35"/>`;
+    g += `<rect x="${x0 + gw * 0.18 + bw + 4}" y="${Y(r.testPPL)}" width="${bw}" height="${H - pb - Y(r.testPPL)}" fill="${on ? ac : mu}"/>`;
+    g += `<text x="${x0 + gw / 2}" y="${H - 8}" font-size="${W < 600 ? 14 : 12}" fill="${on ? ac : mu}" text-anchor="middle">${r.n}-gram</text>`;
+    g += `<text x="${x0 + gw * 0.18 + bw / 2}" y="${Y(r.trainPPL) - 4}" font-size="${W < 600 ? 12 : 11}" fill="${mu}" text-anchor="middle">${r.trainPPL.toFixed(1)}</text>`;
+    g += `<text x="${x0 + gw * 0.18 + bw * 1.5 + 4}" y="${Y(r.testPPL) - 4}" font-size="${W < 600 ? 12 : 11}" fill="${on ? ac : mu}" text-anchor="middle">${r.testPPL.toFixed(1)}</text>`;
+  });
+  $('#fig1').innerHTML = g;
+  const cur = res[sel - 1], mx = Math.max(...cur.s.bits, 1);
+  const alpha = (o) => Math.round(o * 220).toString(16).padStart(2, '0');
+  $('#strip1').innerHTML = cur.s.chars.map((ch, i) => { const b = cur.s.bits[i], o = Math.min(1, b / mx); return `<span style="background:${wa}${alpha(o)}" title="${b.toFixed(2)} bit">${ch === '$' ? '␃' : ch}</span>`; }).join('');
+  $('#r1a').textContent = fmt(cur.testPPL, 1); $('#r1b').textContent = fmt(cur.trainPPL, 2); $('#r1c').textContent = fmt(cur.testBits, 2); $('#r1d').textContent = vocab.size;
+}
+['#tr1', '#te1'].forEach((id) => $(id).addEventListener('input', draw1)); $('#k1').addEventListener('input', draw1);
+
+/* ---------- 02 pass@k ---------- */
+const R2 = 200;
+function lnC(n, k) { let s = 0; for (let i = 1; i <= k; i++) s += Math.log(n - k + i) - Math.log(i); return s; }
+function passAtK(n, c, k) { if (n - c < k) return 1; return 1 - Math.exp(lnC(n - c, k) - lnC(n, k)); }
+function betaSample(r, a, b) { // Jöhnk 不够稳，这里用 gamma(a)/(gamma(a)+gamma(b))，Marsaglia–Tsang，a,b ≥ 1 时直接用
+  const gam = (sh) => { if (sh < 1) return gam(sh + 1) * Math.pow(r(), 1 / sh); const d = sh - 1 / 3, c = 1 / Math.sqrt(9 * d); for (;;) { let x, v; do { x = gauss(r); v = 1 + c * x; } while (v <= 0); v = v * v * v; const u = r(); if (u < 1 - 0.0331 * x ** 4 || Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v; } };
+  const x = gam(a), y = gam(b); return x / (x + y);
+}
+function draw2() {
+  const p = +$('#p2').value, K = +$('#k2').value, n = +$('#n2').value, Q = +$('#q2').value;
+  $('#p2v').textContent = p.toFixed(2); $('#k2v').textContent = K; $('#n2v').textContent = n; $('#q2v').textContent = Q;
+  const r = rng(11), conc = 4, ps = []; for (let i = 0; i < Q; i++) ps.push(betaSample(r, p * conc, (1 - p) * conc));
+  const kmax = 20, kk = Math.min(K, n);
+  const truth = []; for (let k = 1; k <= kmax; k++) truth.push(mean(ps.map((q) => 1 - Math.pow(1 - q, k))));
+  // 蒙特卡洛：R2 次评测，每次每题采 n 个
+  const est = Array.from({ length: kmax }, () => []), score1 = [];
+  const rr = rng(23);
+  for (let rep = 0; rep < R2; rep++) {
+    const cs = ps.map((q) => { let c = 0; for (let j = 0; j < n; j++) if (rr() < q) c++; return c; });
+    for (let k = 1; k <= Math.min(kmax, n); k++) est[k - 1].push(mean(cs.map((c) => passAtK(n, c, k))));
+    score1.push(mean(cs) / n);
+  }
+  const sd = (a) => { const m = mean(a); return Math.sqrt(mean(a.map((x) => (x - m) ** 2))); };
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent'), wa = css('--warn');
+  const W = 400, H = 240, pl = 40, pr = 10, pt = 10, pb = 26;
+  const X = (k) => pl + (k - 1) / (kmax - 1) * (W - pl - pr), Y = (v) => pt + (1 - v) * (H - pt - pb);
+  let g = '';
+  [0, 0.5, 1].forEach((v) => g += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/><text x="${pl - 5}" y="${Y(v) + 4}" font-size="11" fill="${mu}" text-anchor="end">${v}</text>`);
+  [1, 5, 10, 15, 20].forEach((k) => g += `<text x="${X(k)}" y="${H - 8}" font-size="11" fill="${mu}" text-anchor="middle">${k}</text>`);
+  g += polyline(truth.map((v, i) => [X(i + 1), Y(v)]), mu, 2);
+  est.forEach((a, i) => { if (!a.length) return; const m = mean(a), s = sd(a); g += `<line x1="${X(i + 1)}" y1="${Y(m - s)}" x2="${X(i + 1)}" y2="${Y(m + s)}" stroke="${ac}" stroke-width="2"/><circle cx="${X(i + 1)}" cy="${Y(m)}" r="3" fill="${ac}"/>`; });
+  g += `<line x1="${X(kk)}" y1="${pt}" x2="${X(kk)}" y2="${H - pb}" stroke="${wa}" stroke-dasharray="4 3"/>`;
+  if (n < kmax) g += `<text x="${X(n) + 4}" y="${pt + 12}" font-size="11" fill="${mu}">k &gt; n 无法估计</text>`;
+  $('#fig2a').innerHTML = g;
+  // 直方图
+  const lo = Math.max(0, Math.floor((Math.min(...score1) - 0.02) * 50) / 50), hi = Math.min(1, Math.ceil((Math.max(...score1) + 0.02) * 50) / 50), nb = 24, bins = new Array(nb).fill(0);
+  score1.forEach((s) => bins[Math.min(nb - 1, Math.floor((s - lo) / (hi - lo) * nb))]++);
+  const bm = Math.max(...bins), Xh = (v) => pl + (v - lo) / (hi - lo) * (W - pl - pr), Yh = (c) => pt + (1 - c / bm) * (H - pt - pb);
+  g = '';
+  const ticks = []; for (let v = Math.ceil(lo * 20) / 20; v <= hi + 1e-9; v += 0.05) ticks.push(v);
+  ticks.forEach((v) => g += `<text x="${Xh(v)}" y="${H - 8}" font-size="11" fill="${mu}" text-anchor="middle">${(v * 100).toFixed(0)}%</text>`);
+  bins.forEach((c, i) => { const x0 = Xh(lo + i * (hi - lo) / nb), x1 = Xh(lo + (i + 1) * (hi - lo) / nb); g += `<rect x="${x0}" y="${Yh(c)}" width="${Math.max(0, x1 - x0 - 1)}" height="${H - pb - Yh(c)}" fill="${ac}"/>`; });
+  g += `<line x1="${Xh(truth[0])}" y1="${pt}" x2="${Xh(truth[0])}" y2="${H - pb}" stroke="${mu}" stroke-dasharray="4 3"/>`;
+  $('#fig2b').innerHTML = g;
+  const sorted = [...score1].sort((a, b) => a - b), q05 = sorted[Math.floor(R2 * 0.025)], q95 = sorted[Math.ceil(R2 * 0.975) - 1];
+  const sd1 = Math.sqrt(mean(ps.map((q) => q * (1 - q))) / Q);
+  $('#r2a').textContent = pct(truth[K - 1]); $('#r2b').textContent = est[K - 1].length ? `${pct(mean(est[K - 1]))} ± ${pct(sd(est[K - 1]))}` : 'k > n';
+  $('#r2c').textContent = `${pct(q05)} – ${pct(q95)}`; $('#r2d').textContent = pct(sd1, 2);
+}
+['#p2', '#k2', '#n2', '#q2'].forEach((id) => $(id).addEventListener('input', draw2));
+
+/* ---------- 03 数据污染 ---------- */
+const CORPUS = [
+  '北京的冬天干燥而寒冷，街上的行人裹着厚外套。', '上海的夏天潮湿闷热，傍晚常常下一阵雷雨。', '合肥的春天来得早，三月的路边已经开满了花。', '纽约的秋天凉爽，公园里的树叶渐渐变黄。',
+  '地铁早高峰的车厢很挤，人们安静地看着手机。', '公交车沿着主路缓缓开过，每一站都有人上下。', '火车穿过隧道时，车窗外一下子变黑了。', '飞机起飞前，乘务员提醒大家系好安全带。',
+  '图书馆周末开到晚上九点，自习室总是坐满了人。', '学校食堂的午饭十一点半开始，排队的人很多。', '实验室的电脑一整夜都在跑程序，风扇声不停。', '教室的窗户朝南，下午的阳光照在黑板上。',
+  '水在一个标准大气压下的沸点是一百摄氏度。', '光在真空中每秒大约传播三十万千米。', '地球绕太阳转一圈需要大约三百六十五天。', '月亮绕地球一圈大约需要二十七天。',
+  '早晨的空气带着露水的味道，草地湿漉漉的。', '傍晚的天边出现一道彩虹，人们停下来拍照。', '夜里的风把树叶吹得沙沙响，路灯一盏盏亮起。', '雨后的街道反射着灯光，车轮溅起水花。',
+  // —— 公开测试集（8 句）——
+  '北京的秋天天高云淡，公园里的银杏叶黄了一地。', '地铁晚高峰同样拥挤，人们挤在车门边等下一站。', '图书馆的自习室早上八点开门，门口已经有人排队。', '雨后的空气格外清新，草地上的露水还没干。',
+  '火车进站时慢慢减速，站台上的人提着行李往前走。', '实验室的程序跑了一整天，结果终于在傍晚出来了。', '上海的冬天不算太冷，但湿冷的风让人缩着脖子。', '月亮升起的时候，街道两旁的路灯也一盏盏亮了。',
+  // —— 私有测试集（8 句）——
+  '合肥的夏天也很热，傍晚的雷雨来得快去得也快。', '公交车在早高峰的主路上走走停停，车厢里很安静。', '学校的图书馆周末也开放，自习的学生坐满了靠窗的位置。', '飞机降落前，窗外的城市灯光一片一片地亮起来。',
+  '教室里的阳光慢慢移到黑板的另一边，下午的课快结束了。', '光穿过雨后的空气，天边出现了一道淡淡的彩虹。', '纽约的冬天常常下雪，街上的行人走得很慢。', '地球和月亮都在转，夜里的风把云吹开，露出星星。',
+];
+const TR3 = CORPUS.slice(0, 20), PUB3 = CORPUS.slice(20, 28), PRIV3 = CORPUS.slice(28, 36);
+// 插值 3-gram：P = 0.6 P3 + 0.3 P2 + 0.1 P1（P1 加 k 平滑），预测取 argmax
+function makeInterp(texts, vocab) {
+  const m = [1, 2, 3].map((n) => trainNgram(texts, n, vocab)), k = 0.1, w = [0.1, 0.3, 0.6];
+  const prob = (hist, ch) => { let p = 0; for (let i = 0; i < 3; i++) { const n = i + 1, c = hist.slice(hist.length - (n - 1)); const mm = m[i].ctx.get(c), t = m[i].tot.get(c) || 0; if (n === 1) p += w[i] * ((mm ? (mm.get(ch) || 0) : 0) + k) / (t + k * vocab.size); else if (t > 0) p += w[i] * (mm.get(ch) || 0) / t; else p += w[i] * 1 / vocab.size; } return p; };
+  return { prob, vocab };
+}
+function evalInterp(model, texts) {
+  let bits = 0, T = 0, hit = 0; const V = [...model.vocab];
+  for (const t of texts) {
+    const s = '^^' + t + '$';
+    for (let i = 2; i < s.length; i++) {
+      const hist = s.slice(0, i), ch = s[i]; bits -= log2(model.prob(hist, ch)); T++;
+      let best = null, bp = -1; for (const v of V) { const p = model.prob(hist, v); if (p > bp) { bp = p; best = v; } }
+      if (best === ch) hit++;
+    }
+  }
+  return { acc: hit / T, ppl: Math.pow(2, bits / T) };
+}
+const RES3 = (() => {
+  const vocab = vocabOf(CORPUS); const out = [];
+  for (let c = 0; c <= 8; c++) { const m = makeInterp([...TR3, ...PUB3.slice(0, c)], vocab); out.push({ c, pub: evalInterp(m, PUB3), priv: evalInterp(m, PRIV3) }); }
+  return out;
+})();
+function draw3() {
+  const c = +$('#c3').value; $('#c3v').textContent = `${c} / 8 句`;
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent'), wa = css('--warn');
+  const W = 400, H = 240, pl = 44, pr = 10, pt = 10, pb = 26, X = (i) => pl + i / 8 * (W - pl - pr);
+  const chart = (id, key, lo, hi, fmtv, ticks) => {
+    const Y = (v) => pt + (1 - (v - lo) / (hi - lo)) * (H - pt - pb); let g = '';
+    ticks.forEach((v) => g += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/><text x="${pl - 5}" y="${Y(v) + 4}" font-size="11" fill="${mu}" text-anchor="end">${fmtv(v)}</text>`);
+    for (let i = 0; i <= 8; i += 2) g += `<text x="${X(i)}" y="${H - 8}" font-size="11" fill="${mu}" text-anchor="middle">${i}</text>`;
+    g += polyline(RES3.map((r, i) => [X(i), Y(r.priv[key])]), ac, 2.5) + polyline(RES3.map((r, i) => [X(i), Y(r.pub[key])]), wa, 2.5);
+    g += `<circle cx="${X(c)}" cy="${Y(RES3[c].pub[key])}" r="4.5" fill="${wa}"/><circle cx="${X(c)}" cy="${Y(RES3[c].priv[key])}" r="4.5" fill="${ac}"/>`;
+    $(id).innerHTML = g;
+  };
+  const accs = RES3.flatMap((r) => [r.pub.acc, r.priv.acc]), ppls = RES3.flatMap((r) => [r.pub.ppl, r.priv.ppl]);
+  const aLo = Math.floor(Math.min(...accs) * 10) / 10, aHi = Math.ceil(Math.max(...accs) * 10) / 10;
+  const at = []; for (let v = aLo; v <= aHi + 1e-9; v += 0.1) at.push(v);
+  chart('#fig3a', 'acc', aLo, aHi, (v) => `${Math.round(v * 100)}%`, at);
+  const pLo = 0, pHi = Math.ceil(Math.max(...ppls) / 10) * 10; const ptk = []; for (let v = pLo; v <= pHi; v += pHi / 4) ptk.push(v);
+  chart('#fig3b', 'ppl', pLo, pHi, (v) => v.toFixed(0), ptk);
+  const r = RES3[c];
+  $('#r3a').textContent = pct(r.pub.acc); $('#r3b').textContent = pct(r.priv.acc); $('#r3c').textContent = fmt(r.pub.ppl, 1); $('#r3d').textContent = fmt(r.priv.ppl, 1);
+}
+$('#c3').addEventListener('input', draw3);
+
+/* ---------- 04 Elo 对战 ---------- */
+let seed4 = 1;
+const RUNS4 = 40;
+function draw4() {
+  const p = +$('#p4').value, G = +$('#g4').value, K = +$('#kf4').value;
+  $('#p4v').textContent = p.toFixed(2); $('#g4v').textContent = G; $('#kf4v').textContent = K;
+  const truth = 400 * Math.log10(p / (1 - p));
+  const runs = [], finals = []; let wins0 = 0;
+  for (let rep = 0; rep < RUNS4; rep++) {
+    const r = rng(seed4 * 1000 + rep); let ra = 1000, rb = 1000; const d = [0];
+    for (let g = 1; g <= G; g++) { const ea = 1 / (1 + Math.pow(10, (rb - ra) / 400)); const s = r() < p ? 1 : 0; if (rep === 0) wins0 += s; ra += K * (s - ea); rb -= K * (s - ea); d.push(ra - rb); }
+    runs.push(d); finals.push(d[G]);
+  }
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent');
+  const [W, H] = vb('#fig4', 800, 280, 420, 300), pl = 50, pr = 12, pt = 12, pb = 28;
+  const allv = runs.flatMap((d) => d), lo = Math.min(-50, Math.floor(Math.min(...allv) / 50) * 50), hi = Math.max(50, Math.ceil(Math.max(...allv, truth) / 50) * 50);
+  const X = (g) => pl + g / G * (W - pl - pr), Y = (v) => pt + (hi - v) / (hi - lo) * (H - pt - pb);
+  let g = '';
+  const step = hi - lo > 600 ? 200 : hi - lo > 300 ? 100 : 50;
+  for (let v = lo; v <= hi; v += step) g += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/><text x="${pl - 5}" y="${Y(v) + 4}" font-size="${W < 600 ? 14 : 12}" fill="${mu}" text-anchor="end">${v}</text>`;
+  [0, G / 2, G].forEach((v) => g += `<text x="${X(v)}" y="${H - 8}" font-size="${W < 600 ? 14 : 12}" fill="${mu}" text-anchor="middle">${v}</text>`);
+  // 10%–90% 带
+  const S = Math.max(1, Math.floor(G / 200)), up = [], dn = [];
+  for (let t = 0; t <= G; t += S) { const col = runs.map((d) => d[t]).sort((a, b) => a - b); dn.push([X(t), Y(col[Math.floor(RUNS4 * 0.1)])]); up.push([X(t), Y(col[Math.ceil(RUNS4 * 0.9) - 1])]); }
+  g += `<path d="${[...up, ...dn.reverse()].map((q, i) => (i ? 'L' : 'M') + q[0].toFixed(1) + ',' + q[1].toFixed(1)).join('')}Z" fill="${ac}" fill-opacity="0.18"/>`;
+  g += `<line x1="${pl}" y1="${Y(truth)}" x2="${W - pr}" y2="${Y(truth)}" stroke="${mu}" stroke-dasharray="5 4" stroke-width="2"/>`;
+  const pts = []; for (let t = 0; t <= G; t += S) pts.push([X(t), Y(runs[0][t])]); if ((G % S) !== 0) pts.push([X(G), Y(runs[0][G])]);
+  g += polyline(pts, ac, 2.2);
+  $('#fig4').innerHTML = g;
+  // Wilson 区间 → 分差区间
+  const n = G, ph = wins0 / n, z = 1.96, den = 1 + z * z / n, cen = (ph + z * z / (2 * n)) / den, half = z * Math.sqrt(ph * (1 - ph) / n + z * z / (4 * n * n)) / den;
+  const toD = (q) => 400 * Math.log10(q / (1 - q)), lo95 = toD(Math.max(1e-6, cen - half)), hi95 = toD(Math.min(1 - 1e-6, cen + half));
+  const sdF = Math.sqrt(mean(finals.map((x) => (x - mean(finals)) ** 2)));
+  $('#r4a').textContent = `${truth >= 0 ? '+' : ''}${truth.toFixed(0)}`; $('#r4b').textContent = `${finals[0] >= 0 ? '+' : ''}${finals[0].toFixed(0)}`;
+  $('#r4c').textContent = sdF.toFixed(0); $('#r4d').textContent = `${lo95 >= 0 ? '+' : ''}${lo95.toFixed(0)} ~ +${hi95.toFixed(0)}`;
+}
+['#p4', '#g4', '#kf4'].forEach((id) => $(id).addEventListener('input', draw4)); $('#seed4').addEventListener('click', () => { seed4++; draw4(); });
+
+/* ---------- 05 小 eval 集 ---------- */
+const EVAL = [
+  { q: '12 × 15 = ?', ref: '180', num: true, a: '180', b: '12 乘以 15 等于 170。' },
+  { q: '一个标准大气压下水的沸点是多少摄氏度？', ref: '100', num: true, a: '100 °C', b: '100' },
+  { q: '圆周率保留两位小数', ref: '3.14', num: true, a: '3.14', b: '约等于 3.1416' },
+  { q: 'Python 里把字符串转成整数的内置函数名', ref: 'int', num: false, a: 'int()', b: '用 int 函数，例如 int("42")。' },
+  { q: '地球绕太阳一周大约多少天？', ref: '365', num: true, a: '365.25', b: '大约 365 天' },
+  { q: 'HTTP 状态码 404 的英文含义', ref: 'Not Found', num: false, a: 'Not Found', b: 'not found（未找到）' },
+  { q: '1 KB 等于多少字节（按 1024 算）？', ref: '1024', num: true, a: '1024', b: '1 KB = 1024 B' },
+  { q: '光在真空中的速度约为多少 km/s？', ref: '300000', num: true, a: '3×10^5', b: '约 300000 km/s，更精确是 299792 km/s。' },
+  { q: '把列表 [3, 1, 2] 升序排序后的结果', ref: '[1, 2, 3]', num: false, a: '[1,2,3]', b: '[1, 2, 3]' },
+  { q: '英文单词 evaluation 有几个字母？', ref: '10', num: true, a: '11', b: 'evaluation 有 10 个字母。' },
+];
+const norm = (s) => s.toLowerCase().replace(/[^0-9a-z一-鿿]/g, '');
+const nums = (s) => (s.match(/-?\d+(?:\.\d+)?/g) || []).map(Number);
+function judge(item, ans, rules) {
+  if (rules.len && [...ans].length > 20) return false;
+  if (ans.trim() === item.ref) return true;
+  if (rules.norm && norm(ans) === norm(item.ref)) return true;
+  if (rules.contain && norm(ans).includes(norm(item.ref))) return true;
+  if (rules.num && item.num) { const r = Number(item.ref); if (nums(ans).some((v) => Math.abs(v - r) <= 0.01 * Math.abs(r))) return true; }
+  return false;
+}
+function draw5() {
+  const rules = { norm: $('#ru1').checked, contain: $('#ru2').checked, num: $('#ru3').checked, len: $('#ru4').checked };
+  let sa = 0, sb = 0, rows = '<tr><th>#</th><th>题目</th><th>参考答案</th><th>模型 A</th><th>模型 B</th></tr>';
+  EVAL.forEach((it, i) => {
+    const ja = judge(it, it.a, rules), jb = judge(it, it.b, rules); sa += ja; sb += jb;
+    rows += `<tr><td>${i + 1}</td><td>${it.q}</td><td><code>${it.ref}</code></td><td class="${ja ? 'ok' : 'bad'}">${ja ? '✓' : '✗'} <span style="font-weight:400;color:var(--muted)">${it.a}</span></td><td class="${jb ? 'ok' : 'bad'}">${jb ? '✓' : '✗'} <span style="font-weight:400;color:var(--muted)">${it.b}</span></td></tr>`;
+  });
+  $('#tab5').innerHTML = rows;
+  $('#r5a').textContent = `${sa} / 10`; $('#r5b').textContent = `${sb} / 10`;
+  $('#r5c').textContent = sa > sb ? 'A 胜' : sb > sa ? 'B 胜' : '平手';
+}
+['#ru1', '#ru2', '#ru3', '#ru4'].forEach((id) => $(id).addEventListener('change', draw5));
+
+/* ---------- 启动与重绘 ---------- */
+const all = () => { draw0(); draw1(); draw2(); draw3(); draw4(); draw5(); };
+all();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { draw1(); draw4(); }, 150); });
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>

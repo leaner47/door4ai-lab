@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>LoRA 实验室</title>
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+.formula{font-size:20px;text-align:center;margin:18px 0;letter-spacing:.02em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl b{font-variant-numeric:tabular-nums;min-width:2.4em}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px}
+.toggle input{accent-color:var(--accent)}
+input[type=range]{accent-color:var(--accent);max-width:200px}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.two{grid-template-columns:1fr}}
+.cap{font-size:12px;color:var(--muted);margin:4px 0 0;text-align:center}
+.key{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;margin:0 0 8px}
+.key i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn{border-color:var(--warn)} .ro.warn b{color:var(--warn)}
+.ro.acc{border-color:var(--accent)} .ro.acc b{color:var(--accent)}
+.ro.ok{border-color:var(--ok)} .ro.ok b{color:var(--ok)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.num,th.num{text-align:right}
+tr.tot td{font-weight:600}
+.tw{overflow-x:auto}
+.prog{font-size:13px;color:var(--muted)}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">微调 · 低秩 · ΔW = B·A · SVD · QLoRA</div>
+  <h1>LoRA 实验室</h1>
+  <p class="lede">矩阵的秩是什么，微调的改动为什么近似低秩，LoRA 省下多少参数和显存。下面的网络都在浏览器里真实训练，大模型的数字由公开架构参数算出。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>矩阵的秩是什么</h2>
+  <p>一列数 <i>u</i>（<i>d</i> 个）乘一行数 <i>v</i>（<i>d</i> 个），得到一个 <i>d</i> × <i>d</i> 的矩阵 <i>u v</i><sup>T</sup>，第 <i>i</i> 行第 <i>j</i> 列就是 <i>u<sub>i</sub> v<sub>j</sub></i>。它看起来有 <i>d</i>² 个数，其实只由 2<i>d</i> 个数决定，每一行都是同一行 <i>v</i> 的倍数，这叫秩 1。把 <i>r</i> 个这样的矩阵叠起来，得到的就是秩 <i>r</i> 的矩阵。拖动 <i>r</i>，看一个 16 × 16 的矩阵由几个外积叠成。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="r0">秩 r</label><input id="r0" type="range" min="1" max="16" value="2"><b id="r0v"></b></div>
+      <div class="btns"><button class="btn" id="seed0">换一组 u、v</button></div>
+    </div>
+    <svg id="fig0" viewBox="0 0 800 260" role="img" aria-label="r 个秩 1 矩阵叠加成一个秩 r 矩阵的热力图"></svg>
+    <div class="readout">
+      <div class="ro acc"><b id="r0rank">–</b><span>叠加结果的数值秩（页内 SVD 算出）</span></div>
+      <div class="ro"><b id="r0n">–</b><span>决定它的数字个数 r × (d + d)</span></div>
+      <div class="ro"><b id="r0full">256</b><span>矩阵本身的格子数 d × d</span></div>
+    </div>
+    <p class="note">r 很小时，右边的大矩阵虽然 256 个格子都有值，但只由几十个数决定，这是「低秩」的意思。r 到 16 时它才成为一个「随便什么都能是」的矩阵。</p>
+  </div>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>ΔW = B·A：微调只学一个低秩修正</h2>
+  <p>一个 <i>d</i> × <i>k</i> 的权重矩阵 <i>W</i>，全量微调要动它全部 <i>d</i> × <i>k</i> 个数。LoRA 把 <i>W</i> 冻住，另外学两个瘦长的矩阵：<i>B</i> 是 <i>d</i> × <i>r</i>，<i>A</i> 是 <i>r</i> × <i>k</i>，乘起来 <i>B·A</i> 正好是 <i>d</i> × <i>k</i>，叠在 <i>W</i> 上当修正。可训练参数只有 <i>r</i> × (<i>d</i> + <i>k</i>) 个。</p>
+  <p class="formula"><i>h</i> = <i>W x</i> + <i>B A x</i>　　<i>W</i>：<i>d</i> × <i>k</i>（冻结）　<i>B</i>：<i>d</i> × <i>r</i>　<i>A</i>：<i>r</i> × <i>k</i></p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="d1">d</label><input id="d1" type="range" min="0" max="6" value="3"><b id="d1v"></b></div>
+      <div class="ctrl"><label for="k1">k</label><input id="k1" type="range" min="0" max="6" value="3"><b id="k1v"></b></div>
+      <div class="ctrl"><label for="rr1">r</label><input id="rr1" type="range" min="0" max="8" value="3"><b id="rr1v"></b></div>
+    </div>
+    <svg id="fig1" viewBox="0 0 800 300" role="img" aria-label="W、B、A 三个矩阵的形状对比"></svg>
+    <div class="readout">
+      <div class="ro warn"><b id="r1full">–</b><span>全量：d × k 个参数</span></div>
+      <div class="ro acc"><b id="r1lora">–</b><span>LoRA：r × (d + k) 个参数</span></div>
+      <div class="ro acc"><b id="r1pct">–</b><span>LoRA 占全量的比例</span></div>
+      <div class="ro warn"><b id="r1mem">–</b><span>全量微调这一个矩阵的显存（16 B/参数）</span></div>
+      <div class="ro acc"><b id="r1memL">–</b><span>LoRA：冻结权重 2 B/参数 + 可训练 16 B/参数</span></div>
+    </div>
+    <p class="note">显存按混合精度 + Adam 的常规记法算：每个可训练参数要存 bf16 权重、bf16 梯度、fp32 主权重、Adam 的两个状态，共 16 B；冻结的权重只存一份 bf16，2 B。d、k 越大，r 相对越小，省得越狠。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>真的微调一次，ΔW 长什么样</h2>
+  <p>LoRA 的前提是：微调带来的权重变化 Δ<i>W</i> 本身就近似低秩。用一个小网络验证：先在任务 A 上把它训好（这是「预训练」），再全量微调到任务 B，取中间一层 32 × 32 权重的变化 Δ<i>W</i>，在页内做 SVD。奇异值从大到小排，前 <i>r</i> 个占的能量越多，说明 <i>r</i> 个外积就能把它还原得越好。对照组是预训练好的 <i>W</i> 本身和一个随机矩阵。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="r2">保留前 r 个奇异值</label><input id="r2" type="range" min="1" max="32" value="4"><b id="r2v"></b></div>
+      <div class="ctrl"><span class="prog" id="p2"></span></div>
+    </div>
+    <div class="key"><span><i style="background:var(--accent)"></i>ΔW（微调的改动）</span><span><i style="background:var(--warn)"></i>W（预训练权重）</span><span><i style="background:var(--muted)"></i>随机矩阵</span></div>
+    <div class="two">
+      <div><svg id="fig2a" viewBox="0 0 400 240" role="img" aria-label="三个矩阵的奇异值谱"></svg><p class="cap">奇异值 σ<sub>i</sub> / σ<sub>1</sub>，从大到小</p></div>
+      <div><svg id="fig2b" viewBox="0 0 400 240" role="img" aria-label="保留前 r 个奇异值后的重建误差"></svg><p class="cap">只保留前 r 个奇异值时的相对重建误差</p></div>
+    </div>
+    <div class="two">
+      <div><svg id="fig2c" viewBox="0 0 320 160" role="img" aria-label="真实的 ΔW 热力图"></svg><p class="cap">真实的 ΔW（32 × 32）</p></div>
+      <div><svg id="fig2d" viewBox="0 0 320 160" role="img" aria-label="秩 r 近似的 ΔW 热力图"></svg><p class="cap">只用前 r 个外积叠出来的 ΔW</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro acc"><b id="r2e">–</b><span>ΔW：前 r 个奇异值占的能量</span></div>
+      <div class="ro warn"><b id="r2w">–</b><span>W：前 r 个奇异值占的能量</span></div>
+      <div class="ro"><b id="r2r">–</b><span>随机矩阵：前 r 个占的能量</span></div>
+      <div class="ro acc"><b id="r2k">–</b><span>ΔW 达到 90% 能量需要的 r</span></div>
+    </div>
+    <p class="note">ΔW 的奇异值掉得很快，前几个就占了绝大部分；随机矩阵的奇异值几乎一样大，要留一半以上才够。LoRA 论文在 GPT-3 175B 上观察到同样的事：r = 1 的 LoRA 已经接近 r = 64。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>全量微调 vs LoRA：同一个底座，适应任务 B</h2>
+  <p>从同一个在任务 A 上预训练好的网络出发，四种方法同时把它适应到任务 B：全量微调（全部 2209 个参数都动），以及只在两个 32 × 32 矩阵上加 LoRA，秩分别为 1、2、4。看训练误差怎么下降，以及各自改动了多少参数。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="btns"><button class="btn pri" id="run3" disabled>开始微调</button><button class="btn" id="reset3">重置</button></div>
+      <div class="ctrl"><span class="prog" id="p3"></span></div>
+    </div>
+    <div class="key"><span><i style="background:var(--warn)"></i>全量</span><span><i style="background:var(--accent);opacity:.45"></i>LoRA r = 1</span><span><i style="background:var(--accent);opacity:.7"></i>LoRA r = 2</span><span><i style="background:var(--accent)"></i>LoRA r = 4</span><span><i style="background:var(--muted)"></i>任务 B 目标</span></div>
+    <div class="two">
+      <div><svg id="fig3a" viewBox="0 0 400 280" role="img" aria-label="四种方法的训练误差曲线（对数坐标）"></svg><p class="cap">任务 B 上的训练误差 MSE 随步数（对数坐标）</p></div>
+      <div><svg id="fig3b" viewBox="0 0 400 280" role="img" aria-label="当前拟合出的曲线"></svg><p class="cap">当前拟合出的曲线（虚线是任务 B）</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r3n">0</b><span>已训练步数</span></div>
+      <div class="ro warn"><b id="r3f">–</b><span>全量：误差（2209 个参数，lr 0.003）</span></div>
+      <div class="ro acc"><b id="r3a">–</b><span>LoRA r = 1：误差（128 个参数，lr 0.03）</span></div>
+      <div class="ro acc"><b id="r3b">–</b><span>LoRA r = 2：误差（256 个参数）</span></div>
+      <div class="ro acc"><b id="r3c">–</b><span>LoRA r = 4：误差（512 个参数）</span></div>
+    </div>
+    <p class="note">r = 1 只动 5.8% 的参数，误差也能降到全量的同一量级；r 越大越接近全量。LoRA 通常用比全量大一个量级的学习率，这里也是。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>合并与切换：一个底座，两个 LoRA</h2>
+  <p>LoRA 训好以后有两种用法。一是算 <i>W′</i> = <i>W</i> + <i>B·A</i>，把修正合并进原矩阵，形状不变，推理时和原模型一样快；二是不合并，底座只放一份，不同任务各带一对小小的 <i>B</i>、<i>A</i>，随时换。下面用同一个底座分别训了任务 B 和任务 C 的 LoRA（r = 4），点按钮切换。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>当前</label><div class="seg" id="sel4"><button data-v="base" aria-pressed="true">只有底座</button><button data-v="B" aria-pressed="false">底座 + LoRA B</button><button data-v="C" aria-pressed="false">底座 + LoRA C</button></div></div>
+      <label class="toggle"><input type="checkbox" id="merge4">先合并进 W 再算</label>
+      <div class="ctrl"><span class="prog" id="p4"></span></div>
+    </div>
+    <div class="key"><span><i style="background:var(--accent)"></i>网络输出</span><span><i style="background:var(--muted)"></i>任务 A</span><span><i style="background:var(--warn)"></i>任务 B</span><span><i style="background:var(--ok)"></i>任务 C</span></div>
+    <svg id="fig4" viewBox="0 0 800 280" role="img" aria-label="底座加不同 LoRA 后的输出曲线"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r4a">–</b><span>对任务 A 的误差</span></div>
+      <div class="ro warn"><b id="r4b">–</b><span>对任务 B 的误差</span></div>
+      <div class="ro ok"><b id="r4c">–</b><span>对任务 C 的误差</span></div>
+      <div class="ro acc"><b id="r4d">–</b><span>合并前后输出的最大差</span></div>
+      <div class="ro acc"><b id="r4n">512</b><span>换一个任务要换的参数个数（全量要换 2209）</span></div>
+    </div>
+    <p class="note">合并前后输出只差浮点误差，说明合并不损失任何东西，也不多花一次矩阵乘法。切换任务只换 512 个数，底座纹丝不动，这就是一个底座服务很多个 LoRA 的做法。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>Llama-3-8B：各层投影加 LoRA 要多少参数</h2>
+  <p>按公开架构参数算：Llama-3-8B 的 <i>d</i> = 4096，32 层，32 个 query 头、8 个 KV 头、每头 128 维，所以 q、o 投影是 4096 × 4096，k、v 投影是 4096 × 1024；MLP 三个矩阵是 4096 × 14336。全模型 8.03 B 参数（含 128256 词的输入与输出嵌入）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>秩 r</label><div class="seg" id="r5"><button data-v="8" aria-pressed="false">8</button><button data-v="16" aria-pressed="true">16</button><button data-v="64" aria-pressed="false">64</button></div></div>
+      <label class="toggle"><input type="checkbox" id="mlp5">MLP 的三个矩阵也加 LoRA</label>
+    </div>
+    <div class="tw"><table id="tab5"></table></div>
+    <div class="readout">
+      <div class="ro warn"><b id="r5full">–</b><span>全量微调：可训练参数</span></div>
+      <div class="ro warn"><b id="r5fmem">–</b><span>全量微调显存，16 B/参数（不含激活）</span></div>
+      <div class="ro acc"><b id="r5lora">–</b><span>LoRA：可训练参数</span></div>
+      <div class="ro acc"><b id="r5pct">–</b><span>占全模型参数的比例</span></div>
+      <div class="ro acc"><b id="r5lmem">–</b><span>LoRA 显存：bf16 底座 + 可训练参数 16 B</span></div>
+      <div class="ro ok"><b id="r5qmem">–</b><span>QLoRA：4 bit 底座（0.5 B/参数）+ 同样的 LoRA</span></div>
+    </div>
+    <p class="note">全量微调连权重带优化器状态要 128 GB 以上，单张 80 GB 的卡放不下；LoRA 把可训练部分压到百分之一以下，大头变成了只读的底座；QLoRA 再把底座压成 4 bit，一张 24 GB 的消费级显卡就能微调 8B 模型。显存估算都不含激活值。</p>
+  </div>
+</section>
+
+</div>
+<script>
+// ======== 共用核心：小网络（tanh MLP）、全量 / LoRA 微调、Adam、Jacobi SVD。浏览器与 node 共用同一份。========
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function gauss(r) { let u = 0; while (u === 0) u = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r()); }
+const H = 32, NPT = 64;
+const XS = Array.from({ length: NPT }, (_, i) => -1 + 2 * i / (NPT - 1));
+const TASKS = {
+  A: { name: '任务 A', f: (x) => Math.sin(3 * x) },
+  B: { name: '任务 B', f: (x) => Math.sin(3 * x + 1) },
+  C: { name: '任务 C', f: (x) => 0.5 * Math.sin(3 * x) + 0.6 * Math.cos(6 * x) },
+};
+for (const k in TASKS) TASKS[k].ys = XS.map(TASKS[k].f);
+// 网络：x → tanh(win x + bin) = h0 → tanh(W1 h0 + b1) = h1 → tanh(W2 h1 + b2) = h2 → wout·h2 + bout
+function makeNet(seed) {
+  const r = rng(seed), mat = (n, sd) => { const a = new Float64Array(n); for (let i = 0; i < n; i++) a[i] = gauss(r) * sd; return a; };
+  return { win: mat(H, 1.5), bin: mat(H, 1), W: [mat(H * H, 1 / Math.sqrt(H)), mat(H * H, 1 / Math.sqrt(H))], b: [new Float64Array(H), new Float64Array(H)], wout: mat(H, 1 / Math.sqrt(H)), bout: new Float64Array(1), lora: null };
+}
+function cloneNet(net) { return { win: net.win.slice(), bin: net.bin.slice(), W: net.W.map((w) => w.slice()), b: net.b.map((b) => b.slice()), wout: net.wout.slice(), bout: net.bout.slice(), lora: null }; }
+// LoRA：对 W[0] 与 W[1] 各加一个 ΔW = B·A，A 为 r×H 高斯初始化，B 为 H×r 全零（和论文一致，一开始 ΔW = 0）
+function makeLora(r, seed) {
+  const g = rng(seed), A = [], B = [];
+  for (let l = 0; l < 2; l++) { const a = new Float64Array(r * H); for (let i = 0; i < a.length; i++) a[i] = gauss(g) / Math.sqrt(H); A.push(a); B.push(new Float64Array(H * r)); }
+  return { r, A, B };
+}
+function params(net, mode) { if (mode === 'lora') return [...net.lora.A, ...net.lora.B]; return [net.win, net.bin, ...net.W, ...net.b, net.wout, net.bout]; }
+function count(ps) { return ps.reduce((s, p) => s + p.length, 0); }
+// 把 LoRA 合并进 W：W ← W + B·A
+function merged(net) { const out = cloneNet(net); if (!net.lora) return out; const { r, A, B } = net.lora; for (let l = 0; l < 2; l++) for (let i = 0; i < H; i++) for (let j = 0; j < H; j++) { let s = 0; for (let k = 0; k < r; k++) s += B[l][i * r + k] * A[l][k * H + j]; out.W[l][i * H + j] += s; } return out; }
+function forward(net, xs, cache) {
+  const n = xs.length, lo = net.lora, r = lo ? lo.r : 0;
+  const h0 = new Float64Array(n * H), h1 = new Float64Array(n * H), h2 = new Float64Array(n * H), y = new Float64Array(n);
+  const ah = [new Float64Array(n * r), new Float64Array(n * r)];
+  for (let k = 0; k < n; k++) for (let i = 0; i < H; i++) h0[k * H + i] = Math.tanh(net.win[i] * xs[k] + net.bin[i]);
+  const layer = (l, hin, hout) => {
+    const Wl = net.W[l], bl = net.b[l];
+    for (let k = 0; k < n; k++) {
+      const o = k * H;
+      if (lo) for (let q = 0; q < r; q++) { let s = 0; for (let j = 0; j < H; j++) s += lo.A[l][q * H + j] * hin[o + j]; ah[l][k * r + q] = s; }
+      for (let i = 0; i < H; i++) {
+        let s = bl[i]; const row = i * H; for (let j = 0; j < H; j++) s += Wl[row + j] * hin[o + j];
+        if (lo) for (let q = 0; q < r; q++) s += lo.B[l][i * r + q] * ah[l][k * r + q];
+        hout[o + i] = Math.tanh(s);
+      }
+    }
+  };
+  layer(0, h0, h1); layer(1, h1, h2);
+  for (let k = 0; k < n; k++) { let s = net.bout[0]; for (let i = 0; i < H; i++) s += net.wout[i] * h2[k * H + i]; y[k] = s; }
+  if (cache) Object.assign(cache, { h0, h1, h2, ah, y });
+  return y;
+}
+function mse(net, xs, ys) { const y = forward(net, xs); let s = 0; for (let k = 0; k < xs.length; k++) s += (y[k] - ys[k]) ** 2; return s / xs.length; }
+function backward(net, xs, ys, mode) {
+  const n = xs.length, c = {}; forward(net, xs, c); const lo = net.lora, r = lo ? lo.r : 0;
+  const g = { win: new Float64Array(H), bin: new Float64Array(H), W: [new Float64Array(H * H), new Float64Array(H * H)], b: [new Float64Array(H), new Float64Array(H)], wout: new Float64Array(H), bout: new Float64Array(1), A: [new Float64Array(r * H), new Float64Array(r * H)], B: [new Float64Array(H * r), new Float64Array(H * r)] };
+  let loss = 0; let D = new Float64Array(n * H);
+  for (let k = 0; k < n; k++) { const e = c.y[k] - ys[k]; loss += e * e; const dy = 2 * e / n; g.bout[0] += dy; for (let i = 0; i < H; i++) { g.wout[i] += dy * c.h2[k * H + i]; D[k * H + i] = dy * net.wout[i] * (1 - c.h2[k * H + i] ** 2); } }
+  const hs = [c.h0, c.h1, c.h2];
+  for (let l = 1; l >= 0; l--) {
+    const hin = hs[l], D2 = new Float64Array(n * H), Wl = net.W[l];
+    for (let k = 0; k < n; k++) {
+      const o = k * H;
+      for (let i = 0; i < H; i++) {
+        const d = D[o + i]; if (d === 0) continue; g.b[l][i] += d; const row = i * H;
+        for (let j = 0; j < H; j++) { g.W[l][row + j] += d * hin[o + j]; D2[o + j] += Wl[row + j] * d; }
+        if (lo) for (let q = 0; q < r; q++) g.B[l][i * r + q] += d * c.ah[l][k * r + q];
+      }
+      if (lo) for (let q = 0; q < r; q++) { let t = 0; for (let i = 0; i < H; i++) t += lo.B[l][i * r + q] * D[o + i]; for (let j = 0; j < H; j++) { g.A[l][q * H + j] += t * hin[o + j]; D2[o + j] += lo.A[l][q * H + j] * t; } }
+      for (let j = 0; j < H; j++) D2[o + j] *= 1 - hin[o + j] ** 2;
+    }
+    D = D2;
+  }
+  for (let k = 0; k < n; k++) for (let i = 0; i < H; i++) { g.win[i] += D[k * H + i] * xs[k]; g.bin[i] += D[k * H + i]; }
+  return { loss: loss / n, grads: mode === 'lora' ? [...g.A, ...g.B] : [g.win, g.bin, ...g.W, ...g.b, g.wout, g.bout] };
+}
+function makeAdam(ps) { return { t: 0, m: ps.map((p) => new Float64Array(p.length)), v: ps.map((p) => new Float64Array(p.length)) }; }
+function adamStep(ps, grads, st, lr) {
+  st.t++; const b1 = 0.9, b2 = 0.999, c1 = 1 - b1 ** st.t, c2 = 1 - b2 ** st.t;
+  ps.forEach((p, k) => { const m = st.m[k], v = st.v[k], gk = grads[k]; for (let i = 0; i < p.length; i++) { m[i] = b1 * m[i] + (1 - b1) * gk[i]; v[i] = b2 * v[i] + (1 - b2) * gk[i] * gk[i]; p[i] -= lr * (m[i] / c1) / (Math.sqrt(v[i] / c2) + 1e-8); } });
+}
+function trainer(net, mode, task, lr) {
+  const ps = params(net, mode), st = makeAdam(ps), hist = [];
+  return { net, mode, ps, hist, n: 0, step() { const { loss, grads } = backward(net, XS, task.ys, mode); adamStep(ps, grads, st, lr); this.n++; hist.push(loss); return loss; } };
+}
+// SVD：对 MᵀM 做 Jacobi 特征分解，奇异值 = √特征值，u = M v / σ
+function svd(M, rows, cols) {
+  const n = cols, S = new Float64Array(n * n);
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { let s = 0; for (let k = 0; k < rows; k++) s += M[k * n + i] * M[k * n + j]; S[i * n + j] = s; }
+  const V = new Float64Array(n * n); for (let i = 0; i < n; i++) V[i * n + i] = 1;
+  for (let sweep = 0; sweep < 60; sweep++) {
+    let off = 0; for (let p = 0; p < n; p++) for (let q = p + 1; q < n; q++) off += S[p * n + q] ** 2;
+    if (off < 1e-24) break;
+    for (let p = 0; p < n; p++) for (let q = p + 1; q < n; q++) {
+      const apq = S[p * n + q]; if (Math.abs(apq) < 1e-300) continue;
+      const theta = (S[q * n + q] - S[p * n + p]) / (2 * apq), t = Math.sign(theta || 1) / (Math.abs(theta) + Math.sqrt(theta * theta + 1)), c = 1 / Math.sqrt(t * t + 1), s = t * c;
+      for (let k = 0; k < n; k++) { const kp = S[k * n + p], kq = S[k * n + q]; S[k * n + p] = c * kp - s * kq; S[k * n + q] = s * kp + c * kq; }
+      for (let k = 0; k < n; k++) { const pk = S[p * n + k], qk = S[q * n + k]; S[p * n + k] = c * pk - s * qk; S[q * n + k] = s * pk + c * qk; }
+      for (let k = 0; k < n; k++) { const kp = V[k * n + p], kq = V[k * n + q]; V[k * n + p] = c * kp - s * kq; V[k * n + q] = s * kp + c * kq; }
+    }
+  }
+  const idx = Array.from({ length: n }, (_, i) => i).sort((a, b) => S[b * n + b] - S[a * n + a]);
+  const sv = idx.map((i) => Math.sqrt(Math.max(0, S[i * n + i])));
+  const Vs = idx.map((i) => Float64Array.from({ length: n }, (_, k) => V[k * n + i]));
+  const Us = sv.map((s, t) => { const u = new Float64Array(rows); if (s < 1e-12) return u; for (let k = 0; k < rows; k++) { let a = 0; for (let j = 0; j < n; j++) a += M[k * n + j] * Vs[t][j]; u[k] = a / s; } return u; });
+  return { s: sv, U: Us, V: Vs };
+}
+function lowRank(sv, r, rows, cols) { const M = new Float64Array(rows * cols); for (let t = 0; t < r && t < sv.s.length; t++) { const s = sv.s[t], u = sv.U[t], v = sv.V[t]; for (let i = 0; i < rows; i++) for (let j = 0; j < cols; j++) M[i * cols + j] += s * u[i] * v[j]; } return M; }
+function energyCurve(s) { const tot = s.reduce((a, b) => a + b * b, 0); let acc = 0; return s.map((v) => { acc += v * v; return acc / tot; }); }
+function numRank(s) { const tol = (s[0] || 0) * 1e-6; return s.filter((v) => v > tol).length; }
+
+// ======== 页面 ========
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const SUP = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
+const sup = (n) => String(n).split('').map((c) => SUP[c] ?? c).join('');
+const sci = (v) => { if (!isFinite(v)) return '–'; if (v === 0) return '0'; if (v >= 0.01 && v < 1000) return v < 1 ? v.toFixed(3) : v.toFixed(2); const [m, e] = v.toExponential(1).split('e'); return `${m}×10${sup(+e)}`; };
+const fmtInt = (n) => n.toLocaleString('en-US');
+const fmtBig = (n) => n >= 1e9 ? (n / 1e9).toFixed(2) + ' B' : n >= 1e6 ? (n / 1e6).toFixed(2) + ' M' : n >= 1e3 ? (n / 1e3).toFixed(1) + ' K' : String(n);
+const fmtBytes = (b) => b >= 1e9 ? (b / 1e9).toFixed(1) + ' GB' : b >= 1e6 ? (b / 1e6).toFixed(1) + ' MB' : b >= 1e3 ? (b / 1e3).toFixed(1) + ' KB' : b + ' B';
+const pct = (x) => x >= 0.1 ? (x * 100).toFixed(1) + '%' : x >= 0.001 ? (x * 100).toFixed(2) + '%' : (x * 100).toFixed(3) + '%';
+function seg(id, cb) { const el = $(id); el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; el.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); cb(b.dataset.v); }); return () => el.querySelector('[aria-pressed=true]').dataset.v; }
+function vb(id, w, h, nw, nh) { const el = $(id), n = el.clientWidth > 0 && el.clientWidth < 600, W = n ? nw : w, Hh = n ? nh : h; el.setAttribute('viewBox', `0 0 ${W} ${Hh}`); return [W, Hh]; }
+function polyline(pts, col, w = 2, extra = '') { if (!pts.length) return ''; return `<path d="${pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('')}" fill="none" stroke="${col}" stroke-width="${w}" ${extra}/>`; }
+function logAxis(lo, hi, X0, X1, Y, mu, li, fs = 12) { let s = ''; const step = hi - lo > 8 ? 2 : 1; for (let e = Math.ceil(lo); e <= Math.floor(hi); e += step) s += `<line x1="${X0}" y1="${Y(e)}" x2="${X1}" y2="${Y(e)}" stroke="${li}"/><text x="${X0 - 6}" y="${Y(e) + 4}" font-size="${fs}" fill="${mu}" text-anchor="end">10${sup(e)}</text>`; return s; }
+// 热力图：正数用 col，负数用 neg，透明度按 |v|/max
+function heatmap(M, rows, cols, x0, y0, w, h, col, neg) { let m = 0; for (let i = 0; i < M.length; i++) m = Math.max(m, Math.abs(M[i])); const cw = w / cols, rh = h / rows; let s = ''; for (let i = 0; i < rows; i++) for (let j = 0; j < cols; j++) { const v = m > 0 ? M[i * cols + j] / m : 0; s += `<rect x="${(x0 + j * cw).toFixed(2)}" y="${(y0 + i * rh).toFixed(2)}" width="${(cw * 0.92).toFixed(2)}" height="${(rh * 0.92).toFixed(2)}" fill="${v >= 0 ? col : neg}" fill-opacity="${Math.abs(v).toFixed(3)}"/>`; } return s; }
+
+/* ---------- 00 秩 ---------- */
+let seed0 = 1;
+function draw0() {
+  const D = 16, r = +$('#r0').value; $('#r0v').textContent = r;
+  const g = rng(seed0 * 7 + 3), us = [], vs = [];
+  for (let t = 0; t < D; t++) { us.push(Float64Array.from({ length: D }, () => gauss(g))); vs.push(Float64Array.from({ length: D }, () => gauss(g))); }
+  const M = new Float64Array(D * D); for (let t = 0; t < r; t++) for (let i = 0; i < D; i++) for (let j = 0; j < D; j++) M[i * D + j] += us[t][i] * vs[t][j];
+  const acc = css('--accent'), warn = css('--warn'), mu = css('--muted');
+  const [W, Hh] = vb('#fig0', 800, 260, 420, 420), narrow = W < 600;
+  let s = '';
+  // 左：r 个秩 1 小块（最多画 8 个，再多用 … 表示）
+  const show = Math.min(r, narrow ? 4 : 5), tile = narrow ? 64 : 70, gap = narrow ? 8 : 10, extra = r > show ? 74 : 0;
+  const tilesW = show * tile + (show - 1) * gap + extra, bigS = narrow ? 230 : 220, bigX = narrow ? (W - bigS) / 2 : W - bigS - 20, bigY = narrow ? 170 : 20;
+  const tx0 = narrow ? (W - tilesW) / 2 : 20, ty = narrow ? 30 : 80;
+  for (let t = 0; t < show; t++) {
+    const T = new Float64Array(D * D); for (let i = 0; i < D; i++) for (let j = 0; j < D; j++) T[i * D + j] = us[t][i] * vs[t][j];
+    const x = tx0 + t * (tile + gap);
+    s += heatmap(T, D, D, x, ty, tile, tile, acc, warn);
+    s += `<text x="${x + tile / 2}" y="${ty - 8}" font-size="13" fill="${mu}" text-anchor="middle">u${t + 1}v${t + 1}ᵀ</text>`;
+    if (t < show - 1) s += `<text x="${x + tile + gap / 2}" y="${ty + tile / 2 + 6}" font-size="16" fill="${mu}" text-anchor="middle">+</text>`;
+  }
+  if (r > show) s += `<text x="${tx0 + tilesW - extra + 10}" y="${ty + tile / 2 + 6}" font-size="16" fill="${mu}">+ … (${r - show})</text>`;
+  s += narrow ? `<text x="${W / 2}" y="${bigY - 10}" font-size="16" fill="${mu}" text-anchor="middle">=</text>` : `<text x="${bigX - 22}" y="${bigY + bigS / 2 + 6}" font-size="20" fill="${mu}" text-anchor="middle">=</text>`;
+  s += heatmap(M, D, D, bigX, bigY, bigS, bigS, acc, warn);
+  s += `<text x="${bigX + bigS / 2}" y="${bigY + bigS + 16}" font-size="13" fill="${mu}" text-anchor="middle">16 × 16，秩 ${r}</text>`;
+  $('#fig0').innerHTML = s;
+  $('#r0rank').textContent = numRank(svd(M, D, D).s);
+  $('#r0n').textContent = r * 2 * D;
+}
+$('#r0').addEventListener('input', draw0); $('#seed0').addEventListener('click', () => { seed0++; draw0(); });
+
+/* ---------- 01 参数计数器 ---------- */
+const DIMS = [512, 1024, 2048, 4096, 8192, 12288, 16384], RANKS = [1, 2, 4, 8, 16, 32, 64, 128, 256];
+function draw1() {
+  const d = DIMS[+$('#d1').value], k = DIMS[+$('#k1').value], r = RANKS[+$('#rr1').value];
+  $('#d1v').textContent = d; $('#k1v').textContent = k; $('#rr1v').textContent = r;
+  const full = d * k, lora = r * (d + k);
+  $('#r1full').textContent = fmtBig(full); $('#r1lora').textContent = fmtBig(lora); $('#r1pct').textContent = pct(lora / full);
+  $('#r1mem').textContent = fmtBytes(full * 16); $('#r1memL').textContent = fmtBytes(full * 2 + lora * 16);
+  const acc = css('--accent'), warn = css('--warn'), mu = css('--muted'), fg = css('--fg');
+  const [W, Hh] = vb('#fig1', 800, 300, 420, 440), narrow = W < 600;
+  const Smax = narrow ? 200 : 220, unit = Smax / Math.max(d, k); // 最长的一条边画成 Smax 像素，形状按真实比例
+  const wd = Math.max(d * unit, 6), wk = Math.max(k * unit, 6), wr = Math.max(r * unit, 3);
+  const y0 = 40 + (Smax - wd) / 2, fs = narrow ? 15 : 14;
+  let s = '';
+  const box = (x, y, w, h, col, op, dash) => `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${dash ? 'none' : col}" fill-opacity="${op}" stroke="${col}" ${dash ? 'stroke-dasharray="5 4"' : ''}/>`;
+  const txt = (x, y, t, col, anchor = 'middle') => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${fs}" fill="${col}" text-anchor="${anchor}">${t}</text>`;
+  const xW = 20;
+  s += box(xW, y0, wk, wd, warn, .25) + txt(xW + wk / 2, y0 - 12, `W  ${d} × ${k}`, fg) + txt(xW + wk / 2, y0 + wd + 20, `全量 ${fmtBig(full)} 个`, warn);
+  const xp = xW + wk + 26; s += `<text x="${xp}" y="${y0 + wd / 2 + 8}" font-size="24" fill="${mu}" text-anchor="middle">+</text>`;
+  const xB = xp + 26; s += box(xB, y0, wr, wd, acc, .35) + txt(xB + wr / 2, y0 - 12, `B  ${d} × ${r}`, acc, narrow ? 'end' : 'middle');
+  if (narrow) {
+    const yA = y0 + wd + 70, xA = 60; // 第二行：× A
+    s += `<text x="${xA - 24}" y="${yA + wr / 2 + 7}" font-size="20" fill="${mu}" text-anchor="middle">×</text>`;
+    s += box(xA, yA, wk, wr, acc, .35) + txt(xA + wk / 2, yA - 12, `A  ${r} × ${k}`, acc) + txt(xA + wk / 2, yA + wr + 22, `B、A 共 ${fmtBig(lora)} 个`, acc);
+  } else {
+    const xx = xB + wr + 22; s += `<text x="${xx}" y="${y0 + wd / 2 + 8}" font-size="20" fill="${mu}" text-anchor="middle">×</text>`;
+    const xA = xx + 22, yA = y0 + wd / 2 - wr / 2;
+    s += box(xA, yA, wk, wr, acc, .35) + txt(xA + wk / 2, yA - 12, `A  ${r} × ${k}`, acc) + txt(xA + wk / 2, yA + wr + 20, `B、A 共 ${fmtBig(lora)} 个`, acc);
+    const xe = xA + wk + 30, xD = xe + 30;
+    s += `<text x="${xe}" y="${y0 + wd / 2 + 8}" font-size="20" fill="${mu}" text-anchor="middle">→</text>`;
+    s += box(xD, y0, wk, wd, acc, 0, true) + txt(xD + wk / 2, y0 - 12, `ΔW = B·A  ${d} × ${k}`, acc);
+  }
+  $('#fig1').innerHTML = s;
+}
+['#d1', '#k1', '#rr1'].forEach((id) => $(id).addEventListener('input', draw1));
+
+/* ---------- 后台训练流水线：预训练 A → 全量微调 B（给 02）→ LoRA B、LoRA C（给 04） ---------- */
+const PRE = 1500, FT = 400;
+const S = { base: null, W1pre: null, dW: null, svdD: null, svdW: null, svdR: null, lB: null, lC: null, stage: 0 };
+const JOBS = [
+  { label: '预训练（任务 A）', make: () => { S.base = makeNet(1); return trainer(S.base, 'full', TASKS.A, 0.01); }, steps: PRE, done: () => { S.W1pre = S.base.W[0].slice(); $('#run3').disabled = false; reset3(); } },
+  { label: '全量微调到任务 B', make: () => trainer(cloneNet(S.base), 'full', TASKS.B, 0.003), steps: FT, done: (t) => { S.dW = new Float64Array(H * H); for (let i = 0; i < H * H; i++) S.dW[i] = t.net.W[0][i] - S.W1pre[i]; S.svdD = svd(S.dW, H, H); S.svdW = svd(S.W1pre, H, H); const g = rng(9), R = new Float64Array(H * H); for (let i = 0; i < H * H; i++) R[i] = gauss(g); S.svdR = svd(R, H, H); draw2(); } },
+  { label: '训练 LoRA B', make: () => { const n = cloneNet(S.base); n.lora = makeLora(4, 7); return trainer(n, 'lora', TASKS.B, 0.03); }, steps: FT, done: (t) => { S.lB = t.net; draw4(); } },
+  { label: '训练 LoRA C', make: () => { const n = cloneNet(S.base); n.lora = makeLora(4, 7); return trainer(n, 'lora', TASKS.C, 0.03); }, steps: FT, done: (t) => { S.lC = t.net; draw4(); } },
+];
+function runJobs(i) {
+  if (i >= JOBS.length) { ['#p2', '#p4'].forEach((id) => $(id).textContent = ''); return; }
+  const job = JOBS[i], t = job.make();
+  const chunk = () => {
+    const t0 = performance.now();
+    while (performance.now() - t0 < 25 && t.n < job.steps) t.step();
+    const msg = `${job.label} ${t.n} / ${job.steps}`; ['#p2', '#p3', '#p4'].forEach((id) => $(id).textContent = msg);
+    if (t.n < job.steps) return setTimeout(chunk, 0);
+    ['#p2', '#p3', '#p4'].forEach((id) => $(id).textContent = '');
+    job.done(t); runJobs(i + 1);
+  };
+  chunk();
+}
+
+/* ---------- 02 SVD ---------- */
+function draw2() {
+  const r = +$('#r2').value; $('#r2v').textContent = r;
+  const acc = css('--accent'), warn = css('--warn'), mu = css('--muted'), li = css('--line');
+  if (!S.svdD) { ['#fig2a', '#fig2b', '#fig2c', '#fig2d'].forEach((id) => $(id).innerHTML = `<text x="50%" y="50%" font-size="16" fill="${mu}" text-anchor="middle">训练中…</text>`); return; }
+  const sets = [[S.svdD, acc], [S.svdW, warn], [S.svdR, mu]];
+  // a: 奇异值谱
+  { const W = 400, Hh = 240, pl = 40, pr = 10, pt = 12, pb = 28, X = (i) => pl + (i + 0.5) / H * (W - pl - pr), Y = (v) => pt + (1 - v) * (Hh - pt - pb);
+    let s = ''; [0, 0.5, 1].forEach((v) => s += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/><text x="${pl - 6}" y="${Y(v) + 4}" font-size="12" fill="${mu}" text-anchor="end">${v}</text>`);
+    [1, 8, 16, 24, 32].forEach((i) => s += `<text x="${X(i - 1)}" y="${Hh - 8}" font-size="12" fill="${mu}" text-anchor="middle">${i}</text>`);
+    s += `<rect x="${X(-0.5)}" y="${pt}" width="${X(r - 0.5) - X(-0.5)}" height="${Hh - pt - pb}" fill="${acc}" fill-opacity=".08"/>`;
+    sets.forEach(([sv, col]) => { s += polyline(sv.s.map((v, i) => [X(i), Y(v / sv.s[0])]), col, 2); sv.s.forEach((v, i) => s += `<circle cx="${X(i)}" cy="${Y(v / sv.s[0])}" r="2.5" fill="${col}"/>`); });
+    $('#fig2a').innerHTML = s; }
+  // b: 重建误差曲线 sqrt(1 - E(r))
+  { const W = 400, Hh = 240, pl = 40, pr = 10, pt = 12, pb = 28, X = (i) => pl + i / H * (W - pl - pr), Y = (v) => pt + (1 - v) * (Hh - pt - pb);
+    let s = ''; [0, 0.5, 1].forEach((v) => s += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/><text x="${pl - 6}" y="${Y(v) + 4}" font-size="12" fill="${mu}" text-anchor="end">${v}</text>`);
+    [0, 8, 16, 24, 32].forEach((i) => s += `<text x="${X(i)}" y="${Hh - 8}" font-size="12" fill="${mu}" text-anchor="middle">${i}</text>`);
+    s += `<line x1="${X(r)}" y1="${pt}" x2="${X(r)}" y2="${Hh - pb}" stroke="${acc}" stroke-dasharray="4 3"/>`;
+    sets.forEach(([sv, col]) => { const e = energyCurve(sv.s); const pts = [[X(0), Y(1)], ...e.map((v, i) => [X(i + 1), Y(Math.sqrt(Math.max(0, 1 - v)))])]; s += polyline(pts, col, 2); });
+    $('#fig2b').innerHTML = s; }
+  // c/d: 热力图
+  $('#fig2c').innerHTML = heatmap(S.dW, H, H, 80, 0, 160, 160, acc, warn);
+  $('#fig2d').innerHTML = heatmap(lowRank(S.svdD, r, H, H), H, H, 80, 0, 160, 160, acc, warn);
+  const eD = energyCurve(S.svdD.s), eW = energyCurve(S.svdW.s), eR = energyCurve(S.svdR.s);
+  $('#r2e').textContent = pct(eD[r - 1]); $('#r2w').textContent = pct(eW[r - 1]); $('#r2r').textContent = pct(eR[r - 1]);
+  $('#r2k').textContent = eD.findIndex((v) => v >= 0.9) + 1;
+}
+$('#r2').addEventListener('input', draw2);
+
+/* ---------- 03 全量 vs LoRA ---------- */
+const s3 = { ts: null, raf: 0 };
+function reset3() {
+  cancelAnimationFrame(s3.raf); s3.raf = 0; $('#run3').textContent = '开始微调';
+  if (!S.base) { s3.ts = null; draw3(); return; }
+  s3.ts = [trainer(cloneNet(S.base), 'full', TASKS.B, 0.003), ...[1, 2, 4].map((r) => { const n = cloneNet(S.base); n.lora = makeLora(r, 7); return trainer(n, 'lora', TASKS.B, 0.03); })];
+  s3.ts.forEach((t) => t.hist.push(mse(t.net, XS, TASKS.B.ys)));
+  draw3();
+}
+function run3() {
+  if (!s3.ts) return;
+  if (s3.raf) { cancelAnimationFrame(s3.raf); s3.raf = 0; $('#run3').textContent = '继续'; return; }
+  if (s3.ts[0].n >= FT) reset3();
+  $('#run3').textContent = '暂停';
+  const tick = () => {
+    const t0 = performance.now();
+    do { s3.ts.forEach((t) => t.step()); } while (performance.now() - t0 < 14 && s3.ts[0].n < FT);
+    draw3();
+    if (s3.ts[0].n < FT) s3.raf = requestAnimationFrame(tick); else { s3.raf = 0; $('#run3').textContent = '再来一次'; }
+  };
+  s3.raf = requestAnimationFrame(tick);
+}
+function draw3() {
+  const acc = css('--accent'), warn = css('--warn'), mu = css('--muted'), li = css('--line');
+  const cols = [warn, acc, acc, acc], ops = [1, 0.45, 0.7, 1];
+  const W = 400, Hh = 280, pl = 44, pr = 10, pt = 10, pb = 28, lo = -5, hi = 0;
+  const X = (t) => pl + t / FT * (W - pl - pr), Y = (v) => pt + (hi - Math.max(lo, Math.min(hi, Math.log10(Math.max(v, 1e-12))))) / (hi - lo) * (Hh - pt - pb);
+  let s = logAxis(lo, hi, pl, W - pr, (e) => pt + (hi - e) / (hi - lo) * (Hh - pt - pb), mu, li);
+  [0, FT / 2, FT].forEach((t) => s += `<text x="${X(t)}" y="${Hh - 8}" font-size="12" fill="${mu}" text-anchor="middle">${t}</text>`);
+  if (s3.ts) s3.ts.forEach((t, i) => s += polyline(t.hist.map((v, k) => [X(k), Y(v)]), cols[i], 2, `stroke-opacity="${ops[i]}"`));
+  else s += `<text x="${W / 2}" y="${Hh / 2}" font-size="16" fill="${mu}" text-anchor="middle">等预训练完成…</text>`;
+  $('#fig3a').innerHTML = s;
+  const Xf = (x) => pl + (x + 1) / 2 * (W - pl - pr), Yf = (y) => pt + (1.5 - y) / 3 * (Hh - pt - pb);
+  s = '';
+  [-1, 0, 1].forEach((v) => s += `<text x="${pl - 6}" y="${Yf(v) + 4}" font-size="12" fill="${mu}" text-anchor="end">${v}</text>`);
+  s += `<line x1="${pl}" y1="${Yf(0)}" x2="${W - pr}" y2="${Yf(0)}" stroke="${li}"/>`;
+  [-1, 0, 1].forEach((v) => s += `<text x="${Xf(v)}" y="${Hh - 8}" font-size="12" fill="${mu}" text-anchor="middle">${v}</text>`);
+  s += polyline(XS.map((x, k) => [Xf(x), Yf(TASKS.B.ys[k])]), mu, 1.5, 'stroke-dasharray="5 4"');
+  if (s3.ts) s3.ts.forEach((t, i) => { const y = forward(t.net, XS); s += polyline(XS.map((x, k) => [Xf(x), Yf(Math.max(-1.5, Math.min(1.5, y[k])))]), cols[i], 2.2, `stroke-opacity="${ops[i]}"`); });
+  $('#fig3b').innerHTML = s;
+  $('#r3n').textContent = s3.ts ? s3.ts[0].n : 0;
+  ['#r3f', '#r3a', '#r3b', '#r3c'].forEach((id, i) => $(id).textContent = s3.ts ? sci(s3.ts[i].hist[s3.ts[i].hist.length - 1]) : '–');
+}
+$('#run3').addEventListener('click', run3); $('#reset3').addEventListener('click', reset3);
+
+/* ---------- 04 合并与切换 ---------- */
+const get4 = seg('#sel4', draw4);
+$('#merge4').addEventListener('change', draw4);
+function draw4() {
+  const acc = css('--accent'), warn = css('--warn'), ok = css('--ok'), mu = css('--muted'), li = css('--line');
+  const [W, Hh] = vb('#fig4', 800, 280, 420, 300), pl = 40, pr = 12, pt = 12, pb = 28;
+  const Xf = (x) => pl + (x + 1) / 2 * (W - pl - pr), Yf = (y) => pt + (1.5 - y) / 3 * (Hh - pt - pb), fs = W < 600 ? 15 : 12;
+  let s = '';
+  [-1, 0, 1].forEach((v) => s += `<text x="${pl - 6}" y="${Yf(v) + 4}" font-size="${fs}" fill="${mu}" text-anchor="end">${v}</text>`);
+  s += `<line x1="${pl}" y1="${Yf(0)}" x2="${W - pr}" y2="${Yf(0)}" stroke="${li}"/>`;
+  [-1, 0, 1].forEach((v) => s += `<text x="${Xf(v)}" y="${Hh - 8}" font-size="${fs}" fill="${mu}" text-anchor="middle">${v}</text>`);
+  [[TASKS.A, mu], [TASKS.B, warn], [TASKS.C, ok]].forEach(([t, c]) => s += polyline(XS.map((x, k) => [Xf(x), Yf(t.ys[k])]), c, 1.5, 'stroke-dasharray="5 4"'));
+  const sel = get4(), ready = S.base && (sel === 'base' || (sel === 'B' ? S.lB : S.lC));
+  if (ready) {
+    const net = sel === 'base' ? S.base : sel === 'B' ? S.lB : S.lC;
+    const use = $('#merge4').checked ? merged(net) : net;
+    const y = forward(use, XS), yu = forward(net, XS), ym = forward(merged(net), XS); let d = 0; for (let k = 0; k < NPT; k++) d = Math.max(d, Math.abs(yu[k] - ym[k]));
+    s += polyline(XS.map((x, k) => [Xf(x), Yf(Math.max(-1.5, Math.min(1.5, y[k])))]), acc, 2.6);
+    ['A', 'B', 'C'].forEach((t, i) => $(['#r4a', '#r4b', '#r4c'][i]).textContent = sci(mse(use, XS, TASKS[t].ys)));
+    $('#r4d').textContent = net.lora ? sci(d) : '0（没有 LoRA）';
+  } else { s += `<text x="${W / 2}" y="${Hh / 2}" font-size="16" fill="${mu}" text-anchor="middle">训练中…</text>`; ['#r4a', '#r4b', '#r4c', '#r4d'].forEach((id) => $(id).textContent = '–'); }
+  $('#fig4').innerHTML = s;
+}
+
+/* ---------- 05 Llama-3-8B ---------- */
+// 公开架构参数（config.json）：hidden 4096，层数 32，注意力头 32，KV 头 8，头维 128，MLP 中间维 14336，词表 128256，输入输出嵌入不共享
+const L3 = { d: 4096, L: 32, kv: 8 * 128, ff: 14336, vocab: 128256 };
+const PROJ = [
+  ['q_proj', L3.d, L3.d, 'attn'], ['k_proj', L3.d, L3.kv, 'attn'], ['v_proj', L3.d, L3.kv, 'attn'], ['o_proj', L3.d, L3.d, 'attn'],
+  ['gate_proj', L3.d, L3.ff, 'mlp'], ['up_proj', L3.d, L3.ff, 'mlp'], ['down_proj', L3.ff, L3.d, 'mlp'],
+];
+const TOTAL8B = L3.L * (PROJ.reduce((s, p) => s + p[1] * p[2], 0) + 2 * L3.d) + 2 * L3.vocab * L3.d + L3.d; // 线性层 + 每层两个 RMSNorm + 输入/输出嵌入 + 末尾 RMSNorm
+const get5 = seg('#r5', draw5);
+$('#mlp5').addEventListener('change', draw5);
+function draw5() {
+  const r = +get5(), mlp = $('#mlp5').checked;
+  let rows = '', fullSum = 0, loraSum = 0;
+  PROJ.forEach(([name, a, b, kind]) => {
+    const on = kind === 'attn' || mlp, full = a * b, lora = r * (a + b);
+    if (on) { fullSum += full; loraSum += lora; }
+    rows += `<tr style="${on ? '' : 'opacity:.45'}"><td>${name}</td><td>${a} × ${b}</td><td class="num">${fmtInt(full)}</td><td class="num">${on ? fmtInt(lora) : '–'}</td><td class="num">${on ? pct(lora / full) : '–'}</td></tr>`;
+  });
+  rows += `<tr class="tot"><td>每层合计</td><td></td><td class="num">${fmtInt(fullSum)}</td><td class="num">${fmtInt(loraSum)}</td><td class="num">${pct(loraSum / fullSum)}</td></tr>`;
+  rows += `<tr class="tot"><td>× 32 层</td><td></td><td class="num">${fmtInt(fullSum * 32)}</td><td class="num">${fmtInt(loraSum * 32)}</td><td class="num">${pct(loraSum / fullSum)}</td></tr>`;
+  $('#tab5').innerHTML = `<thead><tr><th>矩阵</th><th>形状</th><th class="num">全量参数</th><th class="num">LoRA 参数 r × (d + k)</th><th class="num">占比</th></tr></thead><tbody>${rows}</tbody>`;
+  const lora = loraSum * 32;
+  $('#r5full').textContent = fmtBig(TOTAL8B); $('#r5fmem').textContent = fmtBytes(TOTAL8B * 16);
+  $('#r5lora').textContent = fmtBig(lora); $('#r5pct').textContent = pct(lora / TOTAL8B);
+  $('#r5lmem').textContent = fmtBytes(TOTAL8B * 2 + lora * 16);
+  $('#r5qmem').textContent = fmtBytes(TOTAL8B * 0.5 + lora * 16);
+}
+
+/* ---------- 启动与重绘 ---------- */
+const all = () => { draw0(); draw1(); draw2(); draw3(); draw4(); draw5(); };
+all();
+runJobs(0);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { draw0(); draw1(); draw4(); }, 150); });
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>

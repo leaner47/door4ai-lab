@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>反向传播实验室</title>
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+p code,li code,pre{font-size:.88em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+pre{padding:12px 14px;overflow-x:auto;line-height:1.6;margin:12px 0}
+.formula{font-size:20px;text-align:center;margin:18px 0;letter-spacing:.02em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl b{font-variant-numeric:tabular-nums;min-width:2.4em}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+input[type=range]{accent-color:var(--accent);max-width:200px}
+input[type=number]{font:inherit;font-size:14px;width:5.2em;padding:3px 6px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);font-variant-numeric:tabular-nums}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.node{cursor:pointer}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.two{grid-template-columns:1fr}}
+.cap{font-size:12px;color:var(--muted);margin:4px 0 0;text-align:center}
+.key{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;margin:0 0 8px}
+.key i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn{border-color:var(--warn)} .ro.warn b{color:var(--warn)}
+.ro.acc{border-color:var(--accent)} .ro.acc b{color:var(--accent)}
+.ro.ok{border-color:var(--ok)} .ro.ok b{color:var(--ok)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.detail{font-size:14.5px;margin:10px 0 0;min-height:1.8em;font-variant-numeric:tabular-nums}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px 14px;margin:10px 0 14px;font-size:14px}
+.pgrid label{display:flex;align-items:center;justify-content:space-between;gap:6px;color:var(--muted)}
+.pgrid label i{font-style:italic;color:var(--fg)}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.num,th.num{text-align:right}
+.tw{overflow-x:auto}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">反向传播 · 链式法则 · 计算图 · autograd</div>
+  <h1>反向传播实验室</h1>
+  <p class="lede">梯度不是猜出来的，是沿着计算图从后往前，一个节点一个节点乘出来的。下面所有梯度都由页内几十行的自动微分器真实算出，并与数值微分对照。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>一个表达式的计算图</h2>
+  <p>把 <i>y</i> = (<i>a</i>·<i>b</i> + <i>c</i>)² 拆成三步：<i>u</i> = <i>a</i>·<i>b</i>，<i>v</i> = <i>u</i> + <i>c</i>，<i>y</i> = <i>v</i>²。每一步是图上一个节点。前向从左到右算出每个节点的值；反向从 <i>y</i> 出发往回走，经过一个节点就乘上它的局部导数，走到哪，哪的梯度就算出来了。点「下一步」看梯度怎么流，点任一节点看它的来龙去脉。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="a0">a</label><input id="a0" type="range" min="-3" max="3" step="0.5" value="2"><b id="a0v"></b></div>
+      <div class="ctrl"><label for="b0">b</label><input id="b0" type="range" min="-3" max="3" step="0.5" value="3"><b id="b0v"></b></div>
+      <div class="ctrl"><label for="c0">c</label><input id="c0" type="range" min="-3" max="3" step="0.5" value="1"><b id="c0v"></b></div>
+      <div class="btns"><button class="btn" id="prev0">上一步</button><button class="btn pri" id="next0">下一步</button><button class="btn" id="all0">一步到底</button><button class="btn" id="reset0">重来</button></div>
+    </div>
+    <div class="key"><span><i style="background:var(--accent)"></i>前向：节点的值</span><span><i style="background:var(--warn)"></i>反向：∂y/∂节点</span></div>
+    <svg id="fig0" viewBox="0 0 800 350" role="img" aria-label="y=(ab+c)^2 的计算图"></svg>
+    <p class="detail" id="det0"></p>
+    <div class="readout">
+      <div class="ro acc"><b id="r0y">–</b><span>y</span></div>
+      <div class="ro warn"><b id="r0a">–</b><span>∂y/∂a</span></div>
+      <div class="ro warn"><b id="r0b">–</b><span>∂y/∂b</span></div>
+      <div class="ro warn"><b id="r0c">–</b><span>∂y/∂c</span></div>
+    </div>
+    <p class="note">反向走到一个节点时，它需要的只有两样东西：从后面传来的梯度，和自己在前向时记下的局部导数（比如 <i>u</i> = <i>a</i>·<i>b</i> 对 <i>a</i> 的局部导数就是 <i>b</i> 的值）。乘一下，交给前面的节点，自己的事就完了。</p>
+  </div>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>一条链：梯度就是局部导数的乘积</h2>
+  <p>最简单的计算图是一条链：<i>u</i> = 2<i>x</i> + 1，<i>v</i> = tanh <i>u</i>，<i>y</i> = <i>v</i>²。链式法则说 d<i>y</i>/d<i>x</i> 等于沿途每一段局部导数的乘积。拖 <i>x</i>，看三个局部导数怎么变，它们的乘积和右图切线的斜率是否一致。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="x1">x</label><input id="x1" type="range" min="-2" max="2" step="0.01" value="0.3"><b id="x1v"></b></div>
+    </div>
+    <div class="two">
+      <div><svg id="fig1a" viewBox="0 0 400 230" role="img" aria-label="链 x→u→v→y 及各段局部导数"></svg><p class="cap">三段各自的局部导数，相乘就是 dy/dx</p></div>
+      <div><svg id="fig1b" viewBox="0 0 400 230" role="img" aria-label="y(x) 曲线与 x 处的切线"></svg><p class="cap">y(x) 与 x 处的切线，斜率 = 三个局部导数的乘积</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro warn"><b id="r1p">–</b><span>du/dx × dv/du × dy/dv</span></div>
+      <div class="ro acc"><b id="r1g">–</b><span>自动微分算出的 dy/dx</span></div>
+      <div class="ro"><b id="r1n">–</b><span>数值微分 [y(x+h) − y(x−h)] / 2h</span></div>
+    </div>
+    <p class="note">把 <i>x</i> 拖到 ±2 附近：tanh 进入平坦区，中间那段局部导数 1 − <i>v</i>² 接近 0，整条链的梯度跟着接近 0。一条链上任何一段「饱和」，前面的东西就都学不动了，这是上一讲梯度消失的最小版本。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>两层小网络：一次反向，所有参数的梯度</h2>
+  <p>一个 2 → 3 → 1 的网络在单个样本上：<i>z</i> = <i>W</i><sub>1</sub><i>x</i> + <i>b</i><sub>1</sub>，<i>h</i> = 激活(<i>z</i>)，<i>ŷ</i> = <i>W</i><sub>2</sub><i>h</i> + <i>b</i><sub>2</sub>，损失 <i>L</i> = ½(<i>ŷ</i> − <i>y</i>)²。共 13 个参数。图上每个节点上方是前向值，下方是反向算出的 ∂<i>L</i>/∂节点。右边的表把自动微分算出的 13 个梯度逐个和数值微分（有限差分）对照。默认数字就是文章里手算的那组，可以随意改。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>激活函数</label><div class="seg" id="act2"><button data-v="relu" aria-pressed="true">ReLU</button><button data-v="tanh" aria-pressed="false">tanh</button></div></div>
+      <div class="btns"><button class="btn" id="rand2">随机一组</button><button class="btn" id="def2">恢复默认</button></div>
+    </div>
+    <div class="pgrid" id="pg2"></div>
+    <div class="key"><span><i style="background:var(--accent)"></i>前向值</span><span><i style="background:var(--warn)"></i>∂L/∂节点</span></div>
+    <svg id="fig2" viewBox="0 0 800 320" role="img" aria-label="2→3→1 网络的计算图，含前向值与反向梯度"></svg>
+    <div class="readout">
+      <div class="ro acc"><b id="r2L">–</b><span>损失 L</span></div>
+      <div class="ro warn"><b id="r2d">–</b><span>∂L/∂ŷ = ŷ − y</span></div>
+      <div class="ro ok"><b id="r2e">–</b><span>13 个梯度与数值微分的最大差</span></div>
+      <div class="ro"><b id="r2n">–</b><span>数值微分用的前向次数</span></div>
+    </div>
+    <div class="tw"><table id="tb2"></table></div>
+    <p class="note">用 ReLU 时注意第三个隐藏单元：它的 <i>z</i> 是负数，ReLU 的局部导数是 0，于是传到它的梯度在这里被截断，连着它的 <i>w</i> 和 <i>b</i> 梯度全是 0，这一步什么都学不到。换成 tanh 就没有这个硬截断。两种算法得到的梯度差在 10⁻⁹ 以下：反向传播算的是精确导数，差的只是数值微分自己的舍入误差。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>为什么反向只需要一次</h2>
+  <p>实验 02 里，数值微分要给 13 个参数各做两次前向。参数一多这就没法用了：数值微分和前向模式自动微分的代价都正比于参数个数，而反向传播不管多少参数，都是一次前向加一次反向（反向的计算量约等于两次前向）。拖参数个数，或者直接点几个真实模型的规模。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="n3">参数个数 10^</label><input id="n3" type="range" min="1" max="12" step="0.1" value="8"><b id="n3v"></b></div>
+      <div class="ctrl"><label>规模</label><div class="seg" id="pre3"><button data-v="13">本页小网络 13</button><button data-v="124000000">GPT-2 small 124M</button><button data-v="8030000000">Llama-3-8B</button><button data-v="70600000000">Llama-3-70B</button></div></div>
+    </div>
+    <svg id="fig3" viewBox="0 0 800 230" role="img" aria-label="四种求梯度方法需要的前向次数（对数坐标）"></svg>
+    <p class="cap">横轴：需要多少次「相当于一次前向」的计算（对数坐标）</p>
+    <div class="readout">
+      <div class="ro warn"><b id="r3n">–</b><span>数值微分（中心差分）：前向次数</span></div>
+      <div class="ro acc"><b id="r3b">–</b><span>反向传播：相当于几次前向</span></div>
+      <div class="ro"><b id="r3r">–</b><span>两者之比</span></div>
+      <div class="ro"><b id="r3t">–</b><span>若一次前向 1 ms，数值微分要</span></div>
+    </div>
+    <p class="note">关键在于损失是一个数。反向模式每次从一个<b>输出</b>出发，一趟就把它对所有输入的导数算完；前向模式和数值微分每次只能从一个<b>输入</b>出发。训练时输出只有一个（损失），输入有几十亿个（参数），所以选反向。反向约等于两次前向，这就是「训练每个 token 约 6<i>N</i> 次浮点运算、推理约 2<i>N</i> 次」的来历。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>深链里的连乘</h2>
+  <p>把实验 01 的链拉长到 <i>L</i> 层，每层的局部导数是 +<i>g</i> 或 −<i>g</i>（正负号随机）。普通层 <i>h</i> ← <i>g<sub>i</sub></i>·<i>h</i>，梯度每过一层乘一次 <i>g<sub>i</sub></i>；残差层 <i>h</i> ← <i>h</i> + <i>g<sub>i</sub></i>·<i>h</i>，每过一层乘的是 1 + <i>g<sub>i</sub></i>。两条链都交给同一个自动微分器，看梯度传回第 1 层还剩多少。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="L4">层数 L</label><input id="L4" type="range" min="1" max="100" value="60"><b id="L4v"></b></div>
+      <div class="ctrl"><label for="g4">局部导数幅度 g</label><input id="g4" type="range" min="0.05" max="1.5" step="0.05" value="0.3"><b id="g4v"></b></div>
+      <div class="btns"><button class="btn" id="seed4">换一组随机数</button></div>
+    </div>
+    <div class="key"><span><i style="background:var(--warn)"></i>普通链：× g<sub>i</sub></span><span><i style="background:var(--accent)"></i>残差链：× (1 + g<sub>i</sub>)</span></div>
+    <svg id="fig4" viewBox="0 0 800 280" role="img" aria-label="梯度传到每一层时的大小（对数坐标）"></svg>
+    <p class="cap">横轴：第几层（左边是输入端）；纵轴：∂y/∂h<sub>i</sub> 的大小（对数坐标）</p>
+    <div class="readout">
+      <div class="ro warn"><b id="r4a">–</b><span>普通链：传到第 1 层的梯度</span></div>
+      <div class="ro acc"><b id="r4b">–</b><span>残差链：传到第 1 层的梯度</span></div>
+      <div class="ro"><b id="r4n">–</b><span>计算图里的节点数</span></div>
+    </div>
+    <p class="note">普通链每过一层乘一次 <i>g</i>：<i>g</i> = 0.3 时 60 层只剩 10⁻³²，<i>g</i> 拖到 1 以上又会爆炸。残差链每层乘的是 1 ± <i>g</i>，在 1 附近摆动，正负大致抵消，传回去的梯度还有千分之几到百分之几，比普通链大了近 30 个数量级。上一讲说「残差连接让梯度有一条不打折的通路」，在链式法则里就是这个 1。</p>
+  </div>
+</section>
+
+</div>
+<script>
+/* ===== 最小自动微分器（标量版）：前向建图并记下局部导数，反向按拓扑逆序乘加。浏览器与 node 共用 ===== */
+class V {
+  constructor(data, parents = [], op = '', local = []) { this.data = data; this.grad = 0; this.parents = parents; this.op = op; this.local = local; this.label = ''; }
+  static of(x) { return x instanceof V ? x : new V(x); }
+  add(o) { o = V.of(o); return new V(this.data + o.data, [this, o], '+', [1, 1]); }
+  sub(o) { o = V.of(o); return new V(this.data - o.data, [this, o], '−', [1, -1]); }
+  mul(o) { o = V.of(o); return new V(this.data * o.data, [this, o], '×', [o.data, this.data]); }
+  pow(k) { return new V(this.data ** k, [this], '^' + k, [k * this.data ** (k - 1)]); }
+  relu() { return new V(this.data > 0 ? this.data : 0, [this], 'ReLU', [this.data > 0 ? 1 : 0]); }
+  tanh() { const t = Math.tanh(this.data); return new V(t, [this], 'tanh', [1 - t * t]); }
+}
+function topo(root) { const out = [], seen = new Set(); (function visit(n) { if (seen.has(n)) return; seen.add(n); n.parents.forEach(visit); out.push(n); })(root); return out; }
+// 反向传播：root.grad = 1，按拓扑逆序，每个节点把 (局部导数 × 自己的梯度) 加到各个输入上
+function backward(root, onStep) {
+  const order = topo(root); order.forEach((n) => { n.grad = 0; }); root.grad = 1;
+  for (let i = order.length - 1; i >= 0; i--) { const n = order[i]; n.parents.forEach((p, k) => { p.grad += n.local[k] * n.grad; }); if (onStep && n.parents.length) onStep(n); }
+  return order;
+}
+/* ===== 两层网络 2→3→1（13 个参数），单样本 ===== */
+const PN = ['w11', 'w12', 'w21', 'w22', 'w31', 'w32', 'b1', 'b2', 'b3', 'v1', 'v2', 'v3', 'c'];
+const PL = { w11: 'w¹₁₁', w12: 'w¹₁₂', w21: 'w¹₂₁', w22: 'w¹₂₂', w31: 'w¹₃₁', w32: 'w¹₃₂', b1: 'b¹₁', b2: 'b¹₂', b3: 'b¹₃', v1: 'w²₁', v2: 'w²₂', v3: 'w²₃', c: 'b²' };
+const DEF2 = { w11: 0.5, w12: -0.3, w21: -0.2, w22: 0.4, w31: 0.1, w32: 0.1, b1: 0.2, b2: 0, b3: -0.5, v1: 0.8, v2: -0.5, v3: 0.3, c: 0.1, x1: 1, x2: 2, y: 1 };
+// 返回 {L, nodes}：nodes 里是图上要展示的中间节点
+function net2(p, act) {
+  const P = {}; PN.forEach((k) => { P[k] = new V(p[k]); P[k].label = k; });
+  const x = [new V(p.x1), new V(p.x2)]; x[0].label = 'x1'; x[1].label = 'x2';
+  const z = [0, 1, 2].map((i) => P['w' + (i + 1) + '1'].mul(x[0]).add(P['w' + (i + 1) + '2'].mul(x[1])).add(P['b' + (i + 1)]));
+  const h = z.map((zi) => act === 'tanh' ? zi.tanh() : zi.relu());
+  const yh = P.v1.mul(h[0]).add(P.v2.mul(h[1])).add(P.v3.mul(h[2])).add(P.c);
+  const L = yh.sub(p.y).pow(2).mul(0.5);
+  return { L, P, x, z, h, yh };
+}
+function numGrad2(p, act, k, eps = 1e-5) { const a = { ...p, [k]: p[k] + eps }, b = { ...p, [k]: p[k] - eps }; return (net2(a, act).L.data - net2(b, act).L.data) / (2 * eps); }
+
+if (typeof document !== 'undefined') {
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const SUB = ['₀', '₁', '₂', '₃'];
+const SUP = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
+const sup = (n) => String(n).split('').map((c) => SUP[c] ?? c).join('');
+const sci = (v) => { if (!isFinite(v)) return '–'; if (v === 0) return '0'; const a = Math.abs(v); if (a >= 0.01 && a < 1000) return a < 1 ? v.toFixed(3) : v.toFixed(2); const [m, e] = v.toExponential(1).split('e'); return `${m}×10${sup(+e)}`; };
+const f4 = (v) => (Math.abs(v) < 5e-5 ? '0' : (+v.toFixed(4)).toString());
+const big = (n) => n >= 1e9 ? (n / 1e9).toPrecision(3).replace(/\.?0+$/, '') + ' B' : n >= 1e6 ? (n / 1e6).toPrecision(3).replace(/\.?0+$/, '') + ' M' : n >= 1e3 ? (n / 1e3).toPrecision(3).replace(/\.?0+$/, '') + ' K' : String(n);
+function seg(id, cb) {
+  const el = $(id);
+  el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; el.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); cb(b.dataset.v); });
+  return () => { const b = el.querySelector('[aria-pressed=true]'); return b ? b.dataset.v : null; };
+}
+function vb(id, w, h, nw, nh) { const el = $(id), n = el.clientWidth > 0 && el.clientWidth < 600, W = n ? nw : w, H = n ? nh : h; el.setAttribute('viewBox', `0 0 ${W} ${H}`); return [W, H, n]; }
+function polyline(pts, col, w = 2, extra = '') { if (!pts.length) return ''; return `<path d="${pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('')}" fill="none" stroke="${col}" stroke-width="${w}" ${extra}/>`; }
+function logAxis(lo, hi, X0, X1, Y, mu, li, fs = 12) {
+  let s = ''; const step = Math.max(1, Math.ceil((hi - lo) / 8));
+  for (let e = Math.ceil(lo); e <= Math.floor(hi); e += step) s += `<line x1="${X0}" y1="${Y(e)}" x2="${X1}" y2="${Y(e)}" stroke="${li}"/><text x="${X0 - 6}" y="${Y(e) + 4}" font-size="${fs}" fill="${mu}" text-anchor="end">10${sup(e)}</text>`;
+  return s;
+}
+// 画一个计算图节点：框 + 名字 + 上方值（accent）+ 下方梯度（warn）
+function nodeBox(x, y, w, h, name, val, grad, fs, hl, id) {
+  const ac = css('--accent'), wa = css('--warn'), li = css('--line'), fg = css('--fg'), pa = css('--paper');
+  let s = `<g class="node" data-id="${id}"><rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="6" fill="${pa}" stroke="${hl ? ac : li}" stroke-width="${hl ? 2.5 : 1.2}"/>`;
+  s += `<text x="${x}" y="${y + fs * 0.36}" font-size="${fs}" fill="${fg}" text-anchor="middle" font-style="italic">${name}</text>`;
+  if (val != null) s += `<text x="${x}" y="${y - h / 2 - fs * 0.35}" font-size="${fs}" fill="${ac}" text-anchor="middle">${val}</text>`;
+  if (grad != null) s += `<text x="${x}" y="${y + h / 2 + fs * 1.05}" font-size="${fs}" fill="${wa}" text-anchor="middle">${grad}</text>`;
+  return s + '</g>';
+}
+function arrow(x1, y1, x2, y2, col, w = 1.6, label = '', fs = 12, labCol = '') {
+  const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
+  const ex = x2 - ux * 7, ey = y2 - uy * 7;
+  let s = `<line x1="${x1}" y1="${y1}" x2="${ex}" y2="${ey}" stroke="${col}" stroke-width="${w}"/>`;
+  s += `<polygon points="${x2},${y2} ${ex - uy * 4},${ey + ux * 4} ${ex + uy * 4},${ey - ux * 4}" fill="${col}"/>`;
+  if (label) { const mx = (x1 + x2) / 2 - uy * fs * 0.9, my = (y1 + y2) / 2 + ux * fs * 0.9; s += `<text x="${mx}" y="${my + fs * 0.35}" font-size="${fs}" fill="${labCol || col}" text-anchor="middle">${label}</text>`; }
+  return s;
+}
+
+/* ---------- 00 表达式的计算图 ---------- */
+const s0 = { step: 0, sel: null };
+function build0() {
+  const a = new V(+$('#a0').value), b = new V(+$('#b0').value), c = new V(+$('#c0').value);
+  a.label = 'a'; b.label = 'b'; c.label = 'c';
+  const u = a.mul(b), v = u.add(c), y = v.pow(2); u.label = 'u'; v.label = 'v'; y.label = 'y';
+  const order = topo(y); // a, b, u, c, v, y
+  const done = []; backward(y, (n) => done.push(n));
+  return { nodes: { a, b, c, u, v, y }, order, done };
+}
+const FWD0 = 6, BWD0 = 3;
+function draw0() {
+  ['a', 'b', 'c'].forEach((k) => { $('#' + k + '0v').textContent = $('#' + k + '0').value; });
+  const g = build0(), N = g.nodes, step = s0.step;
+  const [W, H, narrow] = vb('#fig0', 800, 350, 420, 600);
+  const pos = narrow
+    ? { a: [90, 60], b: [330, 60], u: [90, 215], c: [330, 215], v: [210, 370], y: [210, 525] }
+    : { a: [90, 95], b: [90, 235], u: [310, 160], c: [310, 285], v: [530, 222], y: [720, 222] };
+  const bw = narrow ? 116 : 120, bh = 50, fs = narrow ? 17 : 15;
+  const mu = css('--muted'), wa = css('--warn'), li = css('--line');
+  // 前向已揭示的节点：拓扑序前 step 个；反向已处理的节点：done 的前 step-FWD0 个
+  const shown = new Set(g.order.slice(0, Math.min(step, FWD0)));
+  const nb = Math.max(0, step - FWD0), processed = g.done.slice(0, nb), cur = nb > 0 ? g.done[nb - 1] : null;
+  const hasGrad = new Set(); processed.forEach((n) => { hasGrad.add(n); n.parents.forEach((p) => hasGrad.add(p)); });
+  if (nb > 0) hasGrad.add(N.y);
+  const edges = [['a', 'u'], ['b', 'u'], ['u', 'v'], ['c', 'v'], ['v', 'y']];
+  const opOf = { u: '×', v: '+', y: '²' };
+  let s = '';
+  edges.forEach(([p, q]) => {
+    const [x1, y1] = pos[p], [x2, y2] = pos[q];
+    let sx, sy, ex, ey;
+    if (narrow) { sx = x1; sy = y1 + bh / 2 + fs * 1.5; ex = x2; ey = y2 - bh / 2 - fs * 1.3; }
+    else { const dx = x2 - x1, dy = y2 - y1, ax = Math.abs(dx) > Math.abs(dy) * (bw / bh) ? bw / 2 / Math.abs(dx) : bh / 2 / Math.abs(dy); sx = x1 + dx * ax; sy = y1 + dy * ax; ex = x2 - dx * ax; ey = y2 - dy * ax; }
+    const child = N[q], k = child.parents.indexOf(N[p]);
+    const active = cur === child, had = processed.includes(child);
+    const lab = (active || had) ? `× ${f4(child.local[k])}` : '';
+    s += arrow(sx, sy, ex, ey, active ? wa : li, active ? 2.4 : 1.6, lab, fs - 1, active ? wa : mu);
+  });
+  Object.keys(pos).forEach((k) => {
+    const n = N[k], [x, y] = pos[k];
+    const nm = k + (opOf[k] ? ` <tspan fill="${mu}" font-style="normal" font-size="${fs - 2}">${k === 'y' ? 'v²' : k === 'u' ? 'a×b' : 'u+c'}</tspan>` : '');
+    s += nodeBox(x, y, bw, bh, nm, shown.has(n) ? f4(n.data) : null, hasGrad.has(n) ? (k === 'y' ? '∂y/∂y = 1' : `∂y/∂${k} = ${f4(n.grad)}`) : null, fs, cur === n || s0.sel === k, k);
+  });
+  $('#fig0').innerHTML = s;
+  $('#fig0').querySelectorAll('.node').forEach((el) => el.addEventListener('click', () => { s0.sel = el.dataset.id; draw0(); }));
+  // 文字说明
+  const d = (k) => f4(N[k].data), gr = (k) => f4(N[k].grad);
+  const desc = {
+    a: `a = ${d('a')}，是叶子节点（没有输入）。它只接收梯度：∂y/∂a = ∂y/∂u × ∂u/∂a = ${gr('u')} × b = ${gr('u')} × ${d('b')} = ${gr('a')}。`,
+    b: `b = ${d('b')}，叶子节点。∂y/∂b = ∂y/∂u × ∂u/∂b = ${gr('u')} × a = ${gr('u')} × ${d('a')} = ${gr('b')}。`,
+    c: `c = ${d('c')}，叶子节点。∂y/∂c = ∂y/∂v × ∂v/∂c = ${gr('v')} × 1 = ${gr('c')}。`,
+    u: `u = a × b = ${d('a')} × ${d('b')} = ${d('u')}。前向时记下局部导数：∂u/∂a = b = ${d('b')}，∂u/∂b = a = ${d('a')}。反向收到 ∂y/∂u = ${gr('u')}，分别乘上局部导数交给 a 和 b。`,
+    v: `v = u + c = ${d('u')} + ${d('c')} = ${d('v')}。加法的局部导数都是 1，所以收到的 ∂y/∂v = ${gr('v')} 原样交给 u 和 c。`,
+    y: `y = v² = ${d('y')}。出发点 ∂y/∂y = 1；局部导数 ∂y/∂v = 2v = ${f4(2 * N.v.data)}，交给 v。`,
+  };
+  let txt;
+  if (s0.sel) txt = desc[s0.sel];
+  else if (step === 0) txt = '还没开始。前向会从左到右算出每个节点的值。';
+  else if (step <= FWD0) { const n = g.order[step - 1]; txt = `前向第 ${step} 步：算出 ${n.label} = ${f4(n.data)}${n.parents.length ? `，并记下它对输入的局部导数 [${n.local.map(f4).join(', ')}]` : ''}。`; }
+  else { const n = cur; txt = `反向第 ${nb} 步：处理 ${n.label}。它的梯度 ${n.label === 'y' ? '1' : f4(n.grad)} 乘上局部导数，加到输入上：` + n.parents.map((p, k) => `∂y/∂${p.label} += ${f4(n.local[k])} × ${f4(n.grad)}`).join('；') + '。'; }
+  if (step === FWD0 + BWD0 && !s0.sel) txt += ' 反向走完，三个叶子的梯度都有了。';
+  $('#det0').textContent = txt;
+  $('#r0y').textContent = step >= FWD0 ? f4(N.y.data) : '–';
+  $('#r0a').textContent = hasGrad.has(N.a) ? f4(N.a.grad) : '–';
+  $('#r0b').textContent = hasGrad.has(N.b) ? f4(N.b.grad) : '–';
+  $('#r0c').textContent = hasGrad.has(N.c) ? f4(N.c.grad) : '–';
+  $('#prev0').disabled = step === 0; $('#next0').disabled = step >= FWD0 + BWD0;
+}
+['a', 'b', 'c'].forEach((k) => $('#' + k + '0').addEventListener('input', () => { s0.sel = null; draw0(); }));
+$('#next0').addEventListener('click', () => { s0.step = Math.min(FWD0 + BWD0, s0.step + 1); s0.sel = null; draw0(); });
+$('#prev0').addEventListener('click', () => { s0.step = Math.max(0, s0.step - 1); s0.sel = null; draw0(); });
+$('#all0').addEventListener('click', () => { s0.step = FWD0 + BWD0; s0.sel = null; draw0(); });
+$('#reset0').addEventListener('click', () => { s0.step = 0; s0.sel = null; draw0(); });
+
+/* ---------- 01 一条链 ---------- */
+function chain1(xv) { const x = new V(xv); const u = x.mul(2).add(1), v = u.tanh(), y = v.pow(2); return { x, u, v, y }; }
+function draw1() {
+  const xv = +$('#x1').value; $('#x1v').textContent = xv.toFixed(2);
+  const g = chain1(xv); backward(g.y);
+  const dudx = 2, dvdu = 1 - g.v.data ** 2, dydv = 2 * g.v.data, prod = dudx * dvdu * dydv;
+  const h = 1e-5, num = (chain1(xv + h).y.data - chain1(xv - h).y.data) / (2 * h);
+  const mu = css('--muted'), wa = css('--warn'), ac = css('--accent'), li = css('--line'), fg = css('--fg');
+  // 左：链
+  const W = 400, H = 230, fs = 14, xs = [50, 150, 250, 350], yc = 70, bw = 68, bh = 42;
+  const names = ['x', 'u', 'v', 'y'], vals = [g.x, g.u, g.v, g.y], labs = ['du/dx = 2', `dv/du = 1 − v² = ${f4(dvdu)}`, `dy/dv = 2v = ${f4(dydv)}`];
+  let s = '';
+  for (let i = 0; i < 3; i++) { s += arrow(xs[i] + bw / 2, yc, xs[i + 1] - bw / 2, yc, wa, 1.6); }
+  names.forEach((n, i) => { s += nodeBox(xs[i], yc, bw, bh, n, f4(vals[i].data), null, fs, false, n); });
+  labs.forEach((t, i) => { s += `<text x="${W / 2}" y="${140 + i * 20}" font-size="${fs - 1}" fill="${wa}" text-anchor="middle">${t}</text>`; });
+  s += `<text x="${W / 2}" y="${212}" font-size="${fs + 1}" fill="${fg}" text-anchor="middle">dy/dx = 2 × ${f4(dvdu)} × ${f4(dydv)} = <tspan fill="${wa}">${f4(prod)}</tspan></text>`;
+  $('#fig1a').innerHTML = s;
+  // 右：曲线 + 切线
+  const pl = 34, pr = 10, pt = 10, pb = 26, X = (x) => pl + (x + 2) / 4 * (W - pl - pr), Y = (y) => pt + (1 - y) * (H - pt - pb);
+  s = '';
+  [0, 0.5, 1].forEach((v) => s += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/><text x="${pl - 5}" y="${Y(v) + 4}" font-size="12" fill="${mu}" text-anchor="end">${v}</text>`);
+  [-2, -1, 0, 1, 2].forEach((v) => s += `<text x="${X(v)}" y="${H - 8}" font-size="12" fill="${mu}" text-anchor="middle">${v}</text>`);
+  const pts = []; for (let i = 0; i <= 160; i++) { const x = -2 + i / 40; pts.push([X(x), Y(chain1(x).y.data)]); }
+  s += polyline(pts, ac, 2);
+  const y0 = g.y.data, t = []; [-0.6, 0.6].forEach((d) => t.push([X(xv + d), Y(y0 + prod * d)]));
+  s += polyline(t, wa, 2);
+  s += `<circle cx="${X(xv)}" cy="${Y(y0)}" r="4" fill="${wa}"/>`;
+  $('#fig1b').innerHTML = s;
+  $('#r1p').textContent = f4(prod); $('#r1g').textContent = f4(g.x.grad); $('#r1n').textContent = f4(num);
+}
+$('#x1').addEventListener('input', draw1);
+
+/* ---------- 02 两层小网络 ---------- */
+const p2 = { ...DEF2 };
+const get2 = seg('#act2', () => draw2());
+(function initGrid() {
+  const keys = ['x1', 'x2', 'y', ...PN], lab = { x1: 'x₁', x2: 'x₂', y: 'y（目标）', ...PL };
+  $('#pg2').innerHTML = keys.map((k) => `<label><i>${lab[k]}</i><input type="number" step="0.1" data-k="${k}" value="${DEF2[k]}"></label>`).join('');
+  $('#pg2').addEventListener('input', (e) => { const k = e.target.dataset.k; if (!k) return; const v = parseFloat(e.target.value); if (isFinite(v)) { p2[k] = v; draw2(); } });
+})();
+function setGrid2() { $('#pg2').querySelectorAll('input').forEach((el) => { el.value = +p2[el.dataset.k].toFixed(2); }); }
+function draw2() {
+  const act = get2(), g = net2(p2, act); backward(g.L);
+  const mu = css('--muted'), wa = css('--warn'), ac = css('--accent'), li = css('--line'), fg = css('--fg');
+  const [W, H, narrow] = vb('#fig2', 800, 320, 420, 450);
+  const fs = narrow ? 15 : 14, bw = narrow ? 96 : 100, bh = 40;
+  const px = narrow ? [[150, 50], [270, 50]] : [[110, 110], [110, 210]];
+  const ph = narrow ? [[70, 215], [210, 215], [350, 215]] : [[400, 55], [400, 160], [400, 265]];
+  const py = narrow ? [210, 380] : [660, 160];
+  let s = '';
+  // 边：x→h 带权重标签（宽屏），h→ŷ
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) {
+    const [x1, y1] = px[j], [x2, y2] = ph[i];
+    const w = p2['w' + (i + 1) + (j + 1)];
+    if (narrow) s += arrow(x1, y1 + bh / 2 + 2, x2, y2 - bh / 2 - 16, li, 1.2);
+    else { const lab = `${PL['w' + (i + 1) + (j + 1)]}=${f4(w)}`; const t = 0.62, mx = x1 + (x2 - x1) * t, my = y1 + (y2 - y1) * t; s += arrow(x1 + bw / 2, y1, x2 - bw / 2, y2, li, 1.2); s += `<text x="${mx}" y="${my - 4}" font-size="11" fill="${mu}" text-anchor="middle">${lab}</text>`; }
+  }
+  for (let i = 0; i < 3; i++) {
+    const [x1, y1] = ph[i];
+    if (narrow) s += arrow(x1, y1 + bh / 2 + 18, py[0], py[1] - bh / 2 - 16, li, 1.2);
+    else { const t = 0.55, mx = x1 + (py[0] - x1) * t, my = y1 + (py[1] - y1) * t; s += arrow(x1 + bw / 2, y1, py[0] - bw / 2, py[1], li, 1.2); s += `<text x="${mx}" y="${my - 4}" font-size="11" fill="${mu}" text-anchor="middle">${PL['v' + (i + 1)]}=${f4(p2['v' + (i + 1)])}</text>`; }
+  }
+  // 节点
+  [0, 1].forEach((j) => { s += nodeBox(px[j][0], px[j][1], bw, bh, `x${SUB[j + 1]}`, f4(g.x[j].data), `${f4(g.x[j].grad)}`, fs, false, 'x' + j); });
+  [0, 1, 2].forEach((i) => {
+    const zi = g.z[i], hi = g.h[i], dead = act === 'relu' && zi.data <= 0;
+    s += nodeBox(ph[i][0], ph[i][1], bw, bh, `z${SUB[i + 1]} = ${f4(zi.data)} <tspan fill="${mu}" font-style="normal" font-size="${fs - 3}">→</tspan> h${SUB[i + 1]}`, f4(hi.data), `${f4(hi.grad)} → ${f4(zi.grad)}${dead ? (narrow ? ' 截断' : ' (ReLU 截断)') : ''}`, fs, dead, 'h' + i);
+  });
+  s += nodeBox(py[0], py[1], bw, bh, 'ŷ', f4(g.yh.data), `${f4(g.yh.grad)}`, fs, false, 'yh');
+  s += `<text x="${py[0]}" y="${py[1] + bh / 2 + fs * 2.4}" font-size="${fs}" fill="${fg}" text-anchor="middle">L = ½(ŷ − ${f4(p2.y)})² = <tspan fill="${ac}">${f4(g.L.data)}</tspan></text>`;
+  $('#fig2').innerHTML = s;
+  // 表：13 个参数
+  let maxE = 0; const rows = PN.map((k) => { const n = numGrad2(p2, act, k); const e = Math.abs(g.P[k].grad - n); maxE = Math.max(maxE, e); return `<tr><td><i>${PL[k]}</i></td><td class="num">${f4(p2[k])}</td><td class="num" style="color:${wa}">${g.P[k].grad.toFixed(6)}</td><td class="num">${n.toFixed(6)}</td><td class="num">${sci(e)}</td></tr>`; });
+  $('#tb2').innerHTML = `<tr><th>参数</th><th class="num">当前值</th><th class="num">反向传播算出的梯度</th><th class="num">数值微分（h = 10⁻⁵）</th><th class="num">差</th></tr>` + rows.join('');
+  $('#r2L').textContent = f4(g.L.data); $('#r2d').textContent = f4(g.yh.grad); $('#r2e').textContent = sci(maxE); $('#r2n').textContent = `${2 * PN.length} 次（13 × 2）`;
+}
+$('#rand2').addEventListener('click', () => { PN.forEach((k) => { p2[k] = Math.round((Math.random() * 2 - 1) * 10) / 10; }); p2.x1 = Math.round((Math.random() * 4 - 2) * 10) / 10; p2.x2 = Math.round((Math.random() * 4 - 2) * 10) / 10; setGrid2(); draw2(); });
+$('#def2').addEventListener('click', () => { Object.assign(p2, DEF2); setGrid2(); draw2(); });
+
+/* ---------- 03 代价对比 ---------- */
+const BWD_COST = 3; // 一次前向 + 一次反向（约两次前向）
+function fmtT(ms) { const s = ms / 1000; if (s < 60) return `${+s.toPrecision(3)} s`; if (s < 3600) return `${+(s / 60).toPrecision(3)} min`; if (s < 86400) return `${+(s / 3600).toPrecision(3)} h`; if (s < 86400 * 365.25) return `${+(s / 86400).toPrecision(3)} d`; const y = s / (86400 * 365.25); return y < 1e4 ? `${+y.toPrecision(3)} yr` : `${sci(y)} yr`; }
+const pre3 = seg('#pre3', (v) => { $('#n3').value = Math.log10(+v).toFixed(1); draw3(+v); });
+function draw3(nExact) {
+  const n = nExact ?? Math.round(10 ** +$('#n3').value); $('#n3v').textContent = (+$('#n3').value).toFixed(1) + ` ≈ ${big(n)}`;
+  if (nExact == null) $('#pre3').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+  const mu = css('--muted'), wa = css('--warn'), ac = css('--accent'), li = css('--line'), fg = css('--fg');
+  const [W, H, narrow] = vb('#fig3', 800, 230, 420, 260), fs = narrow ? 14 : 13;
+  const pl = narrow ? 80 : 190, pr = narrow ? 64 : 20, pt = 10, pb = 28, lo = 0, hi = 12;
+  const X = (v) => pl + (Math.min(hi, Math.max(lo, Math.log10(v))) - lo) / (hi - lo) * (W - pl - pr);
+  const rows = narrow ? [['前向差分', n + 1, wa], ['中心差分', 2 * n, wa], ['前向模式', n, mu], ['反向传播', BWD_COST, ac]] : [['数值微分（前向差分）', n + 1, wa], ['数值微分（中心差分）', 2 * n, wa], ['前向模式自动微分', n, mu], ['反向传播', BWD_COST, ac]];
+  const rh = (H - pt - pb) / rows.length;
+  let s = '';
+  for (let e = lo; e <= hi; e += narrow ? 4 : 2) s += `<line x1="${X(10 ** e)}" y1="${pt}" x2="${X(10 ** e)}" y2="${H - pb}" stroke="${li}"/><text x="${X(10 ** e)}" y="${H - 8}" font-size="${fs - 1}" fill="${mu}" text-anchor="middle">10${sup(e)}</text>`;
+  rows.forEach(([name, v, col], i) => {
+    const y = pt + i * rh + rh * 0.2, h = rh * 0.6;
+    s += `<text x="${pl - 8}" y="${y + h / 2 + fs * 0.35}" font-size="${fs}" fill="${fg}" text-anchor="end">${name}</text>`;
+    s += `<rect x="${pl}" y="${y}" width="${Math.max(2, X(v) - pl)}" height="${h}" fill="${col}" rx="2"/>`;
+    s += `<text x="${X(v) + 6}" y="${y + h / 2 + fs * 0.35}" font-size="${fs}" fill="${col}">${v < 1e4 ? v : sci(v)}</text>`;
+  });
+  $('#fig3').innerHTML = s;
+  $('#r3n').textContent = sci(2 * n); $('#r3b').textContent = BWD_COST; $('#r3r').textContent = sci(2 * n / BWD_COST) + ' 倍'; $('#r3t').textContent = fmtT(2 * n);
+}
+$('#n3').addEventListener('input', () => draw3());
+
+/* ---------- 04 深链连乘 ---------- */
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+let seed4 = 7;
+function chains4(L, g, seed) {
+  const r = rng(seed), gs = Array.from({ length: L }, () => (r() < 0.5 ? -g : g));
+  const build = (res) => { const x = new V(1); const hs = [x]; let h = x; for (let i = 0; i < L; i++) { const d = h.mul(gs[i]); h = res ? h.add(d) : d; hs.push(h); } return { hs, out: h }; };
+  const A = build(false), B = build(true);
+  const nA = backward(A.out).length, nB = backward(B.out).length;
+  return { gs, plain: A.hs.map((n) => Math.abs(n.grad)), res: B.hs.map((n) => Math.abs(n.grad)), nodes: nA + nB };
+}
+function draw4() {
+  const L = +$('#L4').value, g = +$('#g4').value; $('#L4v').textContent = L; $('#g4v').textContent = g.toFixed(2);
+  const c = chains4(L, g, seed4);
+  const mu = css('--muted'), li = css('--line'), cols = [css('--warn'), css('--accent')];
+  const [W, H, narrow] = vb('#fig4', 800, 280, 420, 300), pl = 60, pr = 14, pt = 12, pb = 30, fs = narrow ? 15 : 13;
+  const all = [...c.plain, ...c.res].map((v) => Math.log10(Math.max(v, 1e-80)));
+  const lo = Math.min(-1, Math.floor(Math.min(...all))), hi = Math.max(1, Math.ceil(Math.max(...all)));
+  const X = (l) => pl + l / L * (W - pl - pr), Y = (e) => pt + (hi - e) / (hi - lo) * (H - pt - pb);
+  let s = logAxis(lo, hi, pl, W - pr, Y, mu, li, fs);
+  [0, Math.round(L / 2), L].forEach((l) => s += `<text x="${X(l)}" y="${H - 8}" font-size="${fs}" fill="${mu}" text-anchor="middle">${l}</text>`);
+  [c.plain, c.res].forEach((arr, i) => { s += polyline(arr.map((v, l) => [X(l), Y(Math.log10(Math.max(v, 1e-80)))]), cols[i], 2.5); if (L <= 30) arr.forEach((v, l) => s += `<circle cx="${X(l)}" cy="${Y(Math.log10(Math.max(v, 1e-80)))}" r="2.5" fill="${cols[i]}"/>`); });
+  $('#fig4').innerHTML = s;
+  $('#r4a').textContent = sci(c.plain[0]); $('#r4b').textContent = sci(c.res[0]); $('#r4n').textContent = c.nodes;
+}
+$('#L4').addEventListener('input', draw4); $('#g4').addEventListener('input', draw4); $('#seed4').addEventListener('click', () => { seed4++; draw4(); });
+
+/* ---------- 启动与重绘 ---------- */
+const all = () => { draw0(); draw1(); draw2(); draw3(); draw4(); };
+all();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(all, 150); });
+}
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>
