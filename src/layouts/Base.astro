@@ -43,7 +43,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     html,body{height:100%}
     body{display:flex;flex-direction:column;min-height:100dvh}
     .wrap{flex:1;display:flex;flex-direction:column;width:100%}
-    header.site{display:flex;align-items:center;gap:16px 28px;flex-wrap:wrap;padding:16px clamp(16px,3vw,40px);border-bottom:1px solid var(--line)}
+    header.site{display:flex;align-items:center;gap:16px 28px;flex-wrap:wrap;padding:16px clamp(16px,3vw,40px)}
     header.site nav{margin-left:auto}
     .acts{display:flex;align-items:center;gap:14px}
     .acct{position:relative}
@@ -73,7 +73,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     header.site nav a:hover{color:var(--fg)}
     main{flex:1;display:flex;flex-direction:column;width:100%;padding:40px clamp(16px,3vw,40px) 80px;box-sizing:border-box}
     main.full{max-width:none;padding:0}
-    footer.site{border-top:1px solid var(--line);padding:20px clamp(16px,3vw,40px) 28px;color:var(--muted);font-size:14px}
+    footer.site{padding:20px clamp(16px,3vw,40px) 28px;color:var(--muted);font-size:14px}
     .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
     h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;text-wrap:balance}
     .prose h2{font-size:22px;margin:40px 0 8px}
@@ -100,7 +100,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     .post-head h1{margin:8px 0 12px}
     .post-head .lede{color:var(--muted);margin:0}
     .post-head + .post-body .prose > :first-child{margin-top:36px}
-    .pager{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:56px;padding-top:24px;border-top:1px solid var(--line)}
+    .pager{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:56px}
     .pager a{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--paper);text-decoration:none;color:var(--fg);transition:border-color .15s}
     .pager a:hover{border-color:var(--accent)}
     .pager a small{font-size:13px;color:var(--muted)}
@@ -113,16 +113,20 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     .motto{margin:0;font-family:"Times New Roman",Times,serif;font-size:clamp(32px,6.5vw,96px);font-weight:400;letter-spacing:.02em;line-height:1.25;text-wrap:balance}
     .motto em{font-style:italic;color:var(--accent)}
     .part{margin-top:48px}
-    .part-head{padding-bottom:14px}
+    .part-head{padding-bottom:8px}
     .part-title{font-size:28px;line-height:1.3;margin:4px 0 0;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 14px}
-    .postlist{list-style:none;padding:0;margin:0}
-    .postlist li{display:grid;grid-template-columns:72px 1fr;align-items:center;gap:0 8px;padding:20px 0;border-top:1px solid var(--line)}
-    .postlist li:last-child{border-bottom:1px solid var(--line)}
+    .postlist{list-style:none;padding:0;margin:0 -16px;display:flex;flex-direction:column;gap:2px}
+    /* 不用分隔线：靠留白区分，悬停时整行出现一块圆角浅底，整行可点 */
+    .postlist li{position:relative;display:grid;grid-template-columns:72px 1fr;align-items:center;gap:0 8px;padding:16px;border-radius:12px;transition:background .15s}
+    .postlist li:hover{background:var(--paper)}
     .postlist .num{font-size:44px;line-height:1;color:var(--line);font-variant-numeric:lining-nums;transition:color .2s}
     .postlist li:hover .num{color:var(--accent)}
     .postlist .meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
     .postlist .badge{font-size:12px;line-height:1;padding:4px 8px;border-radius:999px;background:var(--accent);color:var(--bg);letter-spacing:.04em}
     .postlist .badge.done{background:transparent;color:var(--muted);border:1px solid var(--line)}
+    .postlist a.t::after{content:"";position:absolute;inset:0;border-radius:12px}
+    .postlist a.t:focus-visible{outline:none}
+    .postlist li:has(a.t:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
     .postlist a.t{display:inline-block;font-size:22px;font-weight:700;line-height:1.4;text-decoration:none;color:var(--fg)}
     .postlist a.t:hover{color:var(--accent)}
     .postlist p{margin:6px 0 0;color:var(--muted)}
@@ -150,7 +154,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     @media (max-width:520px){.postlist li{grid-template-columns:44px 1fr}.postlist .num{font-size:34px}.postlist a.t{font-size:20px}}
     .reshead{max-width:900px;margin:0 auto;padding:0 clamp(16px,3vw,40px);box-sizing:border-box}
     main.full .reshead:first-child{padding-top:40px}
-    .resgroup{margin-top:0;padding-top:28px;border-top:1px solid var(--line)}
+    .resgroup{margin-top:0;padding-top:28px}
     .resgroup:first-child{border-top:0;padding-top:16px}
     .resgroup .rt{font-size:24px;margin:0;text-align:center}
     .cardwrap{margin:0;display:flex;flex-direction:column;align-items:center;gap:10px}
