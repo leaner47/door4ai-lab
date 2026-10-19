@@ -77,14 +77,19 @@ td.num,th.num{text-align:right}
 .stage p{font-size:15px;margin:8px 0 0}
 .clip{margin:20px 0}
 .clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+.eq{margin:18px 0;overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.eq .katex-display{margin:0}
+td.num,th.num{text-align:right}
+td.mask{color:var(--muted)}
 </style>
+<link rel="stylesheet" href="/vendor/katex/katex.min.css">
 <script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
 <body>
 <div class="wrap">
 <header class="lab-intro">
   <div class="eyebrow">偏好数据 · Bradley–Terry · 奖励模型 · 奖励黑客 · KL 惩罚 · DPO</div>
   <h1>偏好对齐实验室</h1>
-  <p class="lede">从「两个回答，人选一个」出发，拟合分数、训练奖励模型、看它被钻空子、用 KL 拉住策略，再用 DPO 一步到位。下面的拟合与优化都在浏览器里真实计算；偏好数据和打分函数是构造的示例。</p>
+  <p class="lede">从「两个回答，人选一个」出发，拟合分数、训练奖励模型、看它被钻空子、用 KL 拉住策略，再用 DPO 一步到位，最后把可验证奖励放进 Agent 环境。下面的拟合与优化都在浏览器里真实计算；偏好数据和打分函数是构造的示例。</p>
 </header>
 
 <section id="s0">
@@ -226,6 +231,30 @@ td.num,th.num{text-align:right}
     </div>
     <div class="stages" id="st5"></div>
     <p class="note">出处：InstructGPT 见 Ouyang et al. 2022（基座 GPT-3 的 300 B token 见 Brown et al. 2020）；Llama 2-Chat 见 Touvron et al. 2023。单位不同（token、条、prompt、次比较），只能看量级：预训练比后面两段多出好几个数量级。</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2><span class="n">06</span>放进 Agent 环境：奖励怎么设计，模型就学成什么样</h2>
+  <p>把可验证奖励用到多步任务上：每道题是一个沙箱（代码仓库、几个工具、一个提交动作），模型自己跑完一整条轨迹，最后按测试结果给 0 或 1。下面的「模型」是一个只在三种做法之间选择的策略，每种做法的成功率是构造的示例；采样、组内优势、策略梯度更新都是真实计算。每组对同一道题采样 <i>G</i> 条轨迹，第 <i>i</i> 条的优势是</p>
+  <div class="eq">\[ A_i = \frac{r_i - \operatorname{mean}(r_1,\dots,r_G)}{\operatorname{std}(r_1,\dots,r_G) + \varepsilon} \]</div>
+  <p>轨迹里只有模型自己写的 token 乘上 \(A_i\) 进入损失；工具返回的内容是环境给的，不计入。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>奖励看什么</label><div class="seg" id="m6"><button data-v="0" aria-pressed="true">仓库里的测试（测试文件可改）</button><button data-v="1" aria-pressed="false">隐藏测试（模型看不到、改不了）</button></div></div>
+      <div class="ctrl"><label for="g6">组大小 <i>G</i></label><input id="g6" type="range" min="4" max="32" step="4" value="8"><b id="g6v">8</b></div>
+      <div class="btns"><button class="btn pri" id="run6">训练 300 步</button><button class="btn" id="reset6">重置</button></div>
+    </div>
+    <div class="key"><span><i style="background:var(--ok)"></i>读代码、修改、跑测试再提交</span><span><i style="background:var(--muted)"></i>改完直接提交</span><span><i style="background:var(--warn)"></i>改测试文件让它通过</span><span><i style="background:var(--accent)"></i>隐藏测试上的真实通过率（虚线）</span></div>
+    <svg id="fig6" viewBox="0 0 800 280" role="img" aria-label="三种做法的概率与真实通过率随训练步数变化"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r6n">0</b><span>训练步数</span></div>
+      <div class="ro warn"><b id="r6h">–</b><span>选「改测试文件」的概率</span></div>
+      <div class="ro acc"><b id="r6r">–</b><span>训练时看到的平均奖励（最近 20 步）</span></div>
+      <div class="ro ok"><b id="r6t">–</b><span>隐藏测试上的真实通过率</span></div>
+    </div>
+    <div class="tw"><table id="tab6"><thead><tr><th>最近一组</th><th>做法</th><th class="num">模型写的 token</th><th class="num">工具返回的 token（不计入损失）</th><th class="num">奖励</th><th class="num">优势 <i>A</i></th></tr></thead><tbody></tbody></table></div>
+    <p class="note">注意看：奖励看「仓库里的测试」时，改测试文件这条捷径每次都拿满分，很快就占满了概率，训练时的平均奖励一路涨到接近 1，隐藏测试上的真实通过率却掉到接近 0。换成模型改不了的隐藏测试，同样的算法学会的是认真改、跑测试。全组奖励相同时（全对或全错）优势全是 0，这一组什么也学不到。</p>
   </div>
 </section>
 
@@ -587,14 +616,71 @@ function draw5() {
   $('#st5').innerHTML = m.st.map((s) => `<div class="stage"><div class="k">${s.k}</div><h4>${s.h}</h4><div class="big">${s.big}</div><div class="unit">${s.unit}</div><p>${s.goal}</p><div class="ex">${s.ex}</div></div>`).join('');
 }
 
+/* ---------- 06 Agent 环境里的 GRPO ---------- */
+const S6 = [ // 做法：仓库测试通过率、隐藏测试通过率、模型 token、工具返回 token（构造的示例）
+  { name: '读代码、修改、跑测试再提交', vis: 0.72, hid: 0.68, mt: 1900, tt: 7400, col: '--ok' },
+  { name: '改完直接提交', vis: 0.34, hid: 0.30, mt: 700, tt: 1500, col: '--muted' },
+  { name: '改测试文件让它通过', vis: 1.0, hid: 0.02, mt: 600, tt: 1200, col: '--warn' }
+];
+const P0_6 = [0.35, 0.6, 0.05];
+const s6 = { th: P0_6.map(Math.log), hist: [], step: 0, last: [], r: rng(606), timer: 0 };
+function sm6(th) { const m = Math.max(...th), e = th.map((v) => Math.exp(v - m)), z = e.reduce((a, b) => a + b, 0); return e.map((v) => v / z); }
+function step6(useHidden, G, lr = 0.5) {
+  const p = sm6(s6.th), r = s6.r, grp = [];
+  for (let i = 0; i < G; i++) {
+    const u = r(); const a = u < p[0] ? 0 : u < p[0] + p[1] ? 1 : 2;
+    const st = S6[a], rew = r() < (useHidden ? st.hid : st.vis) ? 1 : 0;
+    grp.push({ a, rew, mt: Math.round(st.mt * (0.8 + 0.4 * r())), tt: Math.round(st.tt * (0.7 + 0.6 * r())) });
+  }
+  const mean = grp.reduce((x, g) => x + g.rew, 0) / G, sd = Math.sqrt(grp.reduce((x, g) => x + (g.rew - mean) ** 2, 0) / G);
+  const grad = [0, 0, 0];
+  grp.forEach((g) => { g.adv = (g.rew - mean) / (sd + 1e-6); for (let k = 0; k < 3; k++) grad[k] += g.adv * ((k === g.a ? 1 : 0) - p[k]) / G; });
+  s6.th = s6.th.map((v, k) => v + lr * grad[k]);
+  s6.last = grp; s6.step++;
+  const q = sm6(s6.th);
+  s6.hist.push({ p: q, avg: mean, hid: q.reduce((x, v, k) => x + v * S6[k].hid, 0) });
+}
+const get6 = seg('#m6', () => reset6());
+function reset6() { clearInterval(s6.timer); s6.timer = 0; s6.th = P0_6.map(Math.log); s6.hist = []; s6.step = 0; s6.last = []; s6.r = rng(606); $('#run6').textContent = '训练 300 步'; draw6(); }
+function run6() {
+  if (s6.timer) return;
+  const target = s6.step + 300, G = +$('#g6').value, hidden = get6() === '1';
+  s6.timer = setInterval(() => { for (let k = 0; k < 6 && s6.step < target; k++) step6(hidden, G); draw6(); if (s6.step >= target) { clearInterval(s6.timer); s6.timer = 0; $('#run6').textContent = '再训练 300 步'; } }, 30);
+}
+$('#run6').addEventListener('click', run6);
+$('#reset6').addEventListener('click', reset6);
+$('#g6').addEventListener('input', () => { $('#g6v').textContent = $('#g6').value; reset6(); });
+function draw6() {
+  const W = 800, H = 280, L = 44, R = 14, T = 14, B = 34, n = Math.max(300, s6.step);
+  const x = (i) => L + (i / n) * (W - L - R), y = (v) => T + (1 - v) * (H - T - B);
+  let s = '';
+  [0, 0.25, 0.5, 0.75, 1].forEach((v) => { s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${css('--line')}" stroke-width=".6"/>` + txt(L - 6, y(v) + 4, v.toFixed(2), 11, css('--muted'), 'end'); });
+  s += txt((L + W - R) / 2, H - 4, '训练步数', 12, css('--muted'));
+  [0, n / 2, n].forEach((v) => { s += txt(x(v), H - B + 16, Math.round(v), 11, css('--muted')); });
+  const P = [{ p: P0_6, hid: P0_6.reduce((a, v, k) => a + v * S6[k].hid, 0) }, ...s6.hist];
+  for (let k = 0; k < 3; k++) s += polyline(P.map((h, i) => [x(i), y(h.p[k])]), css(S6[k].col), 2.2);
+  s += polyline(P.map((h, i) => [x(i), y(h.hid)]), css('--accent'), 2, 'stroke-dasharray="6 4"');
+  $('#fig6').innerHTML = s;
+  const q = P[P.length - 1];
+  $('#r6n').textContent = s6.step;
+  $('#r6h').textContent = pct(q.p[2]);
+  const recent = s6.hist.slice(-20);
+  $('#r6r').textContent = recent.length ? (recent.reduce((a, h) => a + h.avg, 0) / recent.length).toFixed(2) : '–';
+  $('#r6t').textContent = pct(q.hid);
+  $('#tab6 tbody').innerHTML = s6.last.length ? s6.last.slice(0, 8).map((g, i) => `<tr><td>#${i + 1}</td><td>${S6[g.a].name}</td><td class="num">${g.mt.toLocaleString('en-US')}</td><td class="num mask">${g.tt.toLocaleString('en-US')}</td><td class="num">${g.rew}</td><td class="num">${f2(g.adv)}</td></tr>`).join('') + (s6.last.length > 8 ? `<tr><td colspan="6" style="color:var(--muted)">……这一组另外 ${s6.last.length - 8} 条轨迹</td></tr>` : '') : `<tr><td colspan="6" style="color:var(--muted)">点「训练」后显示最近一组的 ${$('#g6').value} 条轨迹</td></tr>`;
+}
+
 /* ---------- 启动与重绘 ---------- */
-reset0(); train1(); reset4();
-const all = () => { draw0(); draw0b(); draw1(); draw2(); draw3(); draw4(); draw5(); };
+reset0(); train1(); reset4(); reset6();
+const all = () => { draw0(); draw0b(); draw1(); draw2(); draw3(); draw4(); draw5(); draw6(); };
 all();
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
 new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { draw0(); draw2(); }, 150); });
 </script>
+<script src="/vendor/katex/katex.min.js"></script>
+<script src="/vendor/katex/auto-render.min.js"></script>
+<script>try{renderMathInElement(document.getElementById("s6"),{delimiters:[{left:"\\[",right:"\\]",display:true},{left:"\\(",right:"\\)",display:false}],throwOnError:false});}catch(e){}</script>
 <script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
 (()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
 let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});

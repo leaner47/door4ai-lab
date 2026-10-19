@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>Harness 实验室</title>
+<link rel="stylesheet" href="/vendor/katex/katex.min.css">
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c; --ok-soft:#dcefe4;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --ok-soft:#1d3a2c; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --ok-soft:#1d3a2c; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+p code,li code,td code{font-family:var(--mono);font-size:.84em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl input[type=range]{width:min(200px,52vw)}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.toggle{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;white-space:nowrap}
+.toggle input{accent-color:var(--accent)}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn{border-color:var(--warn)} .ro.warn b{color:var(--warn)}
+.ro.ok{border-color:var(--ok)} .ro.ok b{color:var(--ok)}
+.ro.acc{border-color:var(--accent)} .ro.acc b{color:var(--accent)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+/* 00：对话记录 */
+.cols{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px}
+@media (max-width:760px){.cols{grid-template-columns:1fr}}
+.msgs{font-family:var(--mono);font-size:12.5px;line-height:1.55;border:1px solid var(--line);border-radius:6px;padding:10px 12px;max-height:440px;overflow:auto;background:var(--bg)}
+.msg{margin:0 0 8px;padding:6px 8px;border-left:3px solid var(--line);border-radius:3px;white-space:pre-wrap;word-break:break-word}
+.msg.user{border-color:var(--muted)} .msg.assistant{border-color:var(--accent)} .msg.tool{border-color:var(--ok)}
+.msg.tool.err{border-color:var(--warn)}
+.msg.h{border-color:transparent;background:var(--ok-soft);font-family:var(--sans);font-size:13px}
+.msg.h.bad{background:var(--warn-soft)}
+.msg .role{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.msg .tu{color:var(--accent)} .msg .th{color:var(--muted)} .msg .cl{color:var(--muted);font-style:italic}
+.parts{display:flex;flex-wrap:wrap;gap:8px 18px}
+/* 01：分类卡片 */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.card{background:var(--bg);border-radius:6px;padding:10px 12px;font-size:14.5px;line-height:1.6;display:flex;flex-direction:column;gap:8px}
+.card .seg button{font-size:12.5px;padding:3px 10px}
+.card.right{background:var(--ok-soft)} .card.wrong{background:var(--warn-soft)}
+.card .why{font-size:13px;color:var(--muted);display:none}
+.card.shown .why{display:block}
+/* 03：编辑格式 */
+.fmts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:900px){.fmts{grid-template-columns:1fr}}
+.fmt h3{font-size:15px;margin:0 0 6px;font-weight:600}
+.fmt textarea{box-sizing:border-box;width:100%;min-height:210px;font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px;resize:vertical}
+.st{font-size:13.5px;margin:6px 0 0;line-height:1.6}
+.st.ok{color:var(--ok)} .st.bad{color:var(--warn)}
+pre.file{font-family:var(--mono);font-size:12px;line-height:1.5;background:var(--bg);border-radius:4px;padding:8px;margin:6px 0 0;overflow-x:auto;white-space:pre}
+pre.file .add{background:var(--ok-soft);display:inline-block;min-width:100%}
+pre.file .del{background:var(--warn-soft);display:inline-block;min-width:100%;text-decoration:line-through;color:var(--muted)}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btns .btn[aria-pressed=true]{background:var(--warn);border-color:var(--warn);color:#fff}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.num{text-align:right}
+.tw{overflow-x:auto}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">Agent · Harness · 上下文 · 工具 · 权限</div>
+  <h1>Harness 实验室</h1>
+  <p class="lede">模型只会输出文字，替它动手、替它管上下文、替它拦住危险动作的，是外面那层程序。下面五个实验都在页面里真实运行：一个迷你 harness、真实分词器计数、三种编辑格式的真解析器。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>拆掉一个部件，看任务在哪一步坏掉</h2>
+  <p>任务：「把服务端口从 8080 改成 9090，并确保测试通过」。项目里有三个文件：<code>config.json</code>、<code>app.js</code>，以及一份七十多行的旧日志 <code>server.log</code>。模型用规则模拟，它的每一步决定都写死了；文件读写、搜索、测试、token 计数、窗口上限，都是页面里一个迷你 harness 真实在做。关掉某个部件，看会发生什么。</p>
+  <div class="lab">
+    <div class="ctrls parts" id="parts0"></div>
+    <div class="cols">
+      <div class="msgs" id="msgs0" aria-live="polite"></div>
+      <div>
+        <svg id="fig0" viewBox="0 0 420 300" role="img" aria-label="每次模型调用的输入 token 与窗口上限"></svg>
+        <div class="readout">
+          <div class="ro" id="ro0a"><b id="r0a">–</b><span>任务结果（页面独立重跑测试）</span></div>
+          <div class="ro"><b id="r0b">–</b><span>模型调用次数</span></div>
+          <div class="ro"><b id="r0c">–</b><span>峰值输入 token</span></div>
+          <div class="ro" id="ro0d"><b id="r0d">–</b><span><code>server.log</code></span></div>
+        </div>
+      </div>
+    </div>
+    <p class="note" id="note0">注意看：每个部件坏掉的方式都不一样。没有循环，停在第一个 tool_use；没有工具执行，模型只会「说」怎么改；没有错误回填，第一次测试失败就中断；没有上下文管理，日志把窗口撑爆；没有权限确认，一个「顺手」的删除就真的执行了。</p>
+  </div>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>这一步是程序在做，还是又调了一次模型</h2>
+  <p>Harness 的主体是确定性的代码，但有些环节需要读懂语义，它会再调一次模型（常常是更小、更便宜的那个）。给下面 14 个动作分类，再点「揭晓」。</p>
+  <div class="lab">
+    <div class="cards" id="cards1"></div>
+    <div class="ctrls" style="margin-top:14px;margin-bottom:0">
+      <button class="btn primary" id="reveal1" type="button">揭晓</button>
+      <button class="btn" id="reset1" type="button">重来</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r1a">0 / 14</b><span>已分类</span></div>
+      <div class="ro ok"><b id="r1b">–</b><span>答对</span></div>
+      <div class="ro acc"><b id="r1c">–</b><span>程序 : 模型（标准答案）</span></div>
+    </div>
+    <p class="note">注意看：凡是「判断这段话什么意思」的环节，都绕不开模型；凡是「按规则执行」的环节，都应该是代码，因为代码可预测、可测试、不花 token。权限判断两种都有：规则表能挡住 <code>rm -rf</code>，但挡不住一段改写过的危险请求。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>按需加载：先给目录，用到再展开</h2>
+  <p>工具定义和 skill 说明每一轮都要发给模型。全部预先塞进去，还没开始干活窗口就少了一截；按需加载只先放一个「搜索工具」和每个 skill 的一行描述，用到时再把完整定义取回来。下面的 token 由真实分词器对 JSON 和文字计数。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="n2">工具总数</label><input id="n2" type="range" min="5" max="300" step="1" value="58"><b id="n2v">58</b></div>
+      <div class="ctrl"><label>每个工具的说明</label><div class="seg" id="d2"></div></div>
+      <div class="ctrl"><label for="k2">这次任务用到</label><input id="k2" type="range" min="1" max="10" step="1" value="3"><b id="k2v">3</b></div>
+      <div class="ctrl"><label for="m2">skill 数</label><input id="m2" type="range" min="0" max="60" step="1" value="12"><b id="m2v">12</b></div>
+      <div class="ctrl"><label for="b2">每个 SKILL.md 正文</label><input id="b2" type="range" min="500" max="8000" step="100" value="2000"><b id="b2v">2000</b></div>
+      <div class="ctrl"><label>窗口</label><div class="seg" id="w2"></div></div>
+    </div>
+    <svg id="fig2" viewBox="0 0 800 200" role="img" aria-label="全部预加载与按需加载占用窗口的对比"></svg>
+    <div class="readout">
+      <div class="ro warn"><b id="r2a">–</b><span>全部预加载：每轮固定占用</span></div>
+      <div class="ro ok"><b id="r2b">–</b><span>按需加载：每轮固定占用</span></div>
+      <div class="ro"><b id="r2c">–</b><span>按需加载省下</span></div>
+      <div class="ro acc"><b id="r2d">–</b><span>预加载占窗口</span></div>
+    </div>
+    <p class="note" id="note2"></p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>同一处修改，三种编辑格式</h2>
+  <p>改文件这件事，不同的 harness 让模型用不同的格式表达：整份重写、精确替换一段原文（<code>str_replace</code>）、带上下文的补丁（Codex 的 <code>apply_patch</code>）。下面三个框里是模型的输出，页面里有三个真解析器把它们应用到同一份 <code>prices.py</code> 上。框里的文字可以直接改；也可以点按钮注入模型常犯的错。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="btns" id="err3"></div>
+    </div>
+    <div class="fmts">
+      <div class="fmt"><h3>整份重写</h3><textarea id="t3a" spellcheck="false" aria-label="整份重写格式的模型输出"></textarea><p class="st" id="s3a"></p></div>
+      <div class="fmt"><h3>精确替换 <code>str_replace</code></h3><textarea id="t3b" spellcheck="false" aria-label="str_replace 格式的模型输出"></textarea><p class="st" id="s3b"></p></div>
+      <div class="fmt"><h3>补丁 <code>apply_patch</code></h3><textarea id="t3c" spellcheck="false" aria-label="apply_patch 格式的模型输出"></textarea><p class="st" id="s3c"></p></div>
+    </div>
+    <div class="tw">
+      <table id="tab3"><thead><tr><th>格式</th><th>能否应用</th><th class="num">模型输出 token</th><th>结果和预期一致</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="ctrls" style="margin-top:14px;margin-bottom:0"><div class="ctrl"><label>看哪种格式的结果</label><div class="seg" id="v3"></div></div></div>
+    <pre class="file" id="f3"></pre>
+    <p class="note">注意看：整份重写最贵，而且模型一偷懒写「其余不变」就会删掉代码，解析器却照样「成功」；<code>str_replace</code> 最严格，原文差一个空格或出现两次就拒绝；<code>apply_patch</code> 按上下文定位，还会逐级放宽（先精确、再忽略行尾空格、再忽略首尾空格），所以缩进写错一格也能打上去。哪种格式好用，取决于模型训练时练的是哪一种。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>Harness 每一轮拼出来的请求，和前缀缓存</h2>
+  <p>每次调用模型前，harness 都要把系统提示、工具定义、记忆文件、历史和最新的工具结果按顺序拼成一个请求。拼法决定了两件事：前后两轮的请求有多长一段完全相同（这一段可以命中服务端的前缀缓存），以及每轮要付多少钱。下面对相邻两轮请求真实分词，再逐个 token 比较最长公共前缀。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="h4">已进行轮数</label><input id="h4" type="range" min="1" max="40" step="1" value="12"><b id="h4v">12</b></div>
+      <label class="toggle"><input type="checkbox" id="o4a">系统提示开头写当前时间</label>
+      <label class="toggle"><input type="checkbox" id="o4b">工具定义放在历史后面</label>
+      <label class="toggle"><input type="checkbox" id="o4c">每轮按相关度重排工具</label>
+    </div>
+    <svg id="fig4" viewBox="0 0 800 220" role="img" aria-label="相邻两轮请求的组成与缓存命中部分"></svg>
+    <div class="legend" id="leg4"></div>
+    <div class="readout">
+      <div class="ro"><b id="r4a">–</b><span>这一轮请求 token</span></div>
+      <div class="ro ok"><b id="r4b">–</b><span>与上一轮相同的前缀</span></div>
+      <div class="ro warn"><b id="r4c">–</b><span>需要重新计算</span></div>
+      <div class="ro acc"><b id="r4d">–</b><span>输入费用（不缓存 = 100%）</span></div>
+    </div>
+    <p class="note" id="note4">注意看：三个开关各自都会把缓存打碎。稳定的东西放前面、只在末尾追加，是 harness 拼请求的第一原则。</p>
+  </div>
+</section>
+
+</div>
+<script src="/vendor/katex/katex.min.js"></script>
+<script src="/vendor/katex/auto-render.min.js"></script>
+<script>
+try{renderMathInElement(document.body,{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});}catch(e){}
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const fmt = (n) => Math.round(n).toLocaleString('en-US');
+const pct = (x, d = 0) => (x * 100).toFixed(d) + '%';
+
+/* ---------- 分词器：同源的 tiktoken.js（o200k_base），未加载时按字符估算 ---------- */
+let TOK = (s) => Math.ceil(s.length / 3.2), TOKNAME = '按字符估算（分词器未加载）';
+const ENC = (s) => (window.TK && window.TK.o200k) ? window.TK.o200k.encode(s) : null;
+function onTK() {
+  if (window.TK && window.TK.o200k) { TOK = (s) => window.TK.o200k.encode(s).length; TOKNAME = 'o200k_base 分词器'; all(); }
+}
+window.addEventListener('tk-ready', onTK);
+
+function seg(id, labels, init, cb) {
+  const el = document.getElementById(id); let v = init;
+  el.innerHTML = labels.map((l, i) => `<button type="button" aria-pressed="${i === init}">${l}</button>`).join('');
+  [...el.children].forEach((b, i) => b.addEventListener('click', () => { v = i; [...el.children].forEach((c, j) => c.setAttribute('aria-pressed', j === i)); cb(); }));
+  return () => v;
+}
+
+/* =====================================================================
+   00 迷你 harness
+   ===================================================================== */
+const TASK0 = '把服务端口从 8080 改成 9090，并确保测试通过。';
+const SYS0 = '你是一个编程助手，在用户的项目目录里工作。先搜索、再修改，改完必须跑测试确认。只做和任务有关的修改；删除文件、推送代码、改系统设置之前要先征得用户同意。回答用中文，简短。';
+const TOOLS0 = [
+  { name: 'grep', description: '在项目里按文本搜索，返回「文件:行号:内容」，每个匹配一行。', input_schema: { type: 'object', properties: { pattern: { type: 'string', description: '要找的文本' } }, required: ['pattern'] } },
+  { name: 'bash', description: '在项目目录里执行一条 shell 命令，返回输出和退出码。', input_schema: { type: 'object', properties: { command: { type: 'string' } }, required: ['command'] } },
+  { name: 'edit', description: '把文件里的一段原文替换成新文本。old_str 必须在文件里恰好出现一次。', input_schema: { type: 'object', properties: { path: { type: 'string' }, old_str: { type: 'string' }, new_str: { type: 'string' } }, required: ['path', 'old_str', 'new_str'] } },
+  { name: 'run_tests', description: '运行项目的测试，返回每个测试的结果。', input_schema: { type: 'object', properties: {} } }
+];
+const LOG_LINES = 75;
+const LOG0 = (() => {
+  let s = 20261012; const r = () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const paths = ['/api/items', '/api/items/42', '/api/cart', '/api/login', '/healthz', '/api/orders', '/static/app.css'];
+  const meth = ['GET', 'GET', 'GET', 'POST', 'GET', 'PUT'];
+  let out = '';
+  for (let i = 0; i < LOG_LINES; i++) {
+    const h = 9 + Math.floor(i / 40), m = Math.floor(r() * 60), sec = Math.floor(r() * 60);
+    const code = r() < 0.9 ? 200 : (r() < 0.5 ? 404 : 500);
+    out += `2026-10-12 ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')} INFO  ${meth[Math.floor(r() * meth.length)]} ${paths[Math.floor(r() * paths.length)]} ${code} ${1 + Math.floor(r() * 180)} ms  listen=0.0.0.0:8080 worker=${1 + Math.floor(r() * 4)}\n`;
+  }
+  return out;
+})();
+const initFS = () => ({
+  'config.json': '{\n  "host": "0.0.0.0",\n  "port": 8080,\n  "workers": 4\n}\n',
+  'app.js': 'const cfg = require("./config.json");\nconst http = require("http");\n\nconst server = http.createServer(handle);\nserver.listen(8080);\n',
+  'server.log': LOG0
+});
+function runTests(fs) {
+  let port = null;
+  try { port = JSON.parse(fs['config.json']).port; } catch (e) { return { ok: false, out: 'FAIL test_config  config.json 无法解析\n1 failed' }; }
+  if (port !== 9090) return { ok: false, out: `FAIL test_config  config.json 的 port 是 ${port}，期望 9090\n    at test/port.test.js:4\nFAIL test_listen  服务监听的端口是 8080，期望 9090\n    at test/port.test.js:9\n2 failed` };
+  if (/listen\(\s*8080/.test(fs['app.js'])) return { ok: false, out: 'PASS test_config\nFAIL test_listen  app.js 第 5 行写死了 server.listen(8080)，没有读 cfg.port\n    at test/port.test.js:9\n1 passed, 1 failed' };
+  if (!/listen\(\s*cfg\.port\s*\)/.test(fs['app.js'])) return { ok: false, out: 'PASS test_config\nFAIL test_listen  服务没有读取 cfg.port\n1 passed, 1 failed' };
+  return { ok: true, out: 'PASS test_config\nPASS test_listen\n2 passed' };
+}
+function grep(fs, pat) {
+  const out = [];
+  for (const f of ['config.json', 'app.js', 'server.log']) if (fs[f] != null) fs[f].split('\n').forEach((l, i) => { if (l.includes(pat)) out.push(`${f}:${i + 1}:${l}`); });
+  return out.join('\n');
+}
+/* 规则模拟的模型：phase 是它在这个任务里走到了哪一步；last 是它看到的最后一条工具结果 */
+function policy(phase, last, opt, fs) {
+  if (!opt.exec) return { think: '没有可用的工具，只能告诉用户怎么改。', text: '请把 config.json 里的 "port": 8080 改成 9090，再把 app.js 第 5 行改成 server.listen(cfg.port)，然后运行测试。' };
+  switch (phase) {
+    case 0: return { think: '先找出项目里所有出现 8080 的地方。', tool: 'grep', args: { pattern: '8080' } };
+    case 1: return { think: `server.log 里有 ${LOG_LINES} 行 8080，都是旧日志，删掉免得干扰后面的搜索。`, tool: 'bash', args: { command: 'rm server.log' } };
+    case 2: return { think: last.err ? '删除被拒绝了，那就不动日志，只改配置和代码。' : '日志删掉了。先改配置。', tool: 'edit', args: { path: 'config.json', old_str: '"port": 8080', new_str: '"port": 9090' } };
+    case 3: return { think: '配置改好了，跑一下测试。', tool: 'run_tests', args: {} };
+    case 4: return { think: '测试说服务监听的端口不对。看看所有 listen 出现的地方。', tool: 'grep', args: { pattern: 'listen' } };
+    case 5: return { think: 'app.js 第 5 行写死了 8080，改成读配置。', tool: 'edit', args: { path: 'app.js', old_str: 'server.listen(8080);', new_str: 'server.listen(cfg.port);' } };
+    case 6: return { think: '再跑一次测试。', tool: 'run_tests', args: {} };
+    default: return { think: '两个测试都通过了。', text: 'config.json 的 port 改成了 9090，app.js 改为读取 cfg.port，2 个测试通过。' + (fs['server.log'] == null ? '另外删掉了旧日志 server.log。' : '') };
+  }
+}
+const WINDOW0 = 8192, OUTRES0 = 2048, LIMIT0 = WINDOW0 - OUTRES0;
+function simulate(opt) {
+  const fs = initFS(), msgs = [], calls = [];
+  const base = TOK(SYS0) + (opt.exec ? TOK(JSON.stringify(TOOLS0)) : 0);
+  msgs.push({ role: 'user', text: TASK0, tok: TOK(TASK0) });
+  let phase = 0, last = {}, result = null;
+  for (let iter = 0; iter < 12; iter++) {
+    let inTok = base + msgs.reduce((a, m) => a + (m.tok || 0), 0);
+    if (opt.ctx && inTok > LIMIT0 * 0.6) {
+      const tools = msgs.filter((m) => m.role === 'tool' && !m.cleared);
+      let n = 0, freed = 0;
+      tools.slice(0, -1).forEach((m) => { if (m.tok > 150) { const ph = `[已清理：${m.name} 的输出，${fmt(m.tok)} token。需要时可以重新运行]`; freed += m.tok; m.full = m.text; m.text = ph; m.tok = TOK(ph); freed -= m.tok; m.cleared = true; n++; } });
+      if (n) { msgs.push({ role: 'h', text: `harness：输入 ${fmt(inTok)} token，超过上限的 60%，把 ${n} 条旧工具结果换成一行占位（腾出 ${fmt(freed)} token）` }); inTok -= freed; }
+    }
+    if (inTok > LIMIT0) {
+      calls.push({ in: inTok, over: true });
+      msgs.push({ role: 'h', bad: true, text: `第 ${iter + 1} 次调用：输入 ${fmt(inTok)} token，超过 ${fmt(WINDOW0)} 的窗口减去 ${fmt(OUTRES0)} 的输出预留。API 拒绝了请求，任务中断。` });
+      result = 'overflow'; break;
+    }
+    calls.push({ in: inTok });
+    const out = policy(phase, last, opt, fs);
+    const atext = out.think + (out.tool ? `\n→ ${out.tool}(${JSON.stringify(out.args)})` : '\n' + out.text);
+    msgs.push({ role: 'assistant', think: out.think, tool: out.tool, args: out.args, text: out.text, tok: TOK(atext) + 8 });
+    if (!out.tool) { result = 'answered'; break; }
+    if (!opt.loop) { msgs.push({ role: 'h', bad: true, text: '没有循环：程序拿到模型的这一次输出就结束了。tool_use 没人执行，也不会再调模型。' }); result = 'stopped'; break; }
+    // 执行工具
+    let r = '', err = false;
+    if (out.tool === 'grep') r = grep(fs, out.args.pattern);
+    else if (out.tool === 'bash') {
+      if (opt.perm) { r = '用户拒绝了这次操作：删除文件需要确认。'; err = true; msgs.push({ role: 'h', text: 'harness：rm 在「需要确认」名单里，暂停并询问用户，用户选择「拒绝」。' }); }
+      else { delete fs['server.log']; r = '(退出码 0)'; msgs.push({ role: 'h', bad: true, text: 'harness：没有权限检查，rm server.log 直接执行了。' }); }
+    } else if (out.tool === 'edit') {
+      const f = fs[out.args.path], c = f ? f.split(out.args.old_str).length - 1 : 0;
+      if (c === 1) { fs[out.args.path] = f.replace(out.args.old_str, out.args.new_str); r = `已修改 ${out.args.path}`; } else { r = `old_str 在 ${out.args.path} 里出现了 ${c} 次，没有修改`; err = true; }
+    } else if (out.tool === 'run_tests') { const t = runTests(fs); r = t.out; err = !t.ok; }
+    if (err && out.tool === 'run_tests' && !opt.errfb) {
+      msgs.push({ role: 'h', bad: true, text: 'run_tests 退出码 1。程序把它当成异常抛出，没有作为 tool_result 回填给模型，循环中断。' });
+      result = 'crashed'; break;
+    }
+    msgs.push({ role: 'tool', name: out.tool, text: r, err, tok: TOK(r) + 8 });
+    last = { err, text: r }; phase++;
+  }
+  const t = runTests(fs);
+  return { msgs, calls, result, pass: t.ok, logAlive: fs['server.log'] != null };
+}
+const PARTS0 = [['loop', '循环'], ['exec', '工具执行'], ['errfb', '错误回填'], ['ctx', '上下文管理'], ['perm', '权限确认']];
+$('#parts0').innerHTML = PARTS0.map(([k, l]) => `<label class="toggle"><input type="checkbox" data-k="${k}" checked>${l}</label>`).join('');
+$('#parts0').addEventListener('change', draw0);
+function showTool(m) {
+  const lines = m.text.split('\n');
+  if (lines.length > 8) return esc(lines.slice(0, 5).join('\n')) + `\n<span class="cl">……共 ${lines.length} 行，${fmt(m.tok)} token</span>`;
+  return m.cleared ? `<span class="cl">${esc(m.text)}</span>` : esc(m.text);
+}
+function draw0() {
+  const opt = {}; document.querySelectorAll('#parts0 input').forEach((i) => opt[i.dataset.k] = i.checked);
+  const R = simulate(opt);
+  $('#msgs0').innerHTML = R.msgs.map((m) => {
+    if (m.role === 'h') return `<div class="msg h${m.bad ? ' bad' : ''}">${esc(m.text)}</div>`;
+    if (m.role === 'user') return `<div class="msg user"><span class="role">user</span>${esc(m.text)}</div>`;
+    if (m.role === 'assistant') return `<div class="msg assistant"><span class="role">assistant · 模型</span><span class="th">${esc(m.think)}</span>\n${m.tool ? `<span class="tu">tool_use → ${m.tool}(${esc(JSON.stringify(m.args))})</span>` : esc(m.text)}</div>`;
+    return `<div class="msg tool${m.err ? ' err' : ''}"><span class="role">tool_result · ${m.name}${m.err ? ' · is_error' : ''}</span>${showTool(m)}</div>`;
+  }).join('');
+  // 每次调用的输入 token
+  const W = 420, H = 300, L = 46, B = 34, T = 16, Rr = 10, n = Math.max(R.calls.length, 7);
+  const ymax = WINDOW0, y = (v) => H - B - (Math.min(v, ymax * 1.05) / ymax) * (H - B - T);
+  const bw = (W - L - Rr) / n;
+  let s = '';
+  [0, 2048, 4096, 6144, 8192].forEach((v) => s += `<text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="${css('--muted')}">${v ? (v / 1024) + 'K' : 0}</text>`);
+  s += `<rect x="${L}" y="${y(WINDOW0)}" width="${W - L - Rr}" height="${y(LIMIT0) - y(WINDOW0)}" fill="${css('--warn-soft')}"/>`;
+  s += `<line x1="${L}" x2="${W - Rr}" y1="${y(LIMIT0)}" y2="${y(LIMIT0)}" stroke="${css('--warn')}" stroke-dasharray="4 3"/>`;
+  s += `<text x="${W - Rr}" y="${y(LIMIT0) - 5}" text-anchor="end" font-size="11" fill="${css('--warn')}">输入上限 ${fmt(LIMIT0)}</text>`;
+  s += `<text x="${W - Rr}" y="${y(WINDOW0) + 13}" text-anchor="end" font-size="11" fill="${css('--muted')}">输出预留</text>`;
+  R.calls.forEach((c, i) => {
+    const x = L + i * bw + bw * 0.18, h = H - B - y(c.in);
+    s += `<rect x="${x}" y="${y(c.in)}" width="${bw * 0.64}" height="${h}" rx="2" fill="${c.over ? css('--warn') : css('--accent')}"/>`;
+    s += `<text x="${x + bw * 0.32}" y="${H - B + 16}" text-anchor="middle" font-size="11" fill="${css('--muted')}">${i + 1}</text>`;
+  });
+  s += `<line x1="${L}" x2="${W - Rr}" y1="${H - B}" y2="${H - B}" stroke="${css('--line')}"/>`;
+  s += `<text x="${(L + W) / 2}" y="${H - 4}" text-anchor="middle" font-size="12" fill="${css('--muted')}">第几次调用模型</text>`;
+  $('#fig0').innerHTML = s;
+  const res = { answered: R.pass ? '测试通过' : '测试未通过', stopped: '未完成', crashed: '中断', overflow: '中断' }[R.result] || '未完成';
+  $('#r0a').textContent = res; $('#ro0a').className = 'ro ' + (R.pass ? 'ok' : 'warn');
+  $('#r0b').textContent = R.calls.filter((c) => !c.over).length;
+  $('#r0c').textContent = fmt(Math.max(...R.calls.map((c) => c.in)));
+  $('#r0d').textContent = R.logAlive ? '还在' : '被删了'; $('#ro0d').className = 'ro ' + (R.logAlive ? '' : 'warn');
+}
+
+/* =====================================================================
+   01 程序还是模型
+   ===================================================================== */
+const ITEMS1 = [
+  ['把模型输出里的 tool_use 解析成函数名和参数', 0, 'JSON 解析，格式固定。'],
+  ['用 JSON Schema 校验参数类型和必填字段', 0, '规则校验，第 100 讲实验 02。'],
+  ['真正执行一条 bash 命令', 0, '交给操作系统，模型从不亲手执行。'],
+  ['统计上下文 token 数，判断是否快满了', 0, '分词器计数加一个阈值。'],
+  ['把前 40 轮对话压成一段摘要', 1, '要判断什么重要，必须读懂内容，这就是 compaction。'],
+  ['按规则表判断 rm、git push 要不要先问用户', 0, '名单匹配。挡得住写法固定的危险命令。'],
+  ['判断一段网页内容里有没有藏着提示注入', 1, '注入可以千变万化，靠规则挡不住，通常用分类模型。'],
+  ['把抓回来的长网页按问题提炼成几条要点', 1, '常用小模型先读一遍，只把要点交给主模型。'],
+  ['派一个子 agent 去整个代码库里找某个函数', 1, '子 agent 本身就是另一次模型调用，有自己的上下文。'],
+  ['用户按下 Ctrl-C 后中止循环', 0, '信号处理。'],
+  ['给这次会话起一个标题', 1, '一句话概括内容，常交给小模型。'],
+  ['会话结束后决定哪些事实值得写进记忆', 1, '要判断什么是长期有用的信息。'],
+  ['达到最大步数后强行停下', 0, '计数器。第 105 讲的兜底。'],
+  ['API 超时后等 2 s 再重试', 0, '指数退避，纯代码。']
+];
+let ans1 = ITEMS1.map(() => -1), shown1 = false;
+function build1() {
+  $('#cards1').innerHTML = ITEMS1.map(([t, , why], i) => `<div class="card" id="c1-${i}"><div>${esc(t)}</div><div class="seg" data-i="${i}"><button type="button" aria-pressed="false" data-v="0">程序</button><button type="button" aria-pressed="false" data-v="1">模型</button></div><div class="why"></div></div>`).join('');
+  document.querySelectorAll('#cards1 .seg').forEach((sg) => sg.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return; const i = +sg.dataset.i; ans1[i] = +b.dataset.v;
+    [...sg.children].forEach((c) => c.setAttribute('aria-pressed', c === b)); draw1();
+  }));
+}
+function draw1() {
+  const done = ans1.filter((a) => a >= 0).length;
+  $('#r1a').textContent = `${done} / ${ITEMS1.length}`;
+  const nModel = ITEMS1.filter((x) => x[1] === 1).length;
+  if (shown1) {
+    let right = 0;
+    ITEMS1.forEach(([, c, why], i) => {
+      const el = $('#c1-' + i); el.classList.add('shown');
+      el.classList.toggle('right', ans1[i] === c); el.classList.toggle('wrong', ans1[i] >= 0 && ans1[i] !== c);
+      el.querySelector('.why').textContent = (c ? '模型。' : '程序。') + why;
+      if (ans1[i] === c) right++;
+    });
+    $('#r1b').textContent = `${right} / ${ITEMS1.length}`; $('#r1c').textContent = `${ITEMS1.length - nModel} : ${nModel}`;
+  } else { $('#r1b').textContent = '–'; $('#r1c').textContent = '–'; }
+}
+$('#reveal1').addEventListener('click', () => { shown1 = true; draw1(); });
+$('#reset1').addEventListener('click', () => { ans1 = ITEMS1.map(() => -1); shown1 = false; build1(); draw1(); });
+build1();
+
+/* =====================================================================
+   02 按需加载
+   ===================================================================== */
+const TOOLDEF2 = [
+  { name: 'create_issue', description: '创建一个 issue。', input_schema: { type: 'object', properties: { repo: { type: 'string' }, title: { type: 'string' }, body: { type: 'string' } }, required: ['repo', 'title'] } },
+  { name: 'create_issue', description: '在代码仓库里创建一个 issue，返回 issue 编号和链接。', input_schema: { type: 'object', properties: { repo: { type: 'string', description: '仓库，格式 owner/name' }, title: { type: 'string', description: '标题，一句话说清问题' }, body: { type: 'string', description: '正文，支持 Markdown' }, labels: { type: 'array', items: { type: 'string' }, description: '标签名列表' } }, required: ['repo', 'title'] } },
+  { name: 'create_issue', description: '在代码仓库里创建一个 issue，返回 issue 编号和链接。适合记录 bug、需求和待办；如果只是想评论已有 issue，请用 add_comment。标题要一句话说清问题，正文写复现步骤、期望行为和实际行为。例子：title「登录页在 Safari 上白屏」，labels ["bug", "frontend"]。仓库必须是当前用户有写权限的；没有权限时返回 403。', input_schema: { type: 'object', properties: { repo: { type: 'string', description: '仓库，格式 owner/name，例如 your-name/demo' }, title: { type: 'string', description: '标题，一句话说清问题，不超过 80 字' }, body: { type: 'string', description: '正文，支持 Markdown。建议包含：复现步骤、期望行为、实际行为、环境' }, labels: { type: 'array', items: { type: 'string', enum: ['bug', 'feature', 'docs', 'frontend', 'backend', 'urgent'] }, description: '标签名列表，只能从枚举里选' }, assignees: { type: 'array', items: { type: 'string' }, description: '指派给谁，用户名列表' }, milestone: { type: 'integer', description: '里程碑编号，可选' } }, required: ['repo', 'title'] } }
+];
+const SEARCH2 = { name: 'tool_search', description: '按关键词搜索可用的工具。返回匹配工具的名字和完整定义，之后就可以直接调用它们。', input_schema: { type: 'object', properties: { query: { type: 'string', description: '要找的功能，例如「建 issue」「发消息」' } }, required: ['query'] } };
+const SKILLDESC2 = '- pdf：读取、拆分、合并 PDF，填写 PDF 表单。用户提到 PDF 文件时使用。';
+const MCP_AVG = 55000 / 58; // Anthropic 文中 5 个 MCP 服务器、58 个工具约 55K token
+const getD2 = seg('d2', ['简短', '普通', '详细', 'MCP 实测平均'], 2, draw2);
+const WIN2 = [128000, 200000, 1000000];
+const getW2 = seg('w2', ['128K', '200K', '1M'], 1, draw2);
+['n2', 'k2', 'm2', 'b2'].forEach((id) => $('#' + id).addEventListener('input', draw2));
+function draw2() {
+  const N = +$('#n2').value, k = Math.min(+$('#k2').value, N), M = +$('#m2').value, body = +$('#b2').value;
+  $('#n2v').textContent = N; $('#k2v').textContent = k; $('#m2v').textContent = M; $('#b2v').textContent = body;
+  const d = getD2();
+  const t = d === 3 ? MCP_AVG : TOK(JSON.stringify(TOOLDEF2[d]));
+  const ts = TOK(JSON.stringify(SEARCH2)), sd = TOK(SKILLDESC2);
+  const win = WIN2[getW2()];
+  const A = { tools: N * t, skills: M * body };
+  const B = { search: ts, found: k * t, skills: M * sd + (M ? body : 0) };
+  const a = A.tools + A.skills, b = B.search + B.found + B.skills;
+  $('#r2a').textContent = fmt(a); $('#r2b').textContent = fmt(b);
+  $('#r2c').textContent = a ? pct(1 - b / a) : '–'; $('#r2d').textContent = pct(a / win, 1);
+  const W = 800, H = 200, L = 92, Rr = 12, sc = (v) => Math.min(v / win, 1) * (W - L - Rr);
+  let s = `<text x="${L - 10}" y="58" text-anchor="end" font-size="14" fill="${css('--fg')}">全部预加载</text><text x="${L - 10}" y="138" text-anchor="end" font-size="14" fill="${css('--fg')}">按需加载</text>`;
+  s += `<rect x="${L}" y="36" width="${W - L - Rr}" height="34" rx="3" fill="${css('--bg')}"/><rect x="${L}" y="116" width="${W - L - Rr}" height="34" rx="3" fill="${css('--bg')}"/>`;
+  const bar = (y, parts) => { let x = L; parts.forEach(([v, c]) => { const w = sc(v); if (w > 0) s += `<rect x="${x}" y="${y}" width="${Math.min(w, W - Rr - x)}" height="34" fill="${c}"/>`; x += w; }); };
+  bar(36, [[A.tools, css('--warn')], [A.skills, css('--accent')]]);
+  bar(116, [[B.search, css('--muted')], [B.found, css('--warn')], [B.skills, css('--accent')]]);
+  if (a > win) s += `<text x="${W - Rr - 6}" y="58" text-anchor="end" font-size="13" fill="#fff">超出窗口</text>`;
+  s += `<text x="${L}" y="${H - 14}" font-size="12" fill="${css('--muted')}">0</text><text x="${W - Rr}" y="${H - 14}" text-anchor="end" font-size="12" fill="${css('--muted')}">${win >= 1e6 ? '1M' : win / 1000 + 'K'}（整个窗口）</text>`;
+  s += `<text x="${L}" y="24" font-size="12" fill="${css('--muted')}"><tspan fill="${css('--warn')}">■</tspan> 工具定义  <tspan fill="${css('--accent')}">■</tspan> skill  <tspan fill="${css('--muted')}">■</tspan> 搜索工具</text>`;
+  $('#fig2').innerHTML = s;
+  $('#note2').textContent = `每个工具定义 ${fmt(t)} token${d === 3 ? '（Anthropic 2025 年 11 月文章里的实测：5 个 MCP 服务器、58 个工具约 55K token）' : '（' + TOKNAME + '对 JSON 计数）'}，搜索工具 ${ts} token，每条 skill 描述 ${sd} token。按需加载的代价是多一次搜索调用，以及模型可能找不到它需要的工具。`;
+}
+
+/* =====================================================================
+   03 三种编辑格式
+   ===================================================================== */
+const ORIG3 = `def total(items):
+    s = 0
+    for it in items:
+        s += it["price"] * it["qty"]
+    return s
+
+
+def discount(items, off):
+    return total(items) * (1 - off)
+
+
+def with_tax(items, rate=0.06):
+    return total(items) * (1 + rate)
+
+
+def price_with_tax(p, rate=0.06):
+    return p * (1 + rate)
+
+
+def fmt(x):
+    return f"{x:.2f} 元"
+`;
+const EXPECT3 = ORIG3.replace('    return total(items) * (1 + rate)', '    return round(total(items) * (1 + rate), 2)');
+const DEF3 = {
+  a: EXPECT3,
+  b: JSON.stringify({ path: 'prices.py', old_str: '    return total(items) * (1 + rate)', new_str: '    return round(total(items) * (1 + rate), 2)' }, null, 1),
+  c: `*** Begin Patch
+*** Update File: prices.py
+@@ def with_tax(items, rate=0.06):
+-    return total(items) * (1 + rate)
++    return round(total(items) * (1 + rate), 2)
+*** End Patch`
+};
+const ERRS3 = [
+  ['缩进多一格', (o) => ({ b: o.b.replace('"old_str": "    return total', '"old_str": "     return total'), c: o.c.replace('-    return total', '-     return total') })],
+  ['原文抄错', (o) => ({ b: o.b.replace('total(items) * (1 + rate)"', 'total(items)*(1 + rate)"'), c: o.c.replace('-    return total(items) * (1 + rate)', '-    return total(items)*(1 + rate)') })],
+  ['只抄一小段，不唯一', (o) => ({ b: JSON.stringify({ path: 'prices.py', old_str: '* (1 + rate)', new_str: '* (1 + rate), 2)' }, null, 1) })],
+  ['整份重写时偷懒', (o) => ({ a: ORIG3.split('\n\n\ndef with_tax')[0].split('\n')[0] + '\n    # ...（前面的代码不变）\n\n\ndef with_tax(items, rate=0.06):\n    return round(total(items) * (1 + rate), 2)\n\n\n# ...（其余不变）\n' })]
+];
+let err3 = -1;
+$('#err3').innerHTML = ERRS3.map(([l], i) => `<button class="btn" type="button" aria-pressed="false" data-i="${i}">${l}</button>`).join('') + '<button class="btn" type="button" data-i="-1">恢复正确输出</button>';
+function load3() {
+  let o = { ...DEF3 }; if (err3 >= 0) o = { ...o, ...ERRS3[err3][1](o) };
+  $('#t3a').value = o.a; $('#t3b').value = o.b; $('#t3c').value = o.c;
+  [...$('#err3').children].forEach((b) => b.setAttribute('aria-pressed', +b.dataset.i === err3 && err3 >= 0));
+  draw3();
+}
+$('#err3').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; err3 = +b.dataset.i; load3(); });
+['t3a', 't3b', 't3c'].forEach((id) => $('#' + id).addEventListener('input', draw3));
+function applyWhole(src) { return { ok: true, out: src, msg: '直接用模型给的全文覆盖原文件' }; }
+function applyStrReplace(src, file) {
+  let j; try { j = JSON.parse(src); } catch (e) { return { ok: false, msg: 'JSON 解析失败：' + e.message }; }
+  if (typeof j.old_str !== 'string' || typeof j.new_str !== 'string') return { ok: false, msg: '缺少 old_str 或 new_str' };
+  if (!j.old_str) return { ok: false, msg: 'old_str 不能为空' };
+  const c = file.split(j.old_str).length - 1;
+  if (c === 0) return { ok: false, msg: 'old_str 在文件里找不到（0 处），拒绝修改' };
+  if (c > 1) return { ok: false, msg: `old_str 在文件里出现了 ${c} 处，不知道改哪一处，拒绝修改` };
+  return { ok: true, out: file.replace(j.old_str, j.new_str), msg: '找到唯一一处，已替换' };
+}
+/* apply_patch：按 Codex CLI 的做法，用上下文行定位，逐级放宽匹配 */
+function seek(lines, pat, start) {
+  const norms = [[(s) => s, '精确匹配'], [(s) => s.replace(/\s+$/, ''), '忽略行尾空格后匹配'], [(s) => s.trim(), '忽略首尾空格后匹配']];
+  for (const [f, name] of norms) {
+    for (let i = start; i + pat.length <= lines.length; i++) {
+      let ok = true; for (let j = 0; j < pat.length; j++) if (f(lines[i + j]) !== f(pat[j])) { ok = false; break; }
+      if (ok) return { i, name };
+    }
+  }
+  return null;
+}
+function applyPatch(src, file) {
+  const L = src.replace(/\r/g, '').split('\n'); while (L.length && L[L.length - 1] === '') L.pop();
+  if (L[0] !== '*** Begin Patch') return { ok: false, msg: '第一行必须是 *** Begin Patch' };
+  if (L[L.length - 1] !== '*** End Patch') return { ok: false, msg: '最后一行必须是 *** End Patch' };
+  if (!/^\*\*\* Update File: /.test(L[1] || '')) return { ok: false, msg: '第二行应为 *** Update File: <路径>' };
+  let lines = file.split('\n'); const hunks = []; let cur = null;
+  for (let k = 2; k < L.length - 1; k++) {
+    const l = L[k];
+    if (l.startsWith('@@')) { cur = { anchor: l.slice(2).trim(), old: [], neu: [] }; hunks.push(cur); continue; }
+    if (!cur) { cur = { anchor: '', old: [], neu: [] }; hunks.push(cur); }
+    const c = l[0], body = l.slice(1);
+    if (c === ' ') { cur.old.push(body); cur.neu.push(body); } else if (c === '-') cur.old.push(body); else if (c === '+') cur.neu.push(body);
+    else if (l === '') { cur.old.push(''); cur.neu.push(''); }
+    else return { ok: false, msg: `第 ${k + 1} 行既不是 @@，也不以空格、- 或 + 开头` };
+  }
+  let pos = 0, how = [];
+  for (const h of hunks) {
+    if (h.anchor) { const a = seek(lines, [h.anchor], pos); if (!a) return { ok: false, msg: `找不到 @@ 后面的定位行「${h.anchor}」` }; pos = a.i + 1; }
+    const m = seek(lines, h.old, pos);
+    if (!m) return { ok: false, msg: '按上下文找不到要替换的那几行（试过精确、忽略行尾空格、忽略首尾空格）' };
+    lines.splice(m.i, h.old.length, ...h.neu); pos = m.i + h.neu.length; how.push(m.name);
+  }
+  return { ok: true, out: lines.join('\n'), msg: '已打上补丁：' + how.join('、') };
+}
+function lineDiff(a, b) {
+  const A = a.split('\n'), B = b.split('\n'), n = A.length, m = B.length;
+  const dp = Array.from({ length: n + 1 }, () => new Int16Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) dp[i][j] = A[i] === B[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+  const out = []; let i = 0, j = 0;
+  while (i < n || j < m) {
+    if (i < n && j < m && A[i] === B[j]) { out.push([' ', A[i]]); i++; j++; }
+    else if (i < n && (j >= m || dp[i + 1][j] >= dp[i][j + 1])) { out.push(['-', A[i]]); i++; }
+    else { out.push(['+', B[j]]); j++; }
+  }
+  return out;
+}
+const getV3 = seg('v3', ['整份重写', 'str_replace', 'apply_patch'], 2, draw3);
+function funcs(s) { return (s.match(/^def \w+/gm) || []).length; }
+function draw3() {
+  const srcs = [$('#t3a').value, $('#t3b').value, $('#t3c').value];
+  const R = [applyWhole(srcs[0]), applyStrReplace(srcs[1], ORIG3), applyPatch(srcs[2], ORIG3)];
+  const names = ['整份重写', 'str_replace', 'apply_patch'];
+  ['s3a', 's3b', 's3c'].forEach((id, i) => {
+    const r = R[i], el = $('#' + id); let extra = '';
+    if (r.ok && r.out.trim() !== EXPECT3.trim()) {
+      const lost = funcs(ORIG3) - funcs(r.out);
+      extra = lost > 0 ? `。但结果少了 ${lost} 个函数` : '。但结果和预期不同';
+    }
+    el.className = 'st ' + (r.ok && !extra ? 'ok' : 'bad'); el.textContent = (r.ok ? '✓ ' : '✗ ') + r.msg + extra;
+  });
+  $('#tab3 tbody').innerHTML = R.map((r, i) => {
+    const same = r.ok && r.out.trim() === EXPECT3.trim();
+    return `<tr><td>${names[i]}</td><td>${r.ok ? '能' : '不能'}</td><td class="num">${fmt(TOK(srcs[i]))}</td><td>${same ? '是' : (r.ok ? '<b style="color:var(--warn)">否</b>' : '—（文件未改动）')}</td></tr>`;
+  }).join('');
+  const v = getV3(), r = R[v];
+  const res = r.ok ? r.out : ORIG3;
+  $('#f3').innerHTML = lineDiff(ORIG3.replace(/\n$/, ''), res.replace(/\n$/, '')).map(([c, l]) => c === '+' ? `<span class="add">+ ${esc(l)}</span>` : c === '-' ? `<span class="del">- ${esc(l)}</span>` : `  ${esc(l)}`).join('\n');
+}
+
+/* =====================================================================
+   04 拼请求与前缀缓存
+   ===================================================================== */
+const SYS4 = '你是一个编程助手，在用户的项目目录里工作。规则：1. 先读代码再改；2. 每次修改后运行测试；3. 删除文件、推送代码前必须征得同意；4. 回答简短，用中文；5. 不确定时先问。项目约定：Python 3.12，测试用 pytest，代码风格遵循 PEP 8，提交信息用英文。';
+const MEM4 = '# 记忆\n- 这个项目是一个小型网店后端，入口 app.py\n- 用户偏好：先给方案再动手；改动要小\n- 上次做到：订单导出接口写完了，还差分页\n';
+const TOOLS4 = [
+  ...TOOLS0,
+  { name: 'read_file', description: '读取一个文件的内容，可指定起止行。', input_schema: { type: 'object', properties: { path: { type: 'string' }, start: { type: 'integer' }, end: { type: 'integer' } }, required: ['path'] } },
+  { name: 'write_file', description: '新建或覆盖一个文件。', input_schema: { type: 'object', properties: { path: { type: 'string' }, content: { type: 'string' } }, required: ['path', 'content'] } },
+  { name: 'web_fetch', description: '抓取一个网页，返回正文文字。', input_schema: { type: 'object', properties: { url: { type: 'string' } }, required: ['url'] } },
+  { name: 'todo', description: '更新任务清单：添加、勾掉或删除条目。', input_schema: { type: 'object', properties: { op: { type: 'string', enum: ['add', 'done', 'remove'] }, item: { type: 'string' } }, required: ['op', 'item'] } }
+];
+function turnText(i) {
+  const files = ['orders.py', 'export.py', 'models.py', 'tests/test_orders.py', 'app.py'];
+  const f = files[i % files.length];
+  return `\n[user] ${i === 0 ? '给订单导出接口加上分页，每页 50 条。' : '继续。'}\n[assistant] 先看一下 ${f}。→ read_file({"path":"${f}"})\n[tool_result] ` + Array.from({ length: 12 }, (_, k) => `${k + 1 + i * 3}: ` + ['def export_orders(db, page=1, size=50):', '    q = db.query(Order).order_by(Order.id)', '    rows = q.offset((page - 1) * size).limit(size).all()', '    return [r.to_dict() for r in rows]'][k % 4]).join('\n');
+}
+function buildReq(h, o, turn) {
+  const ts = turn ? '2026-10-19 14:03:41' : '2026-10-19 14:02:07';
+  let tools = TOOLS4;
+  if (o.c) { const rot = (h + turn) % tools.length; tools = [...tools.slice(rot), ...tools.slice(0, rot)]; }
+  const blocks = [];
+  blocks.push(['sys', (o.a ? `当前时间：${ts}\n` : '') + SYS4]);
+  if (!o.b) blocks.push(['tools', JSON.stringify(tools)]);
+  blocks.push(['mem', MEM4]);
+  let hist = ''; for (let i = 0; i < h + turn; i++) hist += turnText(i);
+  blocks.push(['hist', hist]);
+  if (o.b) blocks.push(['tools', JSON.stringify(tools)]);
+  blocks.push(['new', '\n[user] 继续。']);
+  return blocks;
+}
+['h4', 'o4a', 'o4b', 'o4c'].forEach((id) => $('#' + id).addEventListener('input', draw4));
+const COL4 = () => ({ sys: css('--muted'), tools: css('--warn'), mem: css('--ok'), hist: css('--accent'), new: css('--fg') });
+const NAME4 = { sys: '系统提示', tools: '工具定义', mem: '记忆文件', hist: '历史', new: '新消息' };
+function draw4() {
+  const h = +$('#h4').value; $('#h4v').textContent = h;
+  const o = { a: $('#o4a').checked, b: $('#o4b').checked, c: $('#o4c').checked };
+  const prev = buildReq(h, o, 0), cur = buildReq(h, o, 1);
+  const P = prev.map((b) => b[1]).join(''), C = cur.map((b) => b[1]).join('');
+  let lcp, total;
+  const ep = ENC(P), ec = ENC(C);
+  if (ep && ec) { total = ec.length; lcp = 0; while (lcp < ep.length && lcp < ec.length && ep[lcp] === ec[lcp]) lcp++; }
+  else { total = TOK(C); let c = 0; while (c < P.length && c < C.length && P[c] === C[c]) c++; lcp = TOK(C.slice(0, c)); }
+  const miss = total - lcp, cost = (lcp * 0.1 + miss * 1.25) / total;
+  $('#r4a').textContent = fmt(total); $('#r4b').textContent = fmt(lcp); $('#r4c').textContent = fmt(miss); $('#r4d').textContent = pct(cost);
+  const col = COL4(), W = 800, H = 220, L = 70, Rr = 10, sc = (W - L - Rr) / Math.max(total, 1);
+  let s = '';
+  const row = (blocks, y, label) => {
+    s += `<text x="${L - 10}" y="${y + 22}" text-anchor="end" font-size="14" fill="${css('--fg')}">${label}</text>`;
+    let x = L; blocks.forEach(([k, t]) => { const w = TOK(t) * sc; s += `<rect x="${x}" y="${y}" width="${Math.max(w - 1, 0.5)}" height="34" fill="${col[k]}" opacity=".85"/>`; x += w; });
+  };
+  row(prev, 26, '上一轮'); row(cur, 96, '这一轮');
+  const xc = L + lcp * sc;
+  s += `<rect x="${L}" y="138" width="${Math.max(xc - L, 0)}" height="10" rx="2" fill="${css('--ok')}"/><rect x="${xc}" y="138" width="${Math.max(W - Rr - xc, 0)}" height="10" rx="2" fill="${css('--warn')}"/>`;
+  s += `<line x1="${xc}" x2="${xc}" y1="20" y2="152" stroke="${css('--fg')}" stroke-dasharray="3 3"/>`;
+  s += `<text x="${L}" y="172" font-size="12" fill="${css('--ok')}">命中缓存（0.1×）</text><text x="${W - Rr}" y="172" text-anchor="end" font-size="12" fill="${css('--warn')}">重新计算并写入缓存（1.25×）</text>`;
+  s += `<text x="${L}" y="${H - 12}" font-size="12" fill="${css('--muted')}">每段的长度按 token 计；虚线左边，两轮请求逐个 token 完全一样</text>`;
+  $('#fig4').innerHTML = s;
+  $('#leg4').innerHTML = Object.keys(NAME4).map((k) => `<span><i style="background:${col[k]}"></i>${NAME4[k]}</span>`).join('');
+}
+
+function all() { draw0(); draw1(); draw2(); draw3(); draw4(); }
+load3();
+all();
+if (window.TK && window.TK.o200k) onTK();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+</script>
+<script src="/labs/tokenizer-llm/tiktoken.js" defer></script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>

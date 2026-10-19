@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-19 17:00 America/New_York · 更新者：Claude（会话 session_01CwRcH6yXZUA6quuw1MJimQ）
+最后更新：2026-10-19 18:00 America/New_York · 更新者：Claude（会话 session_01MmDJEcUExCaMurhqYeS9sy）
 
 ---
 
@@ -173,6 +173,8 @@ door4ai-lab/
 - [x] Agent 篇第 4–7 讲（2026-10-19）：《Embedding 与 RAG》(115)、《MCP》(120)、《流式输出》(125)、《Trace 与 Eval》(130)，各 6 实验 + 2 动画
 - [x] 课程规划 14 讲全部上线（2026-10-19）：最后一批《AI 写代码是怎么回事》(3.8，5 实验 + 1 动画)、《多模型网关与多 Agent 编排》(135，6 实验 + 2 动画)、《Agent 框架全景》(140，纯文字)
 - [x] 模型篇补充四讲（2026-10-19）：《多头注意力与 GQA》(order 7)、《模型量化》(12)、《MoE 混合专家》(15)、《RLHF 与偏好对齐》(42)，各 6 实验 + 2 动画
+- [x] 新增《Harness 是什么：模型外面那层替它动手的程序》（order 107，Agent Loop 之后、上下文窗口之前，作为 Agent 篇总纲；5 实验 + 2 动画）；RLHF 讲末尾加「Agent 的强化学习」一节 + 实验 06（2026-10-19）
+- [ ] 拟写《AI 怎么浏览网页、操作电脑》（order 122，另一会话提出的方案）：开头一句回扣 107 讲
 - [ ] 待补查（写手凭记忆、未找到原文出处）：RLHF 讲里 GPT-3 预训练 300 B token、InstructGPT 每题 4–9 个回答排序、Llama 2 双奖励模型与四档评分；量化讲的困惑度表来自单作者预印本（arXiv 2601.14277），如需更强出处可删
 - [ ] 本人自学时发现缺口再补
 - [ ] 关于页只有两句话，待充实
@@ -192,6 +194,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-19 · Claude（session_01MmDJEcUExCaMurhqYeS9sy）** — 本人问「什么是 harness」后要求写成一讲（位置由 Claude 定：107，作为 Agent 篇总纲）。(1) 新增 `agent-harness`（order 107）：文章 `src/content/blog/agent-harness.md`；实验页 `public/labs/agent-harness/`：00 页内迷你 harness（虚拟文件系统、grep / bash / edit / run_tests、o200k 计数、8K 窗口减 2K 输出预留），可关掉循环 / 工具执行 / 错误回填 / 上下文管理 / 权限确认，各自坏法不同（日志 75 行、两次搜索才会撑爆窗口，数字已在 Chromium 里核对）/ 01 14 个动作分「程序 / 再调一次模型」/ 02 按需加载（真实分词器；可切 Anthropic 文中 58 个工具约 55K token 的实测平均）/ 03 整份重写、`str_replace`、`apply_patch` 三个真解析器（apply_patch 按 Codex 的逐级放宽匹配）+ 四种注入错误 / 04 相邻两轮请求逐 token 最长公共前缀，三个打碎缓存的开关。复用同源 `/labs/tokenizer-llm/tiktoken.js`。动画 `manim-src/agent-harness/scenes.py` → `public/videos/agent-harness/{HarnessLayers,ModelInsideHarness}`。(2) `rlhf-alignment` 加一节「从一问一答到多步任务：Agent 的强化学习」（DeepSWE、Search-R1 屏蔽对照、Claude 3.7 Sonnet 系统卡第 6 节）+ 实验 06（三种做法的策略，GRPO 组内优势真实计算；仓库测试可改时改测试文件概率升到 99%+、真实通过率 2%，隐藏测试时学会认真改）；该实验页首次引入 KaTeX，只渲染 `#s6`，旧的 HTML 公式仍待迁移。(3) 衔接：`agent-loop.md` 末段指向 107、`context-window.md` 两处「上一讲」改为第 105 讲并回扣 harness、`agent-frameworks.md` 回顾段加 107。本地 build 38 页通过；Chromium 1440 浅色 / 390 深色无横向滚动、iframe 自动长高、无脚本错误、KaTeX 无报错；个人信息检索 0。
 
 - **2026-10-19 · Claude（session_01CwRcH6yXZUA6quuw1MJimQ）** — 本人看了一个讲 QKV 的抖音视频后要求重写注意力讲，并要求「公式一定要跟平时书写见到的一样」。(1) **全站接入 KaTeX**：`astro.config.mjs` 加 remark-math + rehype-katex；`Base.astro` 引 `/vendor/katex/katex.min.css` 与 `.prose .katex*` 样式；`public/vendor/katex/`（0.16.47）；`context-window.md`、`gateway-orchestration.md` 里的美元金额改成 `\$`。(2) **`attention-qkv` 重写**（order 5 不变，标题改为《注意力里的 Q、K、V：模型怎么知道「小米」是粮食还是手机》）：例子统一为「我在粮油店买了两斤小米 / 我在数码店买了一部小米」（另附「长城」城墙 / 汽车一组），实验 00 嵌入表最近邻 + 两个「小米」逐层夹角 / 01 第 1 层第 11 头真实份额 / 02 余弦相似度 vs q·k（第 1 层两个「小米」的 q 实测完全相同）/ 03 二维点积示意 / 04 softmax vs 只给第一名（梯度）/ 05 真实分数缩放前后 + 随机向量验证 √d / 06 v 与残差二维示意 / 07 28 层 × 16 头浏览器 + 热力图（attention sink）；数据 `public/labs/attention-qkv/qwen-data.js`，生成脚本 `labs-src/attention-qkv/`（`qwen_attn.py` 手算第 1 层 Q/K（含 q_norm、RoPE、GQA 展开）与 transformers 输出对照误差 < 1e-4；`emb.py` 嵌入最近邻）。动画 `manim-src/attention-qkv/scenes.py` → `public/videos/attention-qkv/ScaledDotProduct`。权重由本人 Mac 的内置浏览器从 Hugging Face 分 5 段下载后传到云端（云端与 Mac 的 shell 都连不上 HF），用后已删除。(3) 原来的多头 / 参数构成 / MLP 三个实验移出：多头已由同日另一会话的 `multihead-gqa`(7) 覆盖；新增 **`mlp`(order 8)**：00 参数构成（加 Qwen3-0.6B）/ 01 ReLU、SiLU、GELU 与 SwiGLU / 02 与门 / 03 Qwen3-0.6B 每层激活差别最大的神经元及其 W_down 列的最近词（第 9 层 #2190 → 面粉、米饭、淀粉），数据 `public/labs/mlp/mlp-data.js`，脚本 `labs-src/mlp/`。衔接句：`multihead-gqa.md` 末段改为「下一讲 MLP，再下一讲 KV Cache」，并去掉「QKV 那讲提到了多头和 W_O」。本地 build 37 页通过；两个实验页 1440 浅色 / 390 深色无横向滚动、无脚本错误、KaTeX 无报错；个人信息检索 0。
 
@@ -358,7 +362,7 @@ door4ai-lab/
    - 基础篇：`ai-coding-tools` 3.8 AI Coding 入门（Claude Code / Codex 怎么用，接 Resource 页）
    - 模型篇：`backpropagation` 30 反向传播 · `layernorm` 35 LayerNorm · `lora` 40 LoRA · `model-evaluation` 45 模型评测
    - Agent 篇：`tool-calling` 100 工具调用 · `agent-loop` 105 Agent Loop 与 ReAct · `context-window` 110 上下文与记忆 · `rag-embedding` 115 Embedding 与 RAG · `mcp` 120 MCP · `streaming` 125 流式输出（SSE）· `trace-eval` 130 Trace 与 Eval · `gateway-orchestration` 135 多模型网关与多 Agent 编排 · `agent-frameworks` 140 框架全景（纯文字）
-   - 补充（2026-10-19 已写）：`multihead-gqa` 7 · `weight-quantization` 12 · `mixture-of-experts` 15 · `rlhf-alignment` 42
+   - 补充（2026-10-19 已写）：`multihead-gqa` 7 · `weight-quantization` 12 · `mixture-of-experts` 15 · `rlhf-alignment` 42 · `agent-harness` 107
 2. 给文章列表加按 tag 过滤。
 3. 加 Cloudflare Web Analytics。
 

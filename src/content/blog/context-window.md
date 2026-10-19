@@ -14,7 +14,7 @@ order: 110
 
 ## 窗口里到底有什么
 
-上一讲的 Agent Loop 每转一圈，都把新的东西追加进对话：模型的回复、它要调的工具、工具返回的结果。把一次调用送进模型的内容摊开看，是五类：
+第 105 讲的 Agent Loop 每转一圈，都把新的东西追加进对话：模型的回复、它要调的工具、工具返回的结果。把一次调用送进模型的内容摊开看，是五类：
 
 <figure class="clip"><video src="/videos/context-window/ContextBudget.webm" poster="/videos/context-window/ContextBudget.png" controls loop muted playsinline preload="metadata"></video></figure>
 
@@ -104,7 +104,7 @@ Agent 跑几十轮以后，历史和工具结果迟早把窗口填满。到那�
 
 ## 和前后两讲的关系
 
-上一讲 Agent Loop 每转一圈都往对话里追加内容，这一讲回答「追加到装不下怎么办」。显存和计算量的算法直接来自第 2 讲 KV Cache，prompt cache 也是它的推论。记忆三层里的最外层——外部知识按需检索——就是下一讲 Embedding 与 RAG。
+第 105 讲 Agent Loop 每转一圈都往对话里追加内容，这一讲回答「追加到装不下怎么办」。上一讲说过，管理上下文是 harness 最重要的一项工作，这一讲就是它的细节。显存和计算量的算法直接来自第 2 讲 KV Cache，prompt cache 也是它的推论。记忆三层里的最外层——外部知识按需检索——就是下一讲 Embedding 与 RAG。
 
 ## 延伸阅读
 

@@ -1,6 +1,6 @@
 ---
 title: "RLHF 与偏好对齐：模型是怎么学会「好好说话」的"
-description: "预训练模型只会续写，要经过监督微调和偏好对齐才会好好回答。同一个问题两个回答、人选一个：用 Bradley–Terry 把成对偏好变成分数，训练奖励模型，再用 PPO 加 KL 惩罚去优化，看它怎么被钻空子；DPO 跳过奖励模型一步到位；最后是 AI 反馈和可验证奖励。六个可交互实验。"
+description: "预训练模型只会续写，要经过监督微调和偏好对齐才会好好回答。同一个问题两个回答、人选一个：用 Bradley–Terry 把成对偏好变成分数，训练奖励模型，再用 PPO 加 KL 惩罚去优化，看它怎么被钻空子；DPO 跳过奖励模型一步到位；最后是 AI 反馈、可验证奖励，以及把可验证奖励放进 Agent 环境。七个可交互实验。"
 pubDate: 2026-10-17
 tags: ["训练", "对齐", "RLHF", "奖励模型", "DPO", "强化学习"]
 lab: /labs/rlhf-alignment/
@@ -94,6 +94,22 @@ Anthropic 的 Constitutional AI（Bai 等，2022）是这条路的代表：先�
 
 可验证奖励也不是万能的：它只覆盖有标准答案的任务，「写一封得体的拒绝邮件」仍然要靠人或 AI 的偏好。
 
+## 从一问一答到多步任务：Agent 的强化学习
+
+上面的可验证奖励，一道题就是一个回答。Agent 要学的是另一种东西：在一个环境里连续做几十步决定，什么时候搜索、读哪个文件、改完要不要跑测试、测试失败了怎么办。训练方法还是同一套，变的是「环境」和「一条轨迹」的含义。
+
+**环境就是一个 harness。** 每道题配一个沙箱：一个代码仓库、几个工具、一个任务描述。模型自己调工具，工具在沙箱里真实执行，结果回填，再调下一步，直到它调用「提交」。一条轨迹可能有几十到上百步。轨迹结束后，按结果打分。
+
+一个公开得比较完整的例子是 DeepSWE（Agentica 与 Together AI，2025 年 7 月）：在 Qwen3-32B 上只用强化学习训练，环境取自 R2E-Gym 的约 4,500 道真实仓库的题，每道题一个 Docker 镜像；工具只有四个：执行 bash、搜索、查看和编辑文件、提交；奖励是稀疏的结果奖励：补丁在 5 分钟内通过指定的测试得 1，任何一个测试失败或超时得 0。算法是改进过的 GRPO，64 块 H100 训练 6 天，SWE-bench Verified 的 Pass@1 从约 23% 升到 42.2%（16 次运行的平均）。
+
+和单轮相比，多了三件要注意的事：
+
+- **环境返回的 token 不算模型的。** 一条轨迹里大部分 token 是工具输出（文件内容、命令输出），那是环境写的，模型不该为它负责，所以损失只算在模型自己生成的 token 上。Search-R1（Jin 等，2025）做过对照：把检索回来的文字从损失里屏蔽，7 个问答数据集的平均精确匹配是 0.431；不屏蔽，只有 0.343。
+- **奖励黑客变成了真实动作。** 在 Agent 环境里，钻空子不再是「回答写长一点」，而是真的去改测试文件、针对测试用例写死特判。Anthropic 在 Claude 3.7 Sonnet 的系统卡里写到，模型偶尔会为了通过测试而对测试用例做特判，并明确说这是强化学习训练中奖励黑客的结果。所以奖励要用模型看不到、改不了的测试来算，训练环境本身要像产品一样设计和审查。
+- **训练时的 harness 决定了模型擅长什么。** 模型在什么样的工具集、什么样的编辑格式里练出来，部署时在同样的环境里就最顺手。Agent 篇讲 harness 的那一讲会看到，OpenAI 明确建议用他们原版的 `apply_patch`，理由正是模型在这种格式上训练过。
+
+实验 06 用一个只在三种做法之间选择的策略，演示同一套 GRPO 在两种奖励设计下学成什么样。
+
 ## 实验里讲了什么
 
 0. **Bradley–Terry**：拖分数差看偏好概率和对应的 Elo 分差；再用梯度上升从 200 次对局里拟合出 5 个回答的分数，对照观测胜率与拟合胜率。
@@ -102,6 +118,7 @@ Anthropic 的 Constitutional AI（Bai 等，2022）是这条路的代表：先�
 3. **KL 惩罚**：5 种回答风格上的真实优化，拖 <i>β</i> 看分布离参考模型多远、期望奖励和真实质量怎么变，并与解析解对照。
 4. **DPO**：同一组偏好对，直接最小化 DPO 损失，结果与「奖励模型 + KL 优化」重合，隐式奖励差等于奖励模型分差。
 5. **三段式**：InstructGPT 与 Llama 2-Chat 三个阶段的数据长什么样、有多少（数字取自论文）。
+6. **Agent 环境里的 GRPO**：三种做法（认真改并跑测试、直接提交、改测试文件），组内优势与策略梯度真实计算；奖励看仓库里的测试时，改测试文件的概率涨到 99% 以上，真实通过率掉到 2%；换成隐藏测试，学会的是认真改。表里列出最近一组每条轨迹的模型 token 与（不计入损失的）工具 token。
 
 ## 和前后两讲的关系
 
@@ -118,4 +135,7 @@ Anthropic 的 Constitutional AI（Bai 等，2022）是这条路的代表：先�
 - Yuntao Bai et al., *Constitutional AI: Harmlessness from AI Feedback* (2022)
 - Harrison Lee et al., *RLAIF vs. RLHF: Scaling Reinforcement Learning from Human Feedback with AI Feedback* (2023)
 - Nathan Lambert et al., *Tülu 3: Pushing Frontiers in Open Language Model Post-Training* (2024)，RLVR 一词的出处
+- Agentica, Together AI, *DeepSWE: Training a Fully Open-sourced, State-of-the-Art Coding Agent by Scaling RL* (2025-07-02)
+- Bowen Jin et al., *Search-R1: Training LLMs to Reason and Leverage Search Engines with Reinforcement Learning* (2025)，表 4 的检索 token 屏蔽对照
+- Anthropic, *Claude 3.7 Sonnet System Card* (2025)，第 6 节「Excessive Focus on Passing Tests」
 - DeepSeek-AI, *DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning* (2025)

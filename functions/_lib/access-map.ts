@@ -5,6 +5,10 @@ export const POSTS: Record<string, PostAccess> = {
     "access": "paid",
     "series": "ai-mastery"
   },
+  "agent-harness": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
   "agent-loop": {
     "access": "paid",
     "series": "ai-mastery"
@@ -115,6 +119,7 @@ export const POSTS: Record<string, PostAccess> = {
   }
 };
 export const LABS: Record<string, string> = {
+  "labs/agent-harness": "agent-harness",
   "labs/agent-loop": "agent-loop",
   "labs/ai-coding-tools": "ai-coding-tools",
   "labs/attention-qkv": "attention-qkv",
