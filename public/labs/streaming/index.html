@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>流式输出实验室</title>
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono","Noto Sans Mono CJK SC",monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+p code,li code,td code{font-family:var(--mono);font-size:.84em;background:var(--accent-soft);padding:1px 5px;border-radius:3px;word-break:break-word}
+.formula{font-size:20px;text-align:center;margin:18px 0;letter-spacing:.02em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl b{font-variant-numeric:tabular-nums;min-width:4.6em;font-weight:600}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.stop{background:var(--warn);border-color:var(--warn);color:#fff}
+.btn[disabled]{opacity:.45;cursor:default}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+input[type=range]{accent-color:var(--accent);max-width:180px}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:760px){.two,.three{grid-template-columns:minmax(0,1fr)}}
+.cap{font-size:12px;color:var(--muted);margin:4px 0 0}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn{border-color:var(--warn)} .ro.warn b{color:var(--warn)}
+.ro.acc{border-color:var(--accent)} .ro.acc b{color:var(--accent)}
+.ro.ok{border-color:var(--ok)} .ro.ok b{color:var(--ok)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+pre{font-family:var(--mono);font-size:12px;line-height:1.55;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:10px 12px;margin:0;overflow:auto;white-space:pre-wrap;word-break:break-all}
+pre.tall{height:300px}
+pre .hl{background:var(--accent-soft)}
+pre .cut{color:var(--warn);font-weight:700}
+pre .split{background:var(--warn-soft);color:var(--warn)}
+.evs{display:flex;flex-direction:column;gap:3px;height:200px;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px}
+.ev{font-family:var(--mono);font-size:11.5px;line-height:1.5;word-break:break-all}
+.ev i{font-style:normal;border-radius:3px;padding:0 5px;margin-right:6px;background:var(--line);color:var(--fg)}
+.ev.d i{background:var(--accent-soft);color:var(--accent)}
+.ev.t i{background:var(--warn-soft);color:var(--warn)}
+.out{font-size:16px;line-height:1.85;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:10px 12px;min-height:3.7em;margin:0;word-break:break-word}
+.out .bad{background:var(--warn-soft);color:var(--warn)}
+.out .read{background:var(--accent-soft)}
+.out .caret{display:inline-block;width:.5em;height:1em;vertical-align:-.12em;background:var(--accent);margin-left:1px;animation:bl 1s steps(1) infinite}
+@keyframes bl{50%{opacity:0}}
+.out.long{min-height:12em}
+.lbl{font-size:13px;color:var(--muted);margin:10px 0 4px}
+.lbl b{color:var(--fg);font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:13px;margin-top:6px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.m{font-family:var(--mono);font-size:12px;word-break:break-all}
+td.bad{color:var(--warn)} td.good{color:var(--ok)}
+tr.now td{background:var(--accent-soft)}
+.tw{overflow-x:auto}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">流式输出 · TTFT · token/s · SSE · 分片解析</div>
+  <h1>流式输出实验室</h1>
+  <p class="lede">回答为什么一个字一个字蹦出来，以及前端要怎么接住它。下面的流都在页面里用定时器真实推送、真实解析，切 token 用的是真实分词器。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>流式与非流式：什么时候看到第一个字</h2>
+  <p>同一个请求，服务器端做的事完全一样：排队、把整段 prompt 读一遍（prefill）、然后一个 token 一个 token 地生成（decode）。区别只在于<b>什么时候把结果交给你</b>：非流式等最后一个 token 生成完才一次性返回，流式每生成一点就推一点。</p>
+  <p class="formula">TTFT ≈ 排队 + prompt token 数 ÷ prefill 速度　　总时长 ≈ TTFT + (输出 token 数 − 1) ÷ decode 速度</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="q0">排队</label><input id="q0" type="range" min="0" max="3000" step="50" value="200"><b id="q0v"></b></div>
+      <div class="ctrl"><label for="p0">prompt 长度</label><input id="p0" type="range" min="0" max="10" step="1" value="3"><b id="p0v"></b></div>
+      <div class="ctrl"><label for="f0">prefill 速度</label><input id="f0" type="range" min="500" max="20000" step="100" value="5000"><b id="f0v"></b></div>
+    </div>
+    <div class="ctrls">
+      <div class="ctrl"><label for="o0">输出长度</label><input id="o0" type="range" min="20" max="4000" step="20" value="500"><b id="o0v"></b></div>
+      <div class="ctrl"><label for="d0">decode 速度</label><input id="d0" type="range" min="5" max="300" step="1" value="60"><b id="d0v"></b></div>
+      <div class="btns"><button class="btn" id="pre0">按 RTX 4090 跑 Llama-3-8B 估算</button></div>
+    </div>
+    <svg id="fig0" viewBox="0 0 800 250" role="img" aria-label="非流式与流式两条时间线"></svg>
+    <div class="readout">
+      <div class="ro acc"><b id="r0a">–</b><span>流式：看到第一个字（TTFT）</span></div>
+      <div class="ro warn"><b id="r0b">–</b><span>非流式：看到第一个字</span></div>
+      <div class="ro"><b id="r0c">–</b><span>两者看到完整回答</span></div>
+      <div class="ro ok"><b id="r0d">–</b><span>流式让第一个字提前了</span></div>
+    </div>
+    <p class="note">两条线的终点永远对齐：流式不让模型算得更快，只是把等待从「整段时间」压缩成「TTFT」。拉长输出长度，非流式的空白跟着变长，流式的首字纹丝不动；拉长 prompt，两者的首字一起往后推。</p>
+  </div>
+  <p class="cap" id="cap0"></p>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>SSE 报文：一个不关闭的 HTTP 响应</h2>
+  <p>流式响应用的是 SSE（Server-Sent Events）：服务器回一个 <code>Content-Type: text/event-stream</code> 的响应，但不马上结束，而是一段一段往里写文本。每个事件是几行 <code>字段: 值</code>，最常见的是一行 <code>event:</code> 和一行 <code>data:</code>，事件之间用<b>一个空行</b>分开。</p>
+  <p>点「开始」，左边是服务器写出的原始文本，右边是解析器从里面切出来的事件，以及把文字增量拼起来的结果。可以切换 Anthropic 和 OpenAI 两种格式。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>格式</label><div class="seg" id="w1"><button data-v="anthropic" aria-pressed="true">Anthropic</button><button data-v="openai" aria-pressed="false">OpenAI</button></div></div>
+      <div class="ctrl"><label for="s1i">事件间隔</label><input id="s1i" type="range" min="20" max="600" step="10" value="160"><b id="s1v"></b></div>
+      <div class="btns"><button class="btn pri" id="go1">开始</button><button class="btn" id="rs1">重来</button></div>
+    </div>
+    <div class="two">
+      <div><div class="lbl">原始文本流</div><pre class="tall" id="raw1"></pre></div>
+      <div><div class="lbl">解析出的事件</div><div class="evs" id="ev1"></div><div class="lbl">拼出的回答</div><p class="out" id="txt1"></p></div>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r1a">0</b><span>已收到字节</span></div>
+      <div class="ro acc"><b id="r1b">0</b><span>已解析事件</span></div>
+      <div class="ro"><b id="r1c">0</b><span>其中文字增量</span></div>
+      <div class="ro ok"><b id="r1d">0</b><span>拼出的字数</span></div>
+    </div>
+    <p class="note">真正承载文字的只有中间那一串增量事件（Anthropic 的 <code>text_delta</code>、OpenAI 的 <code>delta.content</code>），前后的事件交代「开始了」「用了多少 token」「为什么停」。注意「蹦」字：o200k_base 把「空格 + 蹦」切成了三个 token，每个只含这个字的一部分字节，服务器等三个都生成完、凑成完整的字，才放进同一个增量里发出。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>网络不按事件切块</h2>
+  <p>服务器一次写一个完整事件，但你从网络上读到的是任意长度的字节块：一块里可能有好几个事件，也可能只有半行，甚至半个汉字（UTF-8 里一个汉字占 3 个字节）。下面把 01 的 Anthropic 流按随机字节边界切开，交给三种解析器，都在页面里真实执行。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="c2">平均块大小</label><input id="c2" type="range" min="4" max="160" step="2" value="24"><b id="c2v"></b></div>
+      <div class="btns"><button class="btn" id="re2">重新随机切</button></div>
+    </div>
+    <div class="lbl">字节流与块边界（<span style="color:var(--warn)">│</span> 是块边界，<span class="split" style="background:var(--warn-soft);color:var(--warn)">底色</span>是被切在中间的汉字）</div>
+    <pre class="tall" id="raw2" style="height:220px"></pre>
+    <div class="three">
+      <div><div class="lbl"><b>A</b> 每块直接按行解析</div><p class="out" id="o2a"></p></div>
+      <div><div class="lbl"><b>B</b> 按空行缓冲，但每块单独解码</div><p class="out" id="o2b"></p></div>
+      <div><div class="lbl"><b>C</b> 流式解码 + 按空行缓冲</div><p class="out" id="o2c"></p></div>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r2a">–</b><span>块数 / 切在汉字中间的边界</span></div>
+      <div class="ro warn"><b id="r2b">–</b><span>A：JSON.parse 失败</span></div>
+      <div class="ro warn"><b id="r2c">–</b><span>B：乱码字符 �</span></div>
+      <div class="ro ok"><b id="r2d">–</b><span>C：与原文一致</span></div>
+    </div>
+    <p class="note">A 把半行 <code>data:</code> 当成完整 JSON 去解析，失败的那些增量整个丢掉；B 修好了半行，但每块用新的解码器解码，切在中间的汉字两半各变成乱码；C 用 <code>TextDecoder</code> 的 <code>{stream: true}</code> 把不完整的字节留到下一块，再按空行切事件，任何切法下都和原文一字不差。把块调到 4 字节看 A 和 B 有多惨，调大到 160 看它们「大部分时候没事」，这正是这类 bug 难发现的原因。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>流里的工具调用：参数是一截一截到的</h2>
+  <p>模型决定调工具时，流里会出现一个 <code>tool_use</code> 内容块。它的参数不是一次给全，而是用一串 <code>input_json_delta</code> 事件分片送来，每片是一截 JSON 字符串（<code>partial_json</code>）。拼到一半的 JSON 是不合法的，要等这个块的 <code>content_block_stop</code> 到了再解析。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>切分方式</label><div class="seg" id="m3"><button data-v="any" aria-pressed="true">任意位置（文档示例那样）</button><button data-v="key" aria-pressed="false">一次一个完整键值</button></div></div>
+      <div class="btns"><button class="btn pri" id="nx3">下一个事件</button><button class="btn" id="au3">自动播放</button><button class="btn" id="rs3">重来</button></div>
+    </div>
+    <div class="tw"><table><thead><tr><th>#</th><th>这一片 partial_json</th><th>拼到现在</th><th>JSON.parse</th></tr></thead><tbody id="tb3"></tbody></table></div>
+    <div class="lbl">这一步收到的原始事件</div>
+    <pre id="raw3"></pre>
+    <div class="readout">
+      <div class="ro"><b id="r3a">–</b><span>已到达片段</span></div>
+      <div class="ro warn"><b id="r3b">–</b><span>现在能不能解析</span></div>
+      <div class="ro ok"><b id="r3c">–</b><span>解析出的 input</span></div>
+    </div>
+    <p class="note">「一次一个完整键值」更接近 Anthropic 文档对当前模型的描述，但中间状态同样不是合法 JSON（缺右括号）。所以做法不变：按 <code>index</code> 把同一个块的片段拼成字符串，<code>content_block_stop</code> 时解析一次；想边到边显示，用专门的「部分 JSON」解析器或 SDK 的辅助函数。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>体感：多快才算「够快」</h2>
+  <p>调 TTFT 和生成速度，点「播放」，下面这段话会真的按这个速度出现（每次加一个 o200k_base 的 token）。浅蓝底色是一个读者按设定的阅读速度读到的位置：只要生成比阅读快，读者就从来不用等。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="t4">TTFT</label><input id="t4" type="range" min="0" max="5000" step="50" value="600"><b id="t4v"></b></div>
+      <div class="ctrl"><label for="v4">生成速度</label><input id="v4" type="range" min="2" max="200" step="1" value="30"><b id="v4v"></b></div>
+      <div class="ctrl"><label for="r4">阅读速度</label><input id="r4" type="range" min="150" max="800" step="10" value="400"><b id="r4v"></b></div>
+      <div class="btns"><button class="btn pri" id="go4">播放</button></div>
+    </div>
+    <svg id="fig4" viewBox="0 0 800 240" role="img" aria-label="已生成字数与已读字数随时间变化"></svg>
+    <p class="out long" id="txt4"></p>
+    <div class="readout">
+      <div class="ro acc"><b id="r4a">–</b><span>生成速度折合</span></div>
+      <div class="ro"><b id="r4b">–</b><span>阅读速度</span></div>
+      <div class="ro"><b id="r4c">–</b><span>生成完 / 读完</span></div>
+      <div class="ro warn"><b id="r4d">–</b><span>读者等待（首字之后）</span></div>
+    </div>
+    <p class="note" id="n4"></p>
+  </div>
+  <p class="cap">阅读速度默认 400 字/min，取中文成人默读速度的常见估计（约 300–500 字/min）；token 与字的换算按这段文字在 o200k_base 下的实际 token 数计算。</p>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>中途取消：停下的是什么</h2>
+  <p>用户点「停止」时，前端用 <code>AbortController</code> 掐断读取，连接随之关闭。但服务器要过一会儿才发现客户端走了，这期间它还在生成。下面的流是页面里一个真实的 <code>ReadableStream</code>，读取端真的被取消；服务器那一侧是按设定的延迟模拟的。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="v5">生成速度</label><input id="v5" type="range" min="5" max="120" step="1" value="40"><b id="v5v"></b></div>
+      <div class="ctrl"><label for="l5">服务器发现断开</label><input id="l5" type="range" min="0" max="2000" step="50" value="500"><b id="l5v"></b></div>
+      <div class="btns"><button class="btn pri" id="go5">开始生成</button><button class="btn stop" id="st5" disabled>停止</button></div>
+    </div>
+    <svg id="fig5" viewBox="0 0 800 110" role="img" aria-label="计划输出、已显示、已生成未送达、未生成的 token"></svg>
+    <p class="out" id="txt5"></p>
+    <div class="readout">
+      <div class="ro acc"><b id="r5a">–</b><span>屏幕上已显示 token</span></div>
+      <div class="ro warn"><b id="r5b">–</b><span>服务器实际生成（示意计费）</span></div>
+      <div class="ro"><b id="r5c">–</b><span>生成了但没送到</span></div>
+      <div class="ro ok"><b id="r5d">–</b><span>没生成（省下）</span></div>
+    </div>
+    <p class="note">取消省下的是「还没生成」的那部分；已经生成的 token，不管送没送到，服务器那边都算过了。这里假设按服务器实际生成的输出 token 计费，各家的具体计费规则以官方文档为准。prompt 的输入 token 在 prefill 时就已经全部算完，取消不影响它。</p>
+  </div>
+</section>
+
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const enc = new TextEncoder();
+function seg(id, cb) {
+  const el = $(id);
+  el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; el.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); cb(b.dataset.v); });
+  return () => el.querySelector('[aria-pressed=true]').dataset.v;
+}
+function vb(id, w, h, nw, nh) { const el = $(id), n = el.clientWidth > 0 && el.clientWidth < 620, W = n ? nw : w, H = n ? nh : h; el.setAttribute('viewBox', `0 0 ${W} ${H}`); return [W, H, n]; }
+const fmtT = (ms) => ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(ms < 10000 ? 2 : 1)} s`;
+const fmtN = (n) => n.toLocaleString('en-US');
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+/* ---------- 分词：真实 o200k_base（同源 /labs/tokenizer-llm/tiktoken.js），没加载到时按字切 ---------- */
+let TOK = null;
+// 每个 token 的原始字节
+function tokenBytes(text) {
+  if (TOK) return TOK.encode(text).map((id) => TOK.bytes(id));
+  return (text.match(/[A-Za-z]+| ?[A-Za-z]+|\s+|./gsu) || []).map((s) => enc.encode(s));
+}
+// 文字增量：把 token 字节攒到能完整解码成字符为止（服务器也是这么做的，JSON 里放不下半个字）
+function textPieces(text) {
+  const out = []; let pend = [], n = 0; const dec = new TextDecoder('utf-8', { fatal: true });
+  for (const b of tokenBytes(text)) {
+    pend.push(...b); n++;
+    try { const s = dec.decode(new Uint8Array(pend)); out.push({ s, n }); pend = []; n = 0; } catch (e) { /* 半个字，继续攒 */ }
+  }
+  return out;
+}
+
+const ANS = '流式输出不会让模型算得更快，只是让你更早看到第一个字。模型本来就是一个 token 一个 token 蹦出来的，开了流式，服务器每生成一小段就立刻推给你。';
+
+/* ---------- SSE 报文生成（字段与官方文档一致，2026-10-19 核实） ---------- */
+function anthropicEvents(pieces, inTok = 25) {
+  const ev = (name, obj) => `event: ${name}\ndata: ${JSON.stringify(obj)}\n\n`;
+  const outTok = pieces.reduce((a, p) => a + p.n, 0);
+  const list = [
+    ev('message_start', { type: 'message_start', message: { id: 'msg_01XFDUDYJgAACzvnptvVoYEL', type: 'message', role: 'assistant', content: [], model: 'claude-opus-5-5', stop_reason: null, stop_sequence: null, usage: { input_tokens: inTok, output_tokens: 1 } } }),
+    ev('content_block_start', { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } }),
+    ev('ping', { type: 'ping' }),
+  ];
+  pieces.forEach((p) => list.push(ev('content_block_delta', { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: p.s } })));
+  list.push(ev('content_block_stop', { type: 'content_block_stop', index: 0 }));
+  list.push(ev('message_delta', { type: 'message_delta', delta: { stop_reason: 'end_turn', stop_sequence: null }, usage: { output_tokens: outTok } }));
+  list.push(ev('message_stop', { type: 'message_stop' }));
+  return list;
+}
+function openaiEvents(pieces) {
+  const base = { id: 'chatcmpl-B9MHDbslfkBeAs8l4bebGdFOJ6PeG', object: 'chat.completion.chunk', created: 1760850000, model: 'gpt-4o' };
+  const ch = (delta, fin = null) => `data: ${JSON.stringify({ ...base, choices: [{ index: 0, delta, logprobs: null, finish_reason: fin }] })}\n\n`;
+  const list = [ch({ role: 'assistant', content: '' })];
+  pieces.forEach((p) => list.push(ch({ content: p.s })));
+  list.push(ch({}, 'stop'));
+  list.push('data: [DONE]\n\n');
+  return list;
+}
+
+/* ---------- SSE 解析器（正确版）：流式解码 + 按空行切事件 ---------- */
+class SSEParser {
+  constructor(onEvent) { this.dec = new TextDecoder('utf-8'); this.buf = ''; this.on = onEvent; }
+  push(bytes) {
+    this.buf += this.dec.decode(bytes, { stream: true }).replace(/\r\n?/g, '\n');
+    let i;
+    while ((i = this.buf.indexOf('\n\n')) >= 0) { const block = this.buf.slice(0, i); this.buf = this.buf.slice(i + 2); this.dispatch(block); }
+  }
+  dispatch(block) {
+    let event = 'message'; const data = [];
+    for (const line of block.split('\n')) {
+      if (line === '' || line.startsWith(':')) continue;           // 冒号开头是注释，常用来保活
+      const c = line.indexOf(':');
+      const field = c < 0 ? line : line.slice(0, c);
+      let value = c < 0 ? '' : line.slice(c + 1);
+      if (value.startsWith(' ')) value = value.slice(1);
+      if (field === 'event') event = value; else if (field === 'data') data.push(value);
+    }
+    if (data.length) this.on({ event, data: data.join('\n') });
+  }
+}
+// 从一个事件里取出文字增量（两种格式）
+function textOf(fmt, ev) {
+  if (fmt === 'openai') { if (ev.data === '[DONE]') return null; const d = JSON.parse(ev.data); return d.choices && d.choices[0] && d.choices[0].delta.content || null; }
+  const d = JSON.parse(ev.data); return d.type === 'content_block_delta' && d.delta.type === 'text_delta' ? d.delta.text : null;
+}
+
+/* ---------- 00 时间线 ---------- */
+const P0 = [100, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 150000, 200000];
+// 预设：Llama-3-8B（8.03B 参数，bf16 权重 16.06 GB）在 RTX 4090 上
+const PRE0 = { params: 8.03e9, bytes: 2, bw: 1008e9, flops: 165.2e12, util: 0.5 };
+PRE0.decode = PRE0.bw / (PRE0.params * PRE0.bytes);            // 每生成一个 token 要把全部权重读一遍：带宽 ÷ 权重字节
+PRE0.prefill = PRE0.flops * PRE0.util / (2 * PRE0.params);     // 每个 token 约 2 × 参数量次浮点运算
+function calc0(q, p, f, o, d) { const ttft = q + p / f * 1000; const total = ttft + (o - 1) / d * 1000; return { ttft, total }; }
+function niceStep(x) { const e = Math.pow(10, Math.floor(Math.log10(x))); for (const m of [1, 2, 5, 10]) if (m * e >= x) return m * e; return 10 * e; }
+function draw0() {
+  const q = +$('#q0').value, p = P0[+$('#p0').value], f = +$('#f0').value, o = +$('#o0').value, d = +$('#d0').value;
+  $('#q0v').textContent = fmtT(q); $('#p0v').textContent = `${fmtN(p)} token`; $('#f0v').textContent = `${fmtN(f)} token/s`;
+  $('#o0v').textContent = `${fmtN(o)} token`; $('#d0v').textContent = `${d} token/s`;
+  const { ttft, total } = calc0(q, p, f, o, d);
+  $('#r0a').textContent = fmtT(ttft); $('#r0b').textContent = fmtT(total); $('#r0c').textContent = fmtT(total);
+  $('#r0d').textContent = `${fmtT(total - ttft)}（${(total / ttft).toFixed(total / ttft < 10 ? 1 : 0)} 倍）`;
+  const [W, H, n] = vb('#fig0', 800, 250, 400, 290);
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent'), wa = css('--warn'), fg = css('--fg'), as = css('--accent-soft'), ws = css('--warn-soft');
+  const L = n ? 14 : 90, R = W - 16, X = (t) => L + (R - L) * t / (total * 1.04), fs = n ? 12 : 13;
+  const rows = n ? [{ y: 70, lab: '非流式', c: wa }, { y: 185, lab: '流式', c: ac }] : [{ y: 60, lab: '非流式', c: wa }, { y: 150, lab: '流式', c: ac }];
+  const bh = 26;
+  let s = '';
+  rows.forEach((r, k) => {
+    const y = r.y;
+    s += n ? `<text x="${L}" y="${y - 24}" font-size="${fs + 1}" fill="${r.c}" font-weight="600">${r.lab}</text>` : `<text x="${L - 12}" y="${y + 5}" font-size="${fs + 1}" fill="${r.c}" text-anchor="end" font-weight="600">${r.lab}</text>`;
+    s += `<rect x="${X(0)}" y="${y - bh / 2}" width="${Math.max(0, X(q) - X(0))}" height="${bh}" fill="${li}"/>`;
+    s += `<rect x="${X(q)}" y="${y - bh / 2}" width="${Math.max(1, X(ttft) - X(q))}" height="${bh}" fill="${ws}"/>`;
+    if (k === 0) {
+      s += `<rect x="${X(ttft)}" y="${y - bh / 2}" width="${Math.max(0, X(total) - X(ttft))}" height="${bh}" fill="none" stroke="${li}" stroke-dasharray="4 4"/>`;
+      if (X(total) - X(ttft) > 15 * fs) s += `<text x="${(X(ttft) + X(total)) / 2}" y="${y + 5}" font-size="${fs}" fill="${mu}" text-anchor="middle">服务器在生成，你什么也看不到</text>`;
+      s += `<rect x="${X(total) - 5}" y="${y - bh / 2 - 4}" width="7" height="${bh + 8}" rx="2" fill="${wa}"/>`;
+    } else {
+      const m = Math.min(o, 160), step = (total - ttft) / Math.max(1, m - 1);
+      for (let i = 0; i < m; i++) { const x = X(ttft + i * step); s += `<line x1="${x}" y1="${y - bh / 2}" x2="${x}" y2="${y + bh / 2}" stroke="${ac}" stroke-width="${m > 80 ? 1 : 2}"/>`; }
+    }
+    const tf = k === 0 ? total : ttft, xf = X(tf);
+    s += `<path d="M${xf},${y + bh / 2 + 3} l-6,10 h12 z" fill="${r.c}"/>`;
+    const lbl = `首字 ${fmtT(tf)}`, anc = xf > R - 70 ? 'end' : (xf < L + 60 ? 'start' : 'middle');
+    s += `<text x="${xf}" y="${y + bh / 2 + 28}" font-size="${fs}" fill="${r.c}" text-anchor="${anc}">${lbl}</text>`;
+  });
+  // 时间轴
+  const ay = n ? H - 30 : H - 32, st = niceStep(total * 1.04 / (n ? 4 : 7));
+  s += `<line x1="${L}" y1="${ay}" x2="${R}" y2="${ay}" stroke="${li}"/>`;
+  for (let t = 0; t <= total * 1.04; t += st) s += `<line x1="${X(t)}" y1="${ay}" x2="${X(t)}" y2="${ay + 5}" stroke="${mu}"/><text x="${X(t)}" y="${ay + 19}" font-size="${fs - 1}" fill="${mu}" text-anchor="middle">${fmtT(t)}</text>`;
+  // 图例
+  const ly = n ? 14 : 16;
+  const key = [[li, '排队'], [ws, 'prefill'], [ac, '每到一批 token']];
+  let lx = n ? L : L;
+  key.forEach(([c, t]) => { s += `<rect x="${lx}" y="${ly - 9}" width="12" height="10" fill="${c}"/><text x="${lx + 17}" y="${ly}" font-size="${fs - 1}" fill="${mu}">${t}</text>`; lx += 17 + t.length * (fs - 1) * (/[a-z]/.test(t) ? 0.55 : 1) + 18; });
+  if (o > 160) s += `<text x="${R}" y="${ly}" font-size="${fs - 1}" fill="${mu}" text-anchor="end">每条竖线 ≈ ${(o / 160).toFixed(1)} token</text>`;
+  $('#fig0').innerHTML = s;
+  $('#cap0').textContent = `预设按公开规格估算：Llama-3-8B 约 ${(PRE0.params / 1e9).toFixed(2)}B 参数，bf16 权重 ${(PRE0.params * PRE0.bytes / 1e9).toFixed(2)} GB；RTX 4090 显存带宽 1008 GB/s，FP16 Tensor Core 稠密峰值 165.2 TFLOPS（NVIDIA Ada 白皮书）。decode 每个 token 要把全部权重读一遍，上限 ≈ 1008 ÷ ${(PRE0.params * PRE0.bytes / 1e9).toFixed(2)} ≈ ${PRE0.decode.toFixed(0)} token/s；prefill 每个 token 约 2 × 参数量次运算，按 50% 利用率 ≈ ${fmtN(Math.round(PRE0.prefill / 100) * 100)} token/s。其余默认值是示例。公式忽略了网络往返和长 prompt 下注意力的额外开销。`;
+}
+['#q0', '#p0', '#f0', '#o0', '#d0'].forEach((id) => $(id).addEventListener('input', draw0));
+$('#pre0').addEventListener('click', () => { $('#q0').value = 0; $('#f0').value = Math.round(PRE0.prefill / 100) * 100; $('#d0').value = Math.round(PRE0.decode); draw0(); });
+
+/* ---------- 01 SSE 逐事件推送 ---------- */
+const fmt1 = seg('#w1', () => reset1());
+let st1 = null;
+function reset1() {
+  if (st1) clearTimeout(st1.timer); st1 = null;
+  $('#raw1').innerHTML = ''; $('#ev1').innerHTML = ''; $('#txt1').innerHTML = '<span class="caret"></span>';
+  ['#r1a', '#r1b', '#r1c', '#r1d'].forEach((id) => $(id).textContent = '0');
+  $('#go1').textContent = '开始'; $('#go1').disabled = false;
+  $('#s1v').textContent = `${$('#s1i').value} ms`;
+}
+function summary(fmt, ev) {
+  if (fmt === 'openai') {
+    if (ev.data === '[DONE]') return { cls: '', tag: '[DONE]', txt: '流结束' };
+    const d = JSON.parse(ev.data), c = d.choices[0];
+    if (c.finish_reason) return { cls: '', tag: 'chunk', txt: `finish_reason: "${c.finish_reason}"` };
+    if (c.delta.role) return { cls: '', tag: 'chunk', txt: `role: "${c.delta.role}"` };
+    return { cls: 'd', tag: 'chunk', txt: `delta.content: ${JSON.stringify(c.delta.content)}` };
+  }
+  const d = JSON.parse(ev.data);
+  switch (d.type) {
+    case 'message_start': return { cls: '', tag: d.type, txt: `input_tokens: ${d.message.usage.input_tokens}` };
+    case 'content_block_start': return { cls: '', tag: d.type, txt: `index ${d.index}, type: ${d.content_block.type}` };
+    case 'content_block_delta': return { cls: 'd', tag: 'text_delta', txt: JSON.stringify(d.delta.text) };
+    case 'message_delta': return { cls: '', tag: d.type, txt: `stop_reason: ${d.delta.stop_reason}, output_tokens: ${d.usage.output_tokens}` };
+    default: return { cls: '', tag: d.type, txt: '' };
+  }
+}
+function start1() {
+  const fmt = fmt1(), pieces = textPieces(ANS), events = fmt === 'openai' ? openaiEvents(pieces) : anthropicEvents(pieces);
+  let bytes = 0, nev = 0, ntx = 0, text = '';
+  const raw = $('#raw1'), evs = $('#ev1');
+  const parser = new SSEParser((ev) => {
+    nev++; const sm = summary(fmt, ev), t = textOf(fmt, ev);
+    if (t) { ntx++; text += t; }
+    const div = document.createElement('div'); div.className = 'ev ' + sm.cls; div.innerHTML = `<i>${esc(sm.tag)}</i>${esc(sm.txt)}`; evs.appendChild(div); evs.scrollTop = evs.scrollHeight;
+    $('#txt1').innerHTML = esc(text) + '<span class="caret"></span>';
+  });
+  st1 = { i: 0, timer: null };
+  $('#go1').disabled = true; $('#go1').textContent = '推送中…';
+  const tick = () => {
+    if (!st1) return;
+    const chunk = events[st1.i++], b = enc.encode(chunk);
+    raw.querySelectorAll('.hl').forEach((x) => x.classList.remove('hl'));
+    const sp = document.createElement('span'); sp.className = 'hl'; sp.textContent = chunk; raw.appendChild(sp); raw.scrollTop = raw.scrollHeight;
+    bytes += b.length; parser.push(b);
+    $('#r1a').textContent = fmtN(bytes); $('#r1b').textContent = nev; $('#r1c').textContent = ntx; $('#r1d').textContent = [...text].length;
+    if (st1.i < events.length) st1.timer = setTimeout(tick, +$('#s1i').value);
+    else { $('#go1').textContent = '已结束'; $('#txt1').innerHTML = esc(text); }
+  };
+  tick();
+}
+$('#go1').addEventListener('click', start1);
+$('#rs1').addEventListener('click', reset1);
+$('#s1i').addEventListener('input', () => $('#s1v').textContent = `${$('#s1i').value} ms`);
+
+/* ---------- 02 分片 ---------- */
+let seed2 = 7;
+function splitBytes(B, avg, seed) {
+  const r = rng(seed), cuts = []; let p = 0;
+  while (true) { p += 1 + Math.floor(-Math.log(1 - r()) * avg); if (p >= B.length) break; cuts.push(p); }
+  const chunks = []; let a = 0; for (const c of [...cuts, B.length]) { chunks.push(B.subarray(a, c)); a = c; }
+  return { cuts, chunks };
+}
+// A：每块直接按行解析（不缓冲）
+function parseA(chunks) {
+  let out = '', fail = 0;
+  for (const c of chunks) {
+    for (const line of new TextDecoder().decode(c).split('\n')) {
+      if (!line.startsWith('data:')) continue;
+      try { const d = JSON.parse(line.slice(5)); if (d.type === 'content_block_delta') out += d.delta.text; } catch (e) { fail++; }
+    }
+  }
+  return { out, fail };
+}
+// B：按空行缓冲，但每块用新的解码器单独解码
+function parseB(chunks) {
+  let buf = '', out = '', fail = 0;
+  for (const c of chunks) {
+    buf += new TextDecoder().decode(c);
+    let i; while ((i = buf.indexOf('\n\n')) >= 0) {
+      const block = buf.slice(0, i); buf = buf.slice(i + 2);
+      const line = block.split('\n').find((l) => l.startsWith('data:'));
+      if (!line) continue;
+      try { const d = JSON.parse(line.slice(5)); if (d.type === 'content_block_delta') out += d.delta.text; } catch (e) { fail++; }
+    }
+  }
+  return { out, fail };
+}
+// C：正确
+function parseC(chunks) { let out = ''; const p = new SSEParser((ev) => { const t = textOf('anthropic', ev); if (t) out += t; }); chunks.forEach((c) => p.push(c)); return { out }; }
+function draw2() {
+  const avg = +$('#c2').value; $('#c2v').textContent = `${avg} bytes`;
+  const full = anthropicEvents(textPieces(ANS)).join(''), B = enc.encode(full);
+  const { cuts, chunks } = splitBytes(B, avg, seed2);
+  // 字节流显示：逐字符走，记录每个字符的字节区间
+  const cutSet = new Set(cuts); let off = 0, html = '', splitN = 0;
+  for (const ch of full) {
+    const len = enc.encode(ch).length;
+    if (cutSet.has(off)) html += '<span class="cut">│</span>';
+    let inside = false; for (let k = 1; k < len; k++) if (cutSet.has(off + k)) inside = true;
+    if (inside) { splitN++; html += `<span class="split">${esc(ch)}</span>`; } else html += esc(ch);
+    off += len;
+  }
+  $('#raw2').innerHTML = html;
+  const A = parseA(chunks), Bp = parseB(chunks), C = parseC(chunks);
+  const bad = (s) => esc(s).replace(/�/g, '<span class="bad">�</span>');
+  $('#o2a').innerHTML = esc(A.out) || '<span style="color:var(--muted)">（什么也没拼出来）</span>';
+  $('#o2b').innerHTML = bad(Bp.out);
+  $('#o2c').innerHTML = esc(C.out);
+  const fff = (Bp.out.match(/�/g) || []).length;
+  $('#r2a').textContent = `${chunks.length} / ${splitN}`;
+  $('#r2b').textContent = `${A.fail} 次，丢 ${[...ANS].length - [...A.out].length} 字`;
+  $('#r2c').textContent = `${fff} 个`;
+  $('#r2d').textContent = C.out === ANS ? '一致 ✓' : '不一致';
+}
+$('#c2').addEventListener('input', draw2);
+$('#re2').addEventListener('click', () => { seed2++; draw2(); });
+
+/* ---------- 03 input_json_delta ---------- */
+const INPUT3 = { city: '上海', date: '2026-10-20', unit: 'celsius' };
+function pieces3(mode) {
+  if (mode === 'key') {
+    const ks = Object.keys(INPUT3);
+    return ks.map((k, i) => (i ? ', ' : '{') + `${JSON.stringify(k)}: ${JSON.stringify(INPUT3[k])}` + (i === ks.length - 1 ? '}' : ''));
+  }
+  const s = JSON.stringify(INPUT3).replace(/":/g, '": ').replace(/,"/g, ', "'), r = rng(11), out = [''];
+  let i = 0; while (i < s.length) { const n = 2 + Math.floor(r() * 6); out.push(s.slice(i, i + n)); i += n; }
+  return out;
+}
+let st3 = { k: 0, timer: null };
+const mode3 = seg('#m3', () => reset3());
+function tryParse(s) { try { return { ok: true, v: JSON.parse(s) }; } catch (e) { return { ok: false, err: e.message.replace(/ in JSON at position.*$/, '').replace(/^.*?(Unexpected|Expected)/, '$1') }; } }
+function events3() {
+  const ps = pieces3(mode3());
+  const ev = (name, obj) => `event: ${name}\ndata: ${JSON.stringify(obj)}`;
+  const list = [{ raw: ev('content_block_start', { type: 'content_block_start', index: 1, content_block: { type: 'tool_use', id: 'toolu_01T1x1fJ34qAmk2tNTrN7Up6', name: 'get_weather', input: {} } }) }];
+  ps.forEach((p) => list.push({ piece: p, raw: ev('content_block_delta', { type: 'content_block_delta', index: 1, delta: { type: 'input_json_delta', partial_json: p } }) }));
+  list.push({ stop: true, raw: ev('content_block_stop', { type: 'content_block_stop', index: 1 }) });
+  return list;
+}
+function draw3() {
+  const list = events3(), k = st3.k; let acc = '', rows = '', nPieces = 0, last = null;
+  for (let i = 0; i < Math.min(k, list.length); i++) {
+    const e = list[i];
+    if (e.piece !== undefined) {
+      acc += e.piece; nPieces++;
+      const r = tryParse(acc); last = r;
+      rows += `<tr class="${i === k - 1 ? 'now' : ''}"><td>${nPieces}</td><td class="m">${esc(JSON.stringify(e.piece))}</td><td class="m">${esc(acc)}</td><td class="${r.ok ? 'good' : 'bad'}">${r.ok ? '可以（但还没到 stop，先别用）' : '✗ ' + esc(r.err)}</td></tr>`;
+    } else if (e.stop) {
+      const r = tryParse(acc || '{}'); last = r;
+      rows += `<tr class="${i === k - 1 ? 'now' : ''}"><td></td><td class="m" style="color:var(--muted)">content_block_stop</td><td class="m">${esc(acc)}</td><td class="${r.ok ? 'good' : 'bad'}">${r.ok ? '✓ 现在解析' : '✗ ' + esc(r.err)}</td></tr>`;
+    }
+  }
+  if (!rows) rows = `<tr><td colspan="4" style="color:var(--muted)">点「下一个事件」</td></tr>`;
+  $('#tb3').innerHTML = rows;
+  $('#raw3').textContent = k ? list[k - 1].raw : '（还没有事件）';
+  const total = list.filter((e) => e.piece !== undefined).length;
+  $('#r3a').textContent = `${nPieces} / ${total}`;
+  const done = k >= list.length;
+  $('#r3b').textContent = !k ? '–' : done ? '可以 ✓' : (last && last.ok ? '语法上可以' : '不行');
+  $('#r3c').textContent = done && last && last.ok ? JSON.stringify(last.v).replace(/,/g, ', ') : '等 stop';
+  $('#nx3').disabled = done;
+}
+function reset3() { clearInterval(st3.timer); st3 = { k: 0, timer: null }; $('#au3').textContent = '自动播放'; draw3(); }
+$('#nx3').addEventListener('click', () => { st3.k++; draw3(); });
+$('#rs3').addEventListener('click', reset3);
+$('#au3').addEventListener('click', () => {
+  if (st3.timer) { clearInterval(st3.timer); st3.timer = null; $('#au3').textContent = '自动播放'; return; }
+  if (st3.k >= events3().length) st3.k = 0;
+  $('#au3').textContent = '暂停';
+  st3.timer = setInterval(() => { st3.k++; draw3(); if (st3.k >= events3().length) { clearInterval(st3.timer); st3.timer = null; $('#au3').textContent = '自动播放'; } }, 550);
+});
+
+/* ---------- 04 体感 ---------- */
+const LONG = '流式输出改变的不是模型算得有多快，而是你等待的方式。不开流式时，你盯着一个转圈的图标，十几秒后整段回答一下子出现；开了流式，不到一秒第一个字就出来了，后面的内容一边生成一边往外冒。两种情况下模型花的时间完全一样，但后一种感觉快得多，因为你从第一个字开始就在读，读的同时模型还在写。只要生成的速度比你阅读的速度快，你就几乎感觉不到它还没写完。所以评价一个对话产品快不快，最先看的是首个 token 出来要多久，其次才是每秒能生成多少个 token。对于要先调工具、先检索资料的 Agent 来说，首字时间还要加上这些步骤的耗时，这也是为什么很多产品会先把「正在搜索」「正在读取文件」这样的中间状态推给用户：让等待的人知道事情在推进。';
+let tok4 = null, st4 = null;
+function prep4() { const bs = tokenBytes(LONG); tok4 = { bytes: bs, T: bs.length, C: [...LONG].length }; }
+function model4() {
+  const ttft = +$('#t4').value, v = +$('#v4').value, rpm = +$('#r4').value;
+  const gcs = v * tok4.C / tok4.T, rcs = rpm / 60;                                 // 字/s
+  const genEnd = ttft + (tok4.T - 1) / v * 1000;
+  const eff = Math.min(gcs, rcs), readEnd = ttft + tok4.C / eff * 1000;
+  const gen = (t) => t < ttft ? 0 : Math.min(tok4.C, (1 + (t - ttft) / 1000 * v) * tok4.C / tok4.T);
+  const read = (t) => t < ttft ? 0 : Math.min(gen(t), (t - ttft) / 1000 * rcs, tok4.C);
+  const wait = Math.max(0, (readEnd - ttft) - tok4.C / rcs * 1000);
+  return { ttft, v, rpm, gcs, rcs, genEnd, readEnd, gen, read, wait };
+}
+function draw4(now) {
+  if (!tok4) prep4();
+  const m = model4();
+  $('#t4v').textContent = fmtT(m.ttft); $('#v4v').textContent = `${m.v} token/s`; $('#r4v').textContent = `${m.rpm} 字/min`;
+  $('#r4a').textContent = `${m.gcs.toFixed(1)} 字/s`; $('#r4b').textContent = `${m.rcs.toFixed(1)} 字/s`;
+  $('#r4c').textContent = `${fmtT(m.genEnd)} / ${fmtT(m.readEnd)}`;
+  $('#r4d').textContent = m.wait < 1 ? '0（从不用等）' : fmtT(m.wait);
+  $('#n4').textContent = m.gcs >= m.rcs
+    ? `这段文字 ${tok4.C} 字、${tok4.T} 个 token（o200k_base），平均 ${(tok4.T / tok4.C).toFixed(2)} token/字。现在生成比阅读快 ${(m.gcs / m.rcs).toFixed(1)} 倍，读者从第一个字开始一路读下去不会被卡住，体感延迟就是 TTFT。`
+    : `这段文字 ${tok4.C} 字、${tok4.T} 个 token（o200k_base），平均 ${(tok4.T / tok4.C).toFixed(2)} token/字。现在生成比阅读慢，读者会追上光标、一次次停下来等，生成速度开始影响体感。`;
+  const [W, H, n] = vb('#fig4', 800, 240, 400, 260);
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent'), ok = css('--ok'), fs = n ? 11 : 12;
+  const L = n ? 34 : 46, R = W - 14, T0 = 14, B = H - 30, tmax = Math.max(m.genEnd, m.readEnd) * 1.05;
+  const X = (t) => L + (R - L) * t / tmax, Y = (c) => B - (B - T0) * c / tok4.C;
+  let s = `<line x1="${L}" y1="${B}" x2="${R}" y2="${B}" stroke="${li}"/><line x1="${L}" y1="${T0}" x2="${L}" y2="${B}" stroke="${li}"/>`;
+  const st = niceStep(tmax / (n ? 4 : 7));
+  for (let t = 0; t <= tmax; t += st) s += `<text x="${X(t)}" y="${B + 17}" font-size="${fs}" fill="${mu}" text-anchor="middle">${fmtT(t)}</text>`;
+  [0, 0.5, 1].forEach((f) => { const c = Math.round(tok4.C * f); s += `<text x="${L - 5}" y="${Y(c) + 4}" font-size="${fs}" fill="${mu}" text-anchor="end">${c}</text>`; });
+  const pts = (fn) => { let d = ''; for (let i = 0; i <= 200; i++) { const t = tmax * i / 200; d += (i ? 'L' : 'M') + X(t).toFixed(1) + ',' + Y(fn(t)).toFixed(1); } return d; };
+  s += `<path d="${pts(m.gen)}" fill="none" stroke="${ac}" stroke-width="2.5"/>`;
+  s += `<path d="${pts(m.read)}" fill="none" stroke="${ok}" stroke-width="2" stroke-dasharray="6 4"/>`;
+  s += `<line x1="${X(m.ttft)}" y1="${T0}" x2="${X(m.ttft)}" y2="${B}" stroke="${mu}" stroke-dasharray="2 3"/><text x="${X(m.ttft) + 4}" y="${T0 + 10}" font-size="${fs}" fill="${mu}">TTFT</text>`;
+  const kx = R - (n ? 125 : 220), ky = B - (n ? 40 : 44);
+  s += `<line x1="${kx}" y1="${ky}" x2="${kx + 22}" y2="${ky}" stroke="${ac}" stroke-width="2.5"/><text x="${kx + 28}" y="${ky + 4}" font-size="${fs}" fill="${ac}">已生成的字数</text>`;
+  s += `<line x1="${kx}" y1="${ky + 18}" x2="${kx + 22}" y2="${ky + 18}" stroke="${ok}" stroke-width="2" stroke-dasharray="6 4"/><text x="${kx + 28}" y="${ky + 22}" font-size="${fs}" fill="${ok}">读者读到的字数</text>`;
+  if (now != null) s += `<line x1="${X(now)}" y1="${T0}" x2="${X(now)}" y2="${B}" stroke="${css('--warn')}" stroke-width="1.5"/>`;
+  $('#fig4').innerHTML = s;
+  if (!st4) $('#txt4').innerHTML = '<span style="color:var(--muted)">点「播放」</span>';
+}
+function play4() {
+  if (st4) { cancelAnimationFrame(st4.raf); st4 = null; $('#go4').textContent = '播放'; draw4(); return; }
+  if (!tok4) prep4();
+  const m = model4(), dec = new TextDecoder('utf-8'); let shown = '', k = 0;
+  st4 = { t0: performance.now(), raf: 0 }; $('#go4').textContent = '停止';
+  const frame = () => {
+    if (!st4) return;
+    const t = performance.now() - st4.t0;
+    // 到时间的 token 逐个送进流式解码器（半个字会被留到下一个 token）
+    while (k < tok4.T && t >= m.ttft + k / m.v * 1000) { shown += dec.decode(tok4.bytes[k], { stream: true }); k++; }
+    if (k >= tok4.T) shown += dec.decode();
+    const chars = [...shown], r = Math.floor(m.read(t));
+    $('#txt4').innerHTML = (k === 0 ? '' : `<span class="read">${esc(chars.slice(0, r).join(''))}</span>${esc(chars.slice(r).join(''))}`) + (k < tok4.T ? '<span class="caret"></span>' : '');
+    draw4(t);
+    if (t < Math.max(m.genEnd, m.readEnd) + 300) st4.raf = requestAnimationFrame(frame);
+    else { st4 = null; $('#go4').textContent = '播放'; }
+  };
+  frame();
+}
+['#t4', '#v4', '#r4'].forEach((id) => $(id).addEventListener('input', () => { if (st4) { cancelAnimationFrame(st4.raf); st4 = null; $('#go4').textContent = '播放'; } draw4(); }));
+$('#go4').addEventListener('click', play4);
+
+/* ---------- 05 取消 ---------- */
+const ANS5 = LONG;
+let st5 = null;
+function draw5(state) {
+  const total = state ? state.total : tokenBytes(ANS5).length;
+  const shown = state ? state.shown : 0, gen = state ? state.gen : 0;
+  $('#v5v').textContent = `${$('#v5').value} token/s`; $('#l5v').textContent = fmtT(+$('#l5').value);
+  const [W, H, n] = vb('#fig5', 800, 110, 400, 130);
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent'), wa = css('--warn'), ok = css('--ok'), fs = n ? 11 : 12;
+  const L = 6, R = W - 6, X = (k) => L + (R - L) * k / total, y = 30, h = 30;
+  let s = `<rect x="${L}" y="${y}" width="${R - L}" height="${h}" rx="4" fill="${li}" fill-opacity=".5"/>`;
+  s += `<rect x="${L}" y="${y}" width="${X(shown) - L}" height="${h}" fill="${ac}"/>`;
+  s += `<rect x="${X(shown)}" y="${y}" width="${X(gen) - X(shown)}" height="${h}" fill="${wa}"/>`;
+  s += `<text x="${L}" y="${y - 10}" font-size="${fs}" fill="${mu}">计划输出 ${total} token</text>`;
+  const ky = y + h + 26, key = [[ac, '已显示'], [wa, '已生成未送达'], [li, '未生成']];
+  let kx = L; key.forEach(([c, t]) => { s += `<rect x="${kx}" y="${ky - 10}" width="12" height="11" fill="${c}"/><text x="${kx + 17}" y="${ky}" font-size="${fs}" fill="${mu}">${t}</text>`; kx += 17 + t.length * fs + 20; });
+  $('#fig5').innerHTML = s;
+  $('#r5a').textContent = state ? shown : '–'; $('#r5b').textContent = state ? gen : '–';
+  $('#r5c').textContent = state ? gen - shown : '–'; $('#r5d').textContent = state ? total - gen : '–';
+}
+function start5() {
+  if (st5 && st5.running) return;
+  const toks = tokenBytes(ANS5), v = +$('#v5').value, lag = +$('#l5').value;
+  const state = { total: toks.length, shown: 0, gen: 0, running: true, text: '' };
+  // 一个真实的 ReadableStream：服务器每生成一个 token 就 enqueue 一段 SSE 字节
+  let timer = null, cancelledAt = null;
+  const stream = new ReadableStream({
+    start(ctrl) {
+      const step = () => {
+        if (state.gen >= state.total) { if (cancelledAt == null) ctrl.close(); state.running = false; finish5(state); return; }
+        state.gen++;
+        if (cancelledAt == null) ctrl.enqueue(toks[state.gen - 1]);
+        else if (performance.now() - cancelledAt >= lag) { state.gen--; state.running = false; finish5(state); return; }   // 服务器发现断开，停止生成
+        draw5(state);
+        timer = setTimeout(step, 1000 / v);
+      };
+      timer = setTimeout(step, 1000 / v);
+    },
+    cancel() { cancelledAt = performance.now(); if (lag === 0) { clearTimeout(timer); state.running = false; finish5(state); } },
+  });
+  const ac = new AbortController(), reader = stream.getReader(), dec = new TextDecoder('utf-8');
+  ac.signal.addEventListener('abort', () => reader.cancel('用户停止'));
+  st5 = { state, ac };
+  $('#go5').disabled = true; $('#st5').disabled = false; $('#txt5').innerHTML = '<span class="caret"></span>';
+  (async () => {
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        state.shown++; state.text += dec.decode(value, { stream: true });
+        $('#txt5').innerHTML = esc(state.text) + '<span class="caret"></span>';
+        draw5(state);
+      }
+    } catch (e) { /* 取消 */ }
+    if (ac.signal.aborted) $('#txt5').innerHTML = esc(state.text) + '<span style="color:var(--warn)">　［已停止］</span>';
+    else $('#txt5').innerHTML = esc(state.text + dec.decode());
+  })();
+}
+function finish5(state) { draw5(state); $('#go5').disabled = false; $('#st5').disabled = true; }
+$('#go5').addEventListener('click', start5);
+$('#st5').addEventListener('click', () => { if (st5) { st5.ac.abort(); $('#st5').disabled = true; } });
+['#v5', '#l5'].forEach((id) => $(id).addEventListener('input', () => { if (!st5 || !st5.state.running) draw5(st5 && st5.state); }));
+
+/* ---------- 全部 ---------- */
+const all = () => { draw0(); draw2(); draw3(); draw4(st4 ? performance.now() - st4.t0 : null); draw5(st5 && st5.state); };
+function onTK() { if (window.TK && window.TK.o200k && !TOK) { TOK = window.TK.o200k; tok4 = null; reset1(); all(); } }
+window.addEventListener('tk-ready', onTK);
+reset1(); all(); onTK();
+addEventListener('resize', all);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+</script>
+<script src="/labs/tokenizer-llm/tiktoken.js" defer></script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>

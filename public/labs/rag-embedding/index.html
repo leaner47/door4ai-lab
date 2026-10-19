@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>Embedding 与 RAG 实验室</title>
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c; --c4:#7c3aed;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --c4:#b08cf5; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --c4:#b08cf5; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+p code,li code{font-size:.88em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+.formula{font-size:20px;text-align:center;margin:18px 0;letter-spacing:.02em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl b{font-variant-numeric:tabular-nums;min-width:2.4em}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer}
+input[type=range]{accent-color:var(--accent);max-width:200px}
+input[type=text],select{font:inherit;font-size:14px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:5px 8px;max-width:100%}
+input[type=text]{width:260px}
+select{max-width:min(100%,360px)}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.cap{font-size:12px;color:var(--muted);margin:4px 0 0;text-align:center}
+.key{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;margin:0 0 8px}
+.key i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600;overflow-wrap:anywhere}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn{border-color:var(--warn)} .ro.warn b{color:var(--warn)}
+.ro.acc{border-color:var(--accent)} .ro.acc b{color:var(--accent)}
+.ro.ok{border-color:var(--ok)} .ro.ok b{color:var(--ok)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.list{list-style:none;margin:12px 0 0;padding:0;font-size:14px;line-height:1.6}
+.list li{display:grid;grid-template-columns:2.2em 1fr 4.5em;gap:8px;align-items:center;padding:5px 8px;border-radius:4px}
+.list li .bar{height:6px;border-radius:3px;background:var(--line);position:relative;overflow:hidden;margin-top:3px}
+.list li .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--accent)}
+.list li .v{text-align:right;font-variant-numeric:tabular-nums}
+.list li.rel{font-weight:600;background:var(--bg)}
+.list li.rel .rk{color:var(--ok)}
+.rk{color:var(--muted);font-variant-numeric:tabular-nums}
+.cols{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:8px}
+@media (max-width:760px){.cols{grid-template-columns:1fr}}
+.col h3{font-size:15px;margin:0 0 4px;font-weight:600}
+.col h3 small{color:var(--muted);font-weight:400;margin-left:6px}
+.col ol{margin:0;padding:0;list-style:none;font-size:13.5px;line-height:1.55}
+.col ol li{padding:5px 0;display:grid;grid-template-columns:1.6em 1fr;gap:6px}
+.col ol li.rel{color:var(--ok)}
+.col ol li.rel::before{content:"✓";font-weight:700}
+.col ol li:not(.rel)::before{content:counter(item);counter-increment:item;color:var(--muted)}
+.col ol{counter-reset:item}
+.col ol li.rel{counter-increment:item}
+.col .empty,.col ol li.empty{display:block;color:var(--warn);font-size:13.5px;padding:6px 0}
+.col ol li.empty::before{content:none}
+.toks{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px;font-size:13px}
+.toks span{border:1px solid var(--line);border-radius:3px;padding:0 6px;font-variant-numeric:tabular-nums}
+.toks span.unk{border-color:var(--warn);color:var(--warn);text-decoration:line-through}
+.passage{font-size:15px;line-height:1.9;margin:10px 0 0;padding:12px 14px;border:1px dashed var(--line);border-radius:6px}
+.passage mark{background:var(--warn-soft);color:inherit;padding:1px 0}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.num{text-align:right}
+td.up{color:var(--ok);font-weight:600} td.down{color:var(--warn);font-weight:600}
+.tw{overflow-x:auto}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.two{grid-template-columns:1fr}}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">Embedding · 向量检索 · 切块 · top-k · 混合检索 · rerank</div>
+  <h1>Embedding 与 RAG 实验室</h1>
+  <p class="lede">语料是一本虚构的《青竹咖啡馆员工手册》（40 条）。页面加载时在浏览器里真实训练一个小 embedding 模型，下面所有检索都是真实计算。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>一句话变成一个向量，相近的句子夹角小</h2>
+  <p>embedding 模型把一段文字变成一个固定长度的向量。这里的模型是页内训练的：把 84 句与手册无关的日常话（当作「预训练语料」）切成相邻两字的词，做 TF-IDF，再用 SVD 压到 24 维。真实模型是几百到几千维。为了画得出来，图里只画 24 维空间的一个二维截面，排序和读数仍按 24 维算。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="q0">输入一句话</label><input id="q0" type="text" value="开封的牛奶能放几天" maxlength="40"><button class="btn" id="go0">变成向量</button></div>
+    </div>
+    <div class="key"><span><i style="background:var(--accent)"></i>牛奶保存</span><span><i style="background:var(--warn)"></i>设备报修</span><span><i style="background:var(--c4)"></i>消防安全</span><span><i style="background:var(--fg)"></i>查询（可拖动）</span></div>
+    <svg id="fig0" viewBox="0 0 800 420" role="img" aria-label="9 句话的向量投影到二维截面，查询向量可拖动"></svg>
+    <p class="cap">9 句话 + 查询：24 维单位向量在一个二维截面上的投影。箭头越接近单位圆，说明它越多地落在这个截面里；夹角越小，余弦相似度越高</p>
+    <ul class="list" id="list0"></ul>
+    <div class="readout">
+      <div class="ro acc"><b id="r0a">–</b><span>与查询最接近的句子</span></div>
+      <div class="ro"><b id="r0b">–</b><span>余弦相似度（按 24 维算）</span></div>
+      <div class="ro warn"><b id="r0c">–</b><span>查询里模型没见过的词</span></div>
+    </div>
+    <p class="note">拖动黑色箭头，看排序怎么跟着夹角变。换一句话试：说法不同但意思相近的句子落在同一簇；跟三簇都不沾边的句子（如「我想请假」）几乎指向截面之外，箭头缩在原点附近；模型没见过的词（如英文缩写「SOP」）对向量没有任何贡献，整句都是生词时向量全为 0。</p>
+  </div>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>切块：答案会不会被切成两半</h2>
+  <p>文档太长，不能整篇向量化，要先切成小块（chunk）。切法最常见的是按字数硬切。下面是手册里「咖啡机维护」一节（290 字），选一个问题，拖块大小和重叠，看答案所在的句子有没有被切断。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>问题</label><div class="seg" id="qs1"><button data-v="0" aria-pressed="true">反冲洗怎么做</button><button data-v="1" aria-pressed="false">蒸汽棒多久拆洗</button><button data-v="2" aria-pressed="false">压力表不对怎么办</button></div></div>
+      <div class="ctrl"><label>切法</label><div class="seg" id="mode1"><button data-v="char" aria-pressed="true">按字数硬切</button><button data-v="sent" aria-pressed="false">按句子切</button></div></div>
+      <div class="ctrl"><label for="sz1">块大小（字）</label><input id="sz1" type="range" min="40" max="240" step="10" value="100"><b id="sz1v"></b></div>
+      <div class="ctrl"><label for="ov1">重叠（字）</label><input id="ov1" type="range" min="0" max="80" step="10" value="0"><b id="ov1v"></b></div>
+    </div>
+    <div class="key"><span><i style="background:var(--warn)"></i>答案所在句</span><span><i style="background:var(--accent)"></i>完整包含答案的块</span><span><i style="background:var(--line)"></i>其他块</span></div>
+    <svg id="fig1" viewBox="0 0 800 260" role="img" aria-label="文档切块示意：每一行是一块，橙色带是答案所在句"></svg>
+    <div class="passage" id="pass1"></div>
+    <div class="readout">
+      <div class="ro"><b id="r1a">–</b><span>切成几块</span></div>
+      <div class="ro acc"><b id="r1b">–</b><span>完整包含答案的块</span></div>
+      <div class="ro warn"><b id="r1c">–</b><span>最好的块里答案只有</span></div>
+      <div class="ro"><b id="r1d">–</b><span>答案被分到几块里</span></div>
+    </div>
+    <p class="note">块大小 100、不重叠时，81 字的反冲洗步骤被切进两块，最完整的那块也只有 88%。把重叠从 0 往上拖：10、20 碰巧救回来，30–50 又断了，能不能完整全看下刀点落在哪；要保证任何位置的 81 字都完整落进某一块，重叠得到 80。按句子切不会从句子中间下刀。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>top-k：取太少漏掉，取太多塞噪声</h2>
+  <p>把 40 条手册都变成向量存起来，就是一个最小的向量库。查询也变成向量，按余弦相似度排序，取前 <i>k</i> 条塞给模型。有的问题只有 1 条相关，有的有 4 条：看 <i>k</i> 怎么影响「召回率」（相关的找到了几成）和「噪声」（塞进去的无关条目）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="qsel2">查询</label><select id="qsel2"></select></div>
+      <div class="ctrl"><label for="q2">或自己写</label><input id="q2" type="text" placeholder="输入后回车" maxlength="40"></div>
+      <div class="ctrl"><label for="k2">k</label><input id="k2" type="range" min="1" max="15" value="3"><b id="k2v"></b></div>
+    </div>
+    <div class="key"><span><i style="background:var(--ok)"></i>人工标注的相关条目</span><span><i style="background:var(--line)"></i>无关条目</span></div>
+    <svg id="fig2" viewBox="0 0 800 300" role="img" aria-label="按余弦相似度排序的前 15 条，虚线左侧是取走的 top-k"></svg>
+    <ul class="list" id="list2"></ul>
+    <div class="readout">
+      <div class="ro ok"><b id="r2a">–</b><span>召回率：相关条目找到了</span></div>
+      <div class="ro warn"><b id="r2b">–</b><span>噪声：塞进去的无关条目</span></div>
+      <div class="ro"><b id="r2c">–</b><span>塞进上下文的字数</span></div>
+      <div class="ro"><b id="r2d">–</b><span>相关条目的最差名次</span></div>
+    </div>
+    <p class="note">「闭店要做哪些事」有 5 条相关：k = 3 只召回 2 条；k 开到 12 才找到第 4 条，同时塞进了 8 条噪声；第 5 条（甜点柜闭店时标记日期）排在第 17，k 再大也不划算。相似度分数本身并不告诉你第几名以后就是垃圾。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>关键词、向量、混合：各自在哪里失手</h2>
+  <p>同一个查询用三种方法排序：关键词检索（BM25，页内实现，只认完全相同的词）、向量检索（上面的 embedding，按余弦）、混合（两份排名用 RRF 合并）。查询分三类：普通、换了说法、英文缩写。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="qsel3">查询</label><select id="qsel3"></select></div>
+      <div class="ctrl"><label for="q3">或自己写</label><input id="q3" type="text" placeholder="输入后回车" maxlength="40"></div>
+    </div>
+    <div class="toks" id="toks3"></div>
+    <div class="cols" id="cols3"></div>
+    <svg id="fig3" viewBox="0 0 800 150" role="img" aria-label="16 个预设查询上三种方法的前 5 命中率"></svg>
+    <p class="cap">16 个预设查询：相关条目进了前 5 的比例</p>
+    <div class="readout">
+      <div class="ro"><b id="r3a">–</b><span>关键词：相关条目最高名次</span></div>
+      <div class="ro"><b id="r3b">–</b><span>向量：相关条目最高名次</span></div>
+      <div class="ro acc"><b id="r3c">–</b><span>混合：相关条目最高名次</span></div>
+    </div>
+    <p class="note">「着火了怎么办」和手册没有一个共同的词，关键词检索一条都搜不到，向量检索直接命中；「SOP」是模型没见过的缩写，向量全为 0，关键词一下就找到。混合检索两边都兜住。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>检索到了，模型用上了吗</h2>
+  <p>top-k 片段最后是拼进上下文的。上一讲的 Lost in the Middle 实验说过：答案放在开头或末尾时模型答得最好，埋在中间时正确率掉到比不给资料还低。这里用查询「牛奶开封后能放多久」真实检索出的 top-k，把含答案的那条放到第几位由你决定，命中率套用上一讲那条拟合论文实测点的示意曲线。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="k4">片段数 k</label><input id="k4" type="range" min="1" max="15" value="10"><b id="k4v"></b></div>
+      <div class="ctrl"><label for="p4">答案片段排第</label><input id="p4" type="range" min="1" max="10" value="5"><b id="p4v"></b></div>
+    </div>
+    <div class="key"><span><i style="background:var(--muted)"></i>系统提示 / 问题</span><span><i style="background:var(--line)"></i>其他片段</span><span><i style="background:var(--ok)"></i>含答案的片段</span><span><i style="background:var(--warn)"></i>示意命中率</span></div>
+    <svg id="fig4" viewBox="0 0 800 280" role="img" aria-label="上下文里各片段的排列，以及每个位置的示意命中率"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r4a">–</b><span>上下文总字数</span></div>
+      <div class="ro"><b id="r4b">–</b><span>答案片段的相对位置</span></div>
+      <div class="ro warn"><b id="r4c">–</b><span>示意命中率</span></div>
+      <div class="ro"><b id="r4d">56.1%</b><span>论文里不给任何资料时</span></div>
+    </div>
+    <p class="note">曲线与上一讲实验 02 是同一个示意模型（参数拟合 Liu 等人 2023 年表 6 中 gpt-3.5-turbo 在 20 篇文档里的五个实测点），按答案片段在 k 条里的相对位置取值，只刻画形状，不是现役模型的测量值。k 越大，「中间」的位置越多；检索排对了也可能白搭，所以 rerank 之后把最相关的放在开头或末尾。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>rerank：先粗召回 20 条，再精排出 5 条</h2>
+  <p>向量检索快但粗（把整句压成 24 个数）。常见做法是两阶段：先用向量取 top-20，再用一个更贵的打分器逐条精排，只留前 5。这里的精排器是模拟的：把压缩前的完整词袋拿出来算精确重合，再加词覆盖率（命中标题加权）和「问数量就偏向带数字的条目」。真正的 reranker 是把问题和条目拼在一起读的交叉编码器。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="qsel5">查询</label><select id="qsel5"></select></div>
+    </div>
+    <div class="two">
+      <div class="col"><h3>第一阶段：向量 top-20<small id="h5a"></small></h3><ol id="l5a"></ol></div>
+      <div class="col"><h3>精排后 top-5<small id="h5b"></small></h3><ol id="l5b"></ol></div>
+    </div>
+    <div class="tw"><table id="t5"></table></div>
+    <div class="readout">
+      <div class="ro"><b id="r5a">–</b><span>第一阶段：相关条目排第 1 的查询数</span></div>
+      <div class="ro ok"><b id="r5b">–</b><span>精排后：相关条目排第 1 的查询数</span></div>
+      <div class="ro"><b id="r5c">–</b><span>相关条目进前 5 的查询数（精排前 → 后）</span></div>
+    </div>
+    <p class="note">精排只能在 20 个候选里重新排，第一阶段漏掉的（如「SOP」向量全 0、一条也没召回）它救不回来。所以 rerank 要配着混合检索用：先把该来的都召回来，再排好。</p>
+  </div>
+</section>
+
+</div>
+<script>
+// ===== 语料 =====
+// 检索语料：一本虚构的《青竹咖啡馆员工手册》，40 条
+const DOCS = [
+  "开店：早班到店后先开灯、开空调，把门口的招牌翻到「营业中」，检查收银机里的备用金是否为 500 元。",
+  "开店：咖啡机开机预热需要 25 分钟，期间冲洗三组冲煮头，直到出水清澈再开始出品。",
+  "闭店 SOP：关闭咖啡机前先做反冲洗，清空滴水盘，关闭磨豆机，最后关总电源。",
+  "闭店：清点当日现金，与 POS 机结算单核对，差额超过 20 元要在交接本上写明原因。",
+  "牛奶：鲜奶开封后必须冷藏，48 小时内用完；未开封的按包装日期先进先出。",
+  "植物奶：燕麦奶和豆奶开封后冷藏不超过 5 天，每次使用前摇匀。",
+  "冷藏：冰箱温度保持在 2 到 6 摄氏度，每天早晚各记录一次温度。",
+  "库存：所有原料按先进先出（FIFO）摆放，新到的货放在后面，先用旧的。",
+  "咖啡豆：开封后的咖啡豆放进密封罐，避光保存，建议 14 天内用完。",
+  "咖啡豆：每周二到货，收货时核对品种、烘焙日期和数量，有破袋要拍照留存。",
+  "磨豆机：每天闭店前清空豆仓，每周用清洁颗粒跑一次；研磨刻度变动要记录。",
+  "浓缩：标准参数是 18 克粉、36 克液，萃取 25 到 30 秒，超出范围先调研磨。",
+  "奶泡：打奶温度 60 到 65 摄氏度，手感是烫但还能握住奶缸底部。",
+  "排班：排班表每周四下午发布，调班要提前 24 小时在群里说明并找到替班人。",
+  "请假：请假需要提前 3 天告知店长，病假当天 9 点前打电话，事后补交假条。",
+  "迟到：迟到 10 分钟以内记一次提醒，一个月累计三次扣当月绩效。",
+  "工资：工资每月 10 日发放，考核指标（KPI）包含出勤、顾客评价和培训完成度。",
+  "收银：POS 机刷卡失败时先检查网络，再重启机器；两次都不行就用备用扫码牌收款。",
+  "发票：顾客要开发票，在收银机上打印小票，让顾客扫码自助开电子发票。",
+  "会员：储值满 300 元送 30 元，每消费 1 元累计 1 积分，生日当月积分双倍。",
+  "优惠：自带杯减 3 元，不能与其他折扣同时使用。",
+  "投诉：顾客投诉先道歉并倾听，能当场解决的当场解决，解决不了的记下联系方式交给店长。",
+  "退换：饮品做错或顾客不满意可以免费重做一次，退款需要店长在 POS 机上授权。",
+  "外卖：外卖订单接单后 8 分钟内出餐，封口贴要贴好，热饮和冷饮分开装袋。",
+  "外卖：平台差评要在 24 小时内回复，并把原因记录到交接本。",
+  "卫生：每两小时擦一次桌面，洗手间每小时检查一次并签字。",
+  "卫生：所有员工上岗前洗手，接触现金后要重新洗手再做饮品。",
+  "消防：灭火器在吧台后方和储物间门口各一个，每月检查压力表指针是否在绿色区域。",
+  "消防：发现火情先切断电源，拨打 119，引导顾客从后门疏散。",
+  "停电：停电时先关掉咖啡机的电源开关，改用手机扫码收款，冰箱门不要频繁打开。",
+  "Wi-Fi：顾客 Wi-Fi 密码贴在收银台前；员工不要把后台网络的密码告诉顾客。",
+  "培训：新员工前两周跟随老员工，第 14 天进行出品考核，通过后才能独立上吧台。",
+  "培训：每月一次品鉴会，试喝新到的豆子并记录风味描述。",
+  "着装：上班穿深色围裙和黑色裤子，长发要扎起，不佩戴戒指和手链。",
+  "手机：上班时间手机放在储物柜，吧台内不允许看手机。",
+  "交接本：每天闭店前在交接本上写当天的异常情况，次日早班先读交接本。",
+  "垃圾：咖啡渣单独收集，放在后门的渣桶里，每天由回收公司取走。",
+  "报修：设备出故障先拍照，在群里说明情况，再打维修电话；等待期间不要自己拆机。",
+  "甜点：甜点柜每天早上补货，当天没卖完的在闭店时标记日期，第二天 15 点前打折处理。",
+  "音乐：店内音乐音量不超过 40 分贝，晚上 8 点以后换成轻音乐。",
+];
+// 「预训练」语料：embedding 模型只从这里学措辞之间的关系（与手册无关的日常句子）
+const BG = [
+  "牛奶就是鲜奶，开了封的奶要放进冰箱冷藏，几天内喝完。",
+  "鲜奶开封以后能放多久？一般冷藏两天之内要用掉。",
+  "奶开了之后容易坏，开封的牛奶要尽快用完，不要放太久。",
+  "冷藏保存的鲜奶过期就会变质，牛奶的保质期要看包装日期。",
+  "燕麦奶、豆奶这些植物奶和牛奶一样，开封后也要冷藏。",
+  "冰箱里的温度太高，冷藏的牛奶和食材都会坏掉。",
+  "冰箱温度要定期记录，冷藏室保持低温，食材才不会变质。",
+  "打奶泡用的是鲜奶，奶泡的温度不能太烫。",
+  "拿铁和卡布奇诺都要打奶泡，牛奶打到合适温度。",
+  "咖啡机坏了要报修，机器出故障先联系维修师傅。",
+  "设备故障的时候不要自己拆机器，打电话找维修。",
+  "磨豆机坏了就是设备出了问题，报修要说明故障情况。",
+  "机器坏了怎么办？先拍照，再找人维修，等师傅来修理。",
+  "咖啡机每天都要清洁，冲煮头要冲洗，机器才不容易坏。",
+  "咖啡机要预热，开机以后等一会儿再做咖啡。",
+  "浓缩咖啡的萃取时间和研磨粗细有关，研磨太细萃取就慢。",
+  "咖啡豆要密封避光保存，豆子开封以后风味会慢慢跑掉。",
+  "烘焙日期越近的咖啡豆越新鲜，豆子放久了就不好喝。",
+  "新到的咖啡豆要先试喝，品鉴一下风味再上架。",
+  "磨豆机的研磨刻度决定粉的粗细，调整以后要重新试萃取。",
+  "想休假要提前请假，跟店长说一声，把假条交上去。",
+  "请假和休假都要提前申请，病假可以当天打电话说明。",
+  "临时有事不能上班，要找人替班，调班得提前说。",
+  "排班表就是班表，上面写着每个人哪天上班、上什么班。",
+  "班表每周发布一次，想调班的人要自己找替班。",
+  "上班迟到会被记录，迟到多了会影响绩效和工资。",
+  "工资就是薪水，发薪日每月固定，绩效考核影响工资多少。",
+  "考核指标包括出勤和顾客评价，考核结果决定绩效。",
+  "顾客投诉的时候要先道歉，顾客不满意就想办法解决。",
+  "有人投诉或者给了差评，要及时回复，记录下原因。",
+  "外卖平台上的差评要回复，顾客不满意的订单要处理。",
+  "饮品做错了可以重做，顾客不满意可以退款。",
+  "退款要店长授权，收银机上才能操作退钱。",
+  "收银的时候可以刷卡也可以扫码，收款机器刷不了卡就用扫码。",
+  "刷卡机就是收款用的机器，刷卡失败先看网络通不通。",
+  "顾客要发票，就在收银机上打小票，扫码自己开电子发票。",
+  "开票就是开发票，现在大多是电子发票，扫码就能开。",
+  "会员储值有优惠，充值送钱，消费还能累计积分。",
+  "积分可以抵扣消费，会员的生日有额外优惠。",
+  "自带杯子有折扣，但是优惠不能叠加使用。",
+  "外卖订单要尽快出餐，热饮和冷饮分开装，封口贴要贴好。",
+  "外卖配送要快，订单接了以后几分钟内就要做好。",
+  "桌面要经常擦，洗手间要定时检查，店里卫生要保持干净。",
+  "做饮品前要洗手，碰过钱以后要重新洗手，这是卫生要求。",
+  "打扫卫生就是清洁，吧台、桌面、洗手间都要打扫。",
+  "灭火器要定期检查，压力表指针在绿色区域才正常。",
+  "着火了怎么办？先断电，打 119 报警，带顾客从安全出口疏散。",
+  "消防安全很重要，火灾发生时要先切断电源再疏散。",
+  "发生火情要冷静，灭火器在哪里要提前知道。",
+  "停电的时候咖啡机不能用，收款可以用手机扫码。",
+  "断电了就是停电，冰箱门不要常开，免得东西坏掉。",
+  "顾客问 Wi-Fi 密码，就告诉他贴在收银台前的那个。",
+  "无线网络的密码分顾客用的和员工用的，后台密码不能外泄。",
+  "新员工入职要先培训，前两周跟着老员工学，考核通过才能独立上岗。",
+  "培训包括出品考核和品鉴会，新人要先学会做咖啡。",
+  "上班要穿工作服，系围裙，长头发要扎起来。",
+  "着装要求是深色衣服和围裙，不戴首饰。",
+  "上班不能玩手机，手机要放在储物柜里。",
+  "交接本上记录每天的异常情况，下一班的人要先看交接本。",
+  "交班的时候把当天的问题写在交接本上，早班先读一遍。",
+  "咖啡渣是垃圾，要单独收集，回收公司会来取。",
+  "垃圾分类，咖啡渣放渣桶，纸杯放可回收。",
+  "甜点当天卖不完要打折处理，第二天就不新鲜了。",
+  "蛋糕和甜点每天早上补货，卖不完的标记日期。",
+  "店里的背景音乐不要太吵，晚上换成轻音乐。",
+  "音量太大顾客会投诉，店内音乐要控制在合适的分贝。",
+  "开店的时候先开灯开空调，把招牌翻过来，检查收银机。",
+  "早班开店要预热咖啡机，检查备用金和现金。",
+  "闭店的时候关机器、关电源、清点现金，和结算单核对。",
+  "晚班闭店要清点当天的现金，核对收款记录，再关总电源。",
+  "库存要先进先出，先到的货先用，新货放后面。",
+  "原料的库存管理要按日期排，旧的先用，新的后用。",
+  "收货要核对数量和日期，破损的要拍照。",
+  "每周进货一次，到货以后清点品种和数量。",
+  "打奶的温度大概六十多摄氏度，手摸奶缸觉得烫就差不多了。",
+  "萃取浓缩的标准是粉量、液重和时间三个参数。",
+  "调班、请假、迟到这些事都要提前跟店长沟通。",
+  "想知道工资什么时候发？发薪日每个月是固定的。",
+  "顾客要求退款或者重做，按规定处理，必要时找店长。",
+  "有东西坏了、设备出问题，报修流程是先拍照再联系维修。",
+  "调班就是换班，要自己找到替班的人，提前在群里说一声。",
+  "请假要提前几天跟店长说，休假回来把假条补上。",
+  "排班表每周发一次，班表上写着每个人的上班时间和休息日。",
+  "什么时候发班表？一般每周固定一天发布下周的排班。",
+];
+// 00 实验的句子：三个话题各三句
+const SENTS = [
+  ["牛奶开封后要冷藏，两天内用完", 0], ["鲜奶开了以后能放多久", 0], ["开封的奶放久了会坏", 0],
+  ["咖啡机坏了要怎么报修", 1], ["机器出故障先联系维修", 1], ["设备出问题不要自己拆", 1],
+  ["灭火器放在什么地方", 2], ["着火了先断电再疏散", 2], ["消防安全检查压力表", 2],
+];
+// 预设查询与人工标注的相关条目（下标从 0 起）
+const QUERIES = [
+  { q: "牛奶开封后能放多久", rel: [4], tag: "普通" },
+  { q: "冰箱温度多少", rel: [6], tag: "普通" },
+  { q: "顾客要开发票", rel: [18], tag: "普通" },
+  { q: "差评怎么处理", rel: [24], tag: "普通" },
+  { q: "奶开了以后几天内要用掉", rel: [4], tag: "换了说法" },
+  { q: "机器坏了找谁修", rel: [37], tag: "换了说法" },
+  { q: "想休假要提前多久说", rel: [14], tag: "换了说法" },
+  { q: "着火了怎么办", rel: [28], tag: "换了说法" },
+  { q: "发薪日是哪天", rel: [16], tag: "换了说法" },
+  { q: "刷卡刷不了怎么办", rel: [17], tag: "换了说法" },
+  { q: "SOP", rel: [2], tag: "缩写" },
+  { q: "KPI 看哪几项", rel: [16], tag: "缩写" },
+  { q: "闭店要做哪些事", rel: [2, 3, 10, 35, 38], tag: "多条相关" },
+  { q: "咖啡豆怎么保存、怎么收货", rel: [8, 9], tag: "多条相关" },
+  { q: "外卖订单怎么处理", rel: [23, 24], tag: "多条相关" },
+  { q: "消防和火灾", rel: [27, 28], tag: "多条相关" },
+];
+
+// ===== 分词：中文按相邻两字（bigram），英文/数字按整词 =====
+function tokenize(s) {
+  const out = []; s = s.toLowerCase();
+  const re = /[a-z0-9][a-z0-9\-]*|[一-鿿]+/g; let m;
+  while ((m = re.exec(s))) {
+    const t = m[0];
+    if (/^[a-z0-9]/.test(t)) out.push(t);
+    else if (t.length === 1) out.push(t);
+    else for (let i = 0; i + 1 < t.length; i++) out.push(t.slice(i, i + 2));
+  }
+  return out;
+}
+const count = (toks) => { const c = new Map(); for (const t of toks) c.set(t, (c.get(t) || 0) + 1); return c; };
+
+// ===== BM25（关键词检索）=====
+function makeBM25(docs, k1 = 1.5, b = 0.75) {
+  const tf = docs.map((d) => count(tokenize(d))), N = docs.length;
+  const len = tf.map((c) => [...c.values()].reduce((a, x) => a + x, 0)), avg = len.reduce((a, x) => a + x, 0) / N;
+  const df = new Map(); tf.forEach((c) => { for (const t of c.keys()) df.set(t, (df.get(t) || 0) + 1); });
+  const idf = (t) => { const n = df.get(t) || 0; return Math.log(1 + (N - n + 0.5) / (n + 0.5)); };
+  return (q) => {
+    const qt = [...new Set(tokenize(q))];
+    return docs.map((_, i) => { let s = 0; for (const t of qt) { const f = tf[i].get(t) || 0; if (!f) continue; s += idf(t) * f * (k1 + 1) / (f + k1 * (1 - b + b * len[i] / avg)); } return s; });
+  };
+}
+
+// ===== LSA embedding：在 BG 上「预训练」（TF-IDF + 截断 SVD），再把任意句子折算进这个空间 =====
+function jacobiEigen(A) { // 对称矩阵特征分解（特征值降序，vecs[j] 是第 j 个特征向量）
+  const n = A.length, V = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => +(i === j)));
+  A = A.map((r) => r.slice());
+  for (let sweep = 0; sweep < 60; sweep++) {
+    let off = 0; for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) off += A[i][j] ** 2;
+    if (off < 1e-18) break;
+    for (let p = 0; p < n; p++) for (let q = p + 1; q < n; q++) {
+      if (Math.abs(A[p][q]) < 1e-14) continue;
+      const th = (A[q][q] - A[p][p]) / (2 * A[p][q]), t = Math.sign(th || 1) / (Math.abs(th) + Math.sqrt(th * th + 1)), c = 1 / Math.sqrt(t * t + 1), s = t * c;
+      for (let k = 0; k < n; k++) { const akp = A[k][p], akq = A[k][q]; A[k][p] = c * akp - s * akq; A[k][q] = s * akp + c * akq; }
+      for (let k = 0; k < n; k++) { const apk = A[p][k], aqk = A[q][k]; A[p][k] = c * apk - s * aqk; A[q][k] = s * apk + c * aqk; }
+      for (let k = 0; k < n; k++) { const vkp = V[k][p], vkq = V[k][q]; V[k][p] = c * vkp - s * vkq; V[k][q] = s * vkp + c * vkq; }
+    }
+  }
+  const idx = [...Array(n).keys()].sort((a, b) => A[b][b] - A[a][a]);
+  return { vals: idx.map((i) => A[i][i]), vecs: idx.map((i) => V.map((r) => r[i])) };
+}
+function makeEmbedder(bg, k = 24) {
+  const tfs = bg.map((d) => count(tokenize(d))), N = bg.length;
+  const df = new Map(); tfs.forEach((c) => { for (const t of c.keys()) df.set(t, (df.get(t) || 0) + 1); });
+  const vocab = [...df.keys()], col = new Map(vocab.map((t, i) => [t, i]));
+  const idf = new Float64Array(vocab.length); vocab.forEach((t, i) => idf[i] = Math.log((N + 1) / (df.get(t) + 1)) + 1);
+  const bow = (s) => { // 归一化的 TF-IDF 稀疏向量（词表外的词直接丢掉）
+    const c = count(tokenize(s)), v = new Map();
+    for (const [t, f] of c) { const i = col.get(t); if (i !== undefined) v.set(i, (1 + Math.log(f)) * idf[i]); }
+    let n = 0; for (const x of v.values()) n += x * x; n = Math.sqrt(n) || 1;
+    for (const [i, x] of v) v.set(i, x / n);
+    return v;
+  };
+  const X = bg.map(bow); // 文档 × 词
+  const G = X.map((a) => X.map((b) => { let s = 0; for (const [i, x] of a) { const y = b.get(i); if (y) s += x * y; } return s; })); // 文档×文档 的 Gram 矩阵
+  const { vals, vecs } = jacobiEigen(G);
+  k = Math.min(k, vals.filter((v) => v > 1e-9).length);
+  const sig = vals.slice(0, k).map(Math.sqrt);
+  // 词向量 U = Xᵀ V Σ⁻¹：每个词在 k 维空间里的方向
+  const U = Array.from({ length: vocab.length }, () => new Float64Array(k));
+  for (let j = 0; j < k; j++) for (let d = 0; d < N; d++) { const w = vecs[j][d] / sig[j]; if (!w) continue; for (const [i, x] of X[d]) U[i][j] += x * w; }
+  const embed = (s) => { const v = bow(s), e = new Float64Array(k); for (const [i, x] of v) for (let j = 0; j < k; j++) e[j] += x * U[i][j]; return e; };
+  const known = (s) => tokenize(s).map((t) => [t, col.has(t)]);
+  return { embed, k, vocab: vocab.length, known, bow };
+}
+const dot = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * b[i]; return s; };
+const norm = (a) => Math.sqrt(dot(a, a));
+const cos = (a, b) => { const n = norm(a) * norm(b); return n ? dot(a, b) / n : 0; };
+const rank = (scores) => [...scores.keys()].filter((i) => scores[i] > 1e-9).sort((a, b) => scores[b] - scores[a] || a - b); // 只排有分的
+function rrf(rankA, rankB, n, c = 60) { // Reciprocal Rank Fusion
+  const s = new Float64Array(n);
+  rankA.forEach((d, r) => s[d] += 1 / (c + r + 1)); rankB.forEach((d, r) => s[d] += 1 / (c + r + 1));
+  return s;
+}
+// ===== 页面共用 =====
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const title = (d) => d.split('：')[0];
+function seg(id, cb) {
+  const el = $(id);
+  el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; el.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); cb(b.dataset.v); });
+  return () => el.querySelector('[aria-pressed=true]').dataset.v;
+}
+function vb(id, w, h, nw, nh) { const el = $(id), n = el.clientWidth > 0 && el.clientWidth < 600, W = n ? nw : w, H = n ? nh : h; el.setAttribute('viewBox', `0 0 ${W} ${H}`); return [W, H, n]; }
+const E = makeEmbedder(BG, 24);
+const bm25 = makeBM25(DOCS);
+const DV = DOCS.map(E.embed);
+const vecScores = (q) => { const qv = E.embed(q); return DV.map((d) => cos(qv, d)); };
+const bestPos = (r, rel) => { const p = rel.map((d) => r.indexOf(d)).filter((x) => x >= 0); return p.length ? Math.min(...p) + 1 : Infinity; };
+const posText = (p) => p === Infinity ? '没搜到' : `第 ${p}`;
+function fillSelect(id) { $(id).innerHTML = QUERIES.map((x, i) => `<option value="${i}">${esc(x.q)}（${x.tag}）</option>`).join(''); }
+
+/* ---------- 00 向量的相近 ---------- */
+const unit = (v) => { const n = norm(v) || 1; return Array.from(v, (x) => x / n); };
+const SV = SENTS.map(([s]) => E.embed(s)), SU = SV.map(unit);
+// 画图用的 2 维截面：挑一个能同时看到三簇的平面（由三个簇中心方向张成），e0、e1 是它的正交基
+const [E0, E1] = (() => {
+  const cent = [0, 1, 2].map((t) => unit(SU.reduce((acc, u, i) => { if (SENTS[i][1] === t) for (let j = 0; j < u.length; j++) acc[j] += u[j]; return acc; }, new Float64Array(E.k))));
+  const e0 = unit(cent[0].map((x, j) => x - cent[1][j]));
+  let e1 = cent[0].map((x, j) => x + cent[1][j] - 2 * cent[2][j]); const d = dot(e1, e0); e1 = unit(e1.map((x, j) => x - d * e0[j]));
+  return [e0, e1];
+})();
+const proj = (v) => { const u = unit(v); return [dot(u, E0), dot(u, E1)]; };
+const SP = SU.map((u) => [dot(u, E0), dot(u, E1)]);
+const s0 = { q: null, text: '', q24: null };
+function setQuery0(text) { s0.text = text; s0.q24 = E.embed(text); s0.q = norm(s0.q24) < 1e-9 ? [0, 0] : proj(s0.q24); draw0(); }
+function draw0() {
+  const [W, H, n] = vb('#fig0', 800, 420, 420, 420), cx = W / 2, cy = H / 2, R = Math.min(W, H) / 2 - 36;
+  const cols = [css('--accent'), css('--warn'), css('--c4')], mu = css('--muted'), li = css('--line'), fg = css('--fg');
+  const X = (p) => cx + p[0] * R, Y = (p) => cy - p[1] * R, fs = n ? 16 : 13;
+  let s = `<line x1="${cx - R - 20}" y1="${cy}" x2="${cx + R + 20}" y2="${cy}" stroke="${li}"/><line x1="${cx}" y1="${cy - R - 10}" x2="${cx}" y2="${cy + R + 10}" stroke="${li}"/>`;
+  s += `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${li}" stroke-dasharray="3 4"/>`;
+  const pa = css('--paper'), halo = `paint-order="stroke" stroke="${pa}" stroke-width="4" stroke-linejoin="round"`;
+  SP.forEach((p, i) => { const c = cols[SENTS[i][1]]; s += `<line x1="${cx}" y1="${cy}" x2="${X(p)}" y2="${Y(p)}" stroke="${c}" stroke-width="1.5" stroke-opacity=".7"/><circle cx="${X(p)}" cy="${Y(p)}" r="4" fill="${c}"/>`; });
+  // 每簇三个标签叠成一列，放在簇中心方向的圆外侧，细线连回各自的点
+  const lh = fs + 5, maxc = n ? 6 : 9;
+  [0, 1, 2].forEach((t) => {
+    const idx = SP.map((p, i) => i).filter((i) => SENTS[i][1] === t).sort((a, b) => SP[b][1] - SP[a][1]);
+    const mx = idx.reduce((a, i) => a + SP[i][0], 0) / 3, my = idx.reduce((a, i) => a + SP[i][1], 0) / 3, d = Math.hypot(mx, my) || 1, ux = mx / d, uy = my / d;
+    const side = ux >= 0 ? 1 : -1, tw = (maxc + 1) * fs, ax0 = cx + ux * (R * 0.55) + side * (n ? 40 : 70);
+    const ax = side > 0 ? Math.min(ax0, W - 4 - tw) : Math.max(ax0, 4 + tw);
+    const ay0 = Math.max(fs + 2, Math.min(H - 6 - 2 * lh, cy - uy * (R * 0.95) - lh));
+    const c = cols[t];
+    idx.forEach((i, j) => {
+      const y = ay0 + j * lh, lab = SENTS[i][0].length > maxc ? SENTS[i][0].slice(0, maxc) + '…' : SENTS[i][0];
+      s += `<line x1="${X(SP[i])}" y1="${Y(SP[i])}" x2="${ax - side * 3}" y2="${y - fs / 3}" stroke="${c}" stroke-opacity=".35"/>`;
+      s += `<text x="${ax}" y="${y}" font-size="${fs}" fill="${c}" text-anchor="${side > 0 ? 'start' : 'end'}" ${halo}>${esc(lab)}</text>`;
+    });
+  });
+  if (s0.q) {
+    const x = X(s0.q), y = Y(s0.q);
+    s += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${fg}" stroke-width="3"/><circle id="qdot" cx="${x}" cy="${y}" r="9" fill="${fg}" style="cursor:grab"/>`;
+    s += `<text x="${x}" y="${y + 24}" font-size="${fs}" fill="${fg}" text-anchor="middle" font-weight="600" paint-order="stroke" stroke="${css('--paper')}" stroke-width="4">查询</text>`;
+  }
+  $('#fig0').innerHTML = s;
+  // 排序按 24 维余弦；拖动时查询向量 = x·e0 + y·e1（落在截面里的 24 维向量）
+  const q24 = s0.q24 || E0.map((e, j) => s0.q[0] * e + s0.q[1] * E1[j]);
+  const sc = SV.map((v) => cos(q24, v)), order = [...sc.keys()].sort((a, b) => sc[b] - sc[a]);
+  $('#list0').innerHTML = order.map((i, r) => `<li><span class="rk">${r + 1}</span><span><span style="color:${cols[SENTS[i][1]]}">●</span> ${esc(SENTS[i][0])}<div class="bar"><i style="width:${Math.max(0, sc[i]) * 100}%;background:${cols[SENTS[i][1]]}"></i></div></span><span class="v">${sc[i].toFixed(2)}</span></li>`).join('');
+  const zero = norm(q24) < 1e-9;
+  $('#r0a').textContent = zero ? '向量全为 0' : SENTS[order[0]][0]; $('#r0b').textContent = zero ? '–' : sc[order[0]].toFixed(3);
+  const unk = E.known(s0.text).filter((x) => !x[1]).map((x) => x[0]);
+  $('#r0c').textContent = s0.text ? (unk.length ? unk.join(' ') : '无') : '–';
+}
+(() => { // 拖动查询箭头
+  const svg = $('#fig0'); let drag = false;
+  const toVB = (e) => { const r = svg.getBoundingClientRect(), vbw = svg.viewBox.baseVal; return [(e.clientX - r.left) / r.width * vbw.width, (e.clientY - r.top) / r.height * vbw.height]; };
+  svg.addEventListener('pointerdown', (e) => { if (e.target.id !== 'qdot') return; drag = true; svg.setPointerCapture(e.pointerId); e.preventDefault(); });
+  svg.addEventListener('pointermove', (e) => {
+    if (!drag) return; const [px, py] = toVB(e), W = svg.viewBox.baseVal.width, H = svg.viewBox.baseVal.height, cx = W / 2, cy = H / 2, R = Math.min(W, H) / 2 - 36;
+    s0.q = [(px - cx) / R, -(py - cy) / R]; s0.text = ''; s0.q24 = null; draw0();
+  });
+  svg.addEventListener('pointerup', () => drag = false); svg.addEventListener('pointercancel', () => drag = false);
+})();
+$('#go0').addEventListener('click', () => setQuery0($('#q0').value.trim() || '开封的牛奶能放几天'));
+$('#q0').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#go0').click(); });
+
+/* ---------- 01 切块 ---------- */
+const PASS = "咖啡机的日常维护分早、中、晚三次。早班开机后先预热 25 分钟，期间把每组冲煮头各冲洗 5 秒，直到出水清澈。午高峰结束后，用干布擦拭蒸汽棒，并空喷两秒清掉奶渍，避免奶垢堵住喷孔。闭店前做反冲洗：把盲碗装上手柄，加入 3 克清洁粉，扣上冲煮头后启动萃取 10 秒再停 10 秒，重复 5 次，然后换清水同样重复 5 次，直到排出的水没有泡沫。反冲洗之后取下手柄，用刷子刷洗分水网，把滴水盘和废水桶倒空、冲净、晾干。蒸汽棒每周拆下喷头浸泡一次，锅炉水每月由维修人员排放更换。如果萃取时间突然变短、出水发散或者压力表指针偏离绿色区域，先停止出品并记录在交接本上，再按报修流程联系维修。";
+const ANS = ["闭店前做反冲洗：把盲碗装上手柄，加入 3 克清洁粉，扣上冲煮头后启动萃取 10 秒再停 10 秒，重复 5 次，然后换清水同样重复 5 次，直到排出的水没有泡沫。", "蒸汽棒每周拆下喷头浸泡一次", "如果萃取时间突然变短、出水发散或者压力表指针偏离绿色区域，先停止出品并记录在交接本上，再按报修流程联系维修。"].map((a) => [PASS.indexOf(a), PASS.indexOf(a) + a.length]);
+function chunkText(text, size, overlap, mode) {
+  const out = [];
+  if (mode === 'char') {
+    let s = 0;
+    for (;;) { const e = Math.min(text.length, s + size); out.push([s, e]); if (e >= text.length) break; s = Math.max(e - overlap, s + 1); }
+  } else { // 按句子：句号/分号为界，整句累加不超过 size；重叠 = 下一块从前面回带整句，回带总长不超过 overlap
+    const sents = []; let st = 0; for (let i = 0; i < text.length; i++) if ('。；！？'.includes(text[i]) || i === text.length - 1) { sents.push([st, i + 1]); st = i + 1; }
+    let i = 0;
+    while (i < sents.length) {
+      let j = i, len = 0; while (j < sents.length && (j === i || len + sents[j][1] - sents[j][0] <= size)) { len += sents[j][1] - sents[j][0]; j++; }
+      out.push([sents[i][0], sents[j - 1][1]]); if (j >= sents.length) break;
+      let b = j, back = 0; while (b - 1 > i && back + sents[b - 1][1] - sents[b - 1][0] <= overlap) { b--; back += sents[b][1] - sents[b][0]; }
+      i = b;
+    }
+  }
+  return out;
+}
+const getQ1 = seg('#qs1', draw1), getMode1 = seg('#mode1', draw1);
+function draw1() {
+  const size = +$('#sz1').value, ov = +$('#ov1').value, mode = getMode1(), [a0, a1] = ANS[+getQ1()];
+  $('#sz1v').textContent = size; $('#ov1v').textContent = ov;
+  const chunks = chunkText(PASS, size, Math.min(ov, size - 10), mode), L = PASS.length;
+  const full = chunks.filter(([s, e]) => s <= a0 && e >= a1).length, touch = chunks.filter(([s, e]) => Math.min(e, a1) - Math.max(s, a0) > 0).length;
+  const best = Math.max(...chunks.map(([s, e]) => Math.max(0, Math.min(e, a1) - Math.max(s, a0)))) / (a1 - a0);
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent'), wa = css('--warn');
+  const top = 54, Hd = Math.max(120, Math.min(260, top + chunks.length * 18 + 10)), [W, H, n] = vb('#fig1', 800, Hd, 420, Hd), pl = 50, pr = 14, rowH = Math.min(18, (H - top - 10) / chunks.length);
+  const X = (i) => pl + i / L * (W - pl - pr), fs = n ? 13 : 12;
+  let s = `<text x="${pl}" y="14" font-size="${fs}" fill="${mu}">全文 ${L} 字</text>`;
+  s += `<rect x="${pl}" y="20" width="${W - pl - pr}" height="12" rx="2" fill="${li}"/><rect x="${X(a0)}" y="20" width="${X(a1) - X(a0)}" height="12" rx="2" fill="${wa}"/>`;
+  s += `<text x="${X((a0 + a1) / 2)}" y="${top - 6}" font-size="${fs}" fill="${wa}" text-anchor="middle">答案 ${a1 - a0} 字</text>`;
+  chunks.forEach(([c0, c1], i) => {
+    const y = top + i * rowH + (rowH >= 12 ? 4 : 1), isFull = c0 <= a0 && c1 >= a1, part = Math.min(c1, a1) - Math.max(c0, a0) > 0;
+    const bh = Math.max(3, rowH - 6);
+    if (rowH >= 12) s += `<text x="${pl - 6}" y="${y + 10}" font-size="${fs}" fill="${mu}" text-anchor="end">${i + 1}</text>`;
+    s += `<rect x="${X(c0)}" y="${y}" width="${X(c1) - X(c0)}" height="${bh}" rx="2" fill="${isFull ? ac : li}" stroke="${part && !isFull ? wa : 'none'}" stroke-width="1.5"/>`;
+    if (part) s += `<rect x="${X(Math.max(c0, a0))}" y="${y + bh * 0.25}" width="${X(Math.min(c1, a1)) - X(Math.max(c0, a0))}" height="${bh * 0.5}" fill="${wa}" fill-opacity="${isFull ? 0.9 : 0.6}"/>`;
+  });
+  $('#fig1').innerHTML = s;
+  $('#pass1').innerHTML = esc(PASS.slice(0, a0)) + '<mark>' + esc(PASS.slice(a0, a1)) + '</mark>' + esc(PASS.slice(a1));
+  $('#r1a').textContent = chunks.length; $('#r1b').textContent = full ? `${full} 块` : '没有';
+  $('#r1c').textContent = `${Math.round(best * 100)}%`; $('#r1c').parentElement.className = 'ro ' + (best >= 0.999 ? 'ok' : 'warn');
+  $('#r1d').textContent = `${touch} 块`;
+}
+$('#sz1').addEventListener('input', draw1); $('#ov1').addEventListener('input', draw1);
+
+/* ---------- 02 top-k ---------- */
+fillSelect('#qsel2');
+const s2 = { q: QUERIES[0].q, rel: QUERIES[0].rel };
+function draw2() {
+  const k = +$('#k2').value; $('#k2v').textContent = k;
+  const sc = vecScores(s2.q), order = rank(sc).slice(0, 15), rel = s2.rel;
+  const mu = css('--muted'), li = css('--line'), ok = css('--ok'), wa = css('--warn');
+  const [W, H, n] = vb('#fig2', 800, 300, 420, 300), pl = 44, pr = 10, pt = 14, pb = 28, bw = (W - pl - pr) / 15, fs = n ? 13 : 12;
+  const mx = Math.max(0.2, ...order.map((i) => sc[i])), Y = (v) => pt + (1 - v / mx) * (H - pt - pb);
+  let s = '';
+  [0, 0.5, 1].forEach((f) => { const v = f * mx; s += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/><text x="${pl - 6}" y="${Y(v) + 4}" font-size="${fs}" fill="${mu}" text-anchor="end">${v.toFixed(2)}</text>`; });
+  order.forEach((d, r) => { const x = pl + r * bw, isRel = rel.includes(d); s += `<rect x="${x + bw * 0.15}" y="${Y(sc[d])}" width="${bw * 0.7}" height="${H - pb - Y(sc[d])}" rx="2" fill="${isRel ? ok : li}"/><text x="${x + bw / 2}" y="${H - 9}" font-size="${fs}" fill="${isRel ? ok : mu}" text-anchor="middle">${r + 1}</text>`; });
+  if (!order.length) s += `<text x="${W / 2}" y="${H / 2}" font-size="15" fill="${wa}" text-anchor="middle">查询向量全为 0：没有一个词是模型认识的</text>`;
+  const xk = pl + Math.min(k, 15) * bw; s += `<line x1="${xk}" y1="${pt - 6}" x2="${xk}" y2="${H - pb}" stroke="${wa}" stroke-width="2" stroke-dasharray="5 4"/><text x="${xk - 6}" y="${pt + 4}" font-size="${fs}" fill="${wa}" text-anchor="end">top-${k}</text>`;
+  $('#fig2').innerHTML = s;
+  const top = order.slice(0, k);
+  $('#list2').innerHTML = top.map((d, r) => `<li class="${rel.includes(d) ? 'rel' : ''}"><span class="rk">${r + 1}</span><span>${esc(DOCS[d])}</span><span class="v">${sc[d].toFixed(2)}</span></li>`).join('');
+  const got = rel.filter((d) => top.includes(d)).length, noise = top.length - got;
+  $('#r2a').textContent = rel.length ? `${got} / ${rel.length}` : '–'; $('#r2b').textContent = `${noise} 条`;
+  $('#r2c').textContent = top.reduce((a, d) => a + DOCS[d].length, 0) + ' 字';
+  const worst = rel.length ? Math.max(...rel.map((d) => order.indexOf(d) < 0 ? Infinity : order.indexOf(d) + 1)) : Infinity;
+  $('#r2d').textContent = rel.length ? (worst === Infinity ? '15 名以外' : `第 ${worst}`) : '–';
+}
+$('#qsel2').addEventListener('change', () => { const x = QUERIES[+$('#qsel2').value]; s2.q = x.q; s2.rel = x.rel; $('#q2').value = ''; draw2(); });
+$('#q2').addEventListener('keydown', (e) => { if (e.key === 'Enter' && $('#q2').value.trim()) { s2.q = $('#q2').value.trim(); s2.rel = []; draw2(); } });
+$('#k2').addEventListener('input', draw2);
+
+/* ---------- 03 三种方法 ---------- */
+fillSelect('#qsel3');
+const s3 = { q: QUERIES[7].q, rel: QUERIES[7].rel };
+$('#qsel3').value = 7;
+function threeWays(q) {
+  const rb = rank(bm25(q)), rv = rank(vecScores(q)), rh = rank(rrf(rb, rv, DOCS.length));
+  return { rb, rv, rh };
+}
+const HIT3 = (() => { const h = [0, 0, 0]; QUERIES.forEach(({ q, rel }) => { const { rb, rv, rh } = threeWays(q); [rb, rv, rh].forEach((r, i) => { if (bestPos(r, rel) <= 5) h[i]++; }); }); return h; })();
+function draw3() {
+  const { rb, rv, rh } = threeWays(s3.q), rel = s3.rel, ac = css('--accent'), mu = css('--muted'), li = css('--line'), wa = css('--warn');
+  $('#toks3').innerHTML = '<span style="border:0;color:var(--muted)">查询切成的词：</span>' + E.known(s3.q).map(([t, k]) => `<span class="${k ? '' : 'unk'}" title="${k ? '模型认识' : '模型没见过'}">${esc(t)}</span>`).join('');
+  const col = (name, sub, r) => `<div class="col"><h3>${name}<small>${sub}</small></h3>${r.length ? `<ol>${r.slice(0, 5).map((d) => `<li class="${rel.includes(d) ? 'rel' : ''}"><span>${esc(DOCS[d])}</span></li>`).join('')}</ol>` : '<p class="empty">一条都没搜到</p>'}</div>`;
+  $('#cols3').innerHTML = col('关键词 BM25', '只认一样的词', rb) + col('向量', '24 维余弦', rv) + col('混合 RRF', '两份排名合并', rh);
+  [['#r3a', rb], ['#r3b', rv], ['#r3c', rh]].forEach(([id, r]) => { $(id).textContent = rel.length ? posText(bestPos(r, rel)) : '–'; });
+  const [W, H, n] = vb('#fig3', 800, 150, 420, 170), pl = 110, pr = 60, rowH = (H - 20) / 3, fs = n ? 16 : 13;
+  let s = ''; ['关键词', '向量', '混合'].forEach((nm, i) => {
+    const y = 10 + i * rowH + rowH * 0.25, w = (W - pl - pr) * HIT3[i] / QUERIES.length;
+    s += `<text x="${pl - 10}" y="${y + rowH * 0.35}" font-size="${fs}" fill="${mu}" text-anchor="end">${nm}</text><rect x="${pl}" y="${y}" width="${W - pl - pr}" height="${rowH * 0.5}" fill="${li}" rx="3"/><rect x="${pl}" y="${y}" width="${w}" height="${rowH * 0.5}" fill="${i === 2 ? ac : mu}" rx="3"/><text x="${pl + w + 8}" y="${y + rowH * 0.35}" font-size="${fs}" fill="${i === 2 ? ac : mu}">${HIT3[i]} / ${QUERIES.length}</text>`;
+  });
+  $('#fig3').innerHTML = s;
+}
+$('#qsel3').addEventListener('change', () => { const x = QUERIES[+$('#qsel3').value]; s3.q = x.q; s3.rel = x.rel; $('#q3').value = ''; draw3(); });
+$('#q3').addEventListener('keydown', (e) => { if (e.key === 'Enter' && $('#q3').value.trim()) { s3.q = $('#q3').value.trim(); s3.rel = []; draw3(); } });
+
+/* ---------- 04 从检索到回答 ---------- */
+// 上一讲（context-window 实验 02）的示意模型，原样搬来：Liu et al. 2023 表 6，gpt-3.5-turbo-0613，20 篇文档，位置 1/5/10/15/20
+const LIM = { pos: [1, 5, 10, 15, 20], acc: [75.8, 57.2, 53.8, 55.4, 63.2], closed: 56.1, N: 20 };
+function solve3(A, b) {
+  const M = A.map((r, i) => [...r, b[i]]);
+  for (let i = 0; i < 3; i++) { let p = i; for (let r = i + 1; r < 3; r++) if (Math.abs(M[r][i]) > Math.abs(M[p][i])) p = r; [M[i], M[p]] = [M[p], M[i]]; if (Math.abs(M[i][i]) < 1e-12) return null; for (let r = 0; r < 3; r++) if (r !== i) { const f = M[r][i] / M[i][i]; for (let c = i; c < 4; c++) M[r][c] -= f * M[i][c]; } }
+  return M.map((r, i) => r[3] / r[i]);
+}
+// acc(x) = c + p·exp(−x/τ1) + r·exp(−(1−x)/τ2)，x = 相对位置 0..1；网格搜 τ1, τ2，线性最小二乘求 c, p, r
+const LIMFIT = (() => {
+  const xs = LIM.pos.map((p) => (p - 1) / (LIM.N - 1)); let best = null;
+  for (let t1 = 0.05; t1 <= 0.6; t1 += 0.01) for (let t2 = 0.05; t2 <= 0.6; t2 += 0.01) {
+    const F = xs.map((x) => [1, Math.exp(-x / t1), Math.exp(-(1 - x) / t2)]);
+    const A = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], b = [0, 0, 0];
+    F.forEach((f, i) => { for (let r = 0; r < 3; r++) { b[r] += f[r] * LIM.acc[i]; for (let c = 0; c < 3; c++) A[r][c] += f[r] * f[c]; } });
+    const sol = solve3(A, b); if (!sol) continue;
+    const err = F.reduce((e, f, i) => e + (f[0] * sol[0] + f[1] * sol[1] + f[2] * sol[2] - LIM.acc[i]) ** 2, 0);
+    if (!best || err < best.err) best = { err, c: sol[0], p: sol[1], r: sol[2], t1, t2 };
+  }
+  return best;
+})();
+const limAccX = (x) => { const f = LIMFIT; return f.c + f.p * Math.exp(-x / f.t1) + f.r * Math.exp(-(1 - x) / f.t2); };
+const Q4 = QUERIES[0], SYS4 = 80, ORDER4 = rank(vecScores(Q4.q)), ANS4 = Q4.rel[0];
+function draw4() {
+  const k = +$('#k4').value; $('#k4v').textContent = k;
+  const pIn = $('#p4'); pIn.max = k; if (+pIn.value > k) pIn.value = k; const at = +pIn.value - 1; $('#p4v').textContent = `${at + 1} / ${k}`;
+  const others = ORDER4.filter((d) => d !== ANS4).slice(0, k - 1); // 其余 k−1 条按真实检索名次
+  const seqDocs = others.slice(); seqDocs.splice(at, 0, ANS4);
+  const xrel = (i) => (k === 1 ? 0 : i / (k - 1)), accs = seqDocs.map((_, i) => limAccX(xrel(i)));
+  const blocks = [{ len: SYS4, kind: 'sys', label: '系统提示' }, ...seqDocs.map((d, i) => ({ len: DOCS[d].length, kind: d === ANS4 ? 'ans' : 'doc', label: title(DOCS[d]), i })), { len: Q4.q.length + 8, kind: 'sys', label: '问题' }];
+  const total = blocks.reduce((a, b) => a + b.len, 0);
+  const mu = css('--muted'), li = css('--line'), ok = css('--ok'), wa = css('--warn');
+  const [W, H, n] = vb('#fig4', 800, 280, 420, 320), pl = 46, pr = 14, barY = H - 64, barH = 26, fs = n ? 13 : 12;
+  const lo = 45, hi = 80, X = (c) => pl + c / total * (W - pl - pr), cY = (v) => 30 + (hi - v) / (hi - lo) * (barY - 56);
+  let s = '', acc = 0; const mids = [];
+  blocks.forEach((b) => {
+    const x0 = X(acc), x1 = X(acc + b.len); if (b.i !== undefined) mids.push((x0 + x1) / 2);
+    s += `<rect x="${x0}" y="${barY}" width="${Math.max(1, x1 - x0 - 1.5)}" height="${barH}" fill="${b.kind === 'sys' ? mu : b.kind === 'ans' ? ok : li}"/>`;
+    if (b.kind === 'ans' || (b.kind === 'sys' && x1 - x0 > (n ? 46 : 40))) s += `<text x="${(x0 + x1) / 2}" y="${barY + barH + 18}" font-size="${fs}" fill="${b.kind === 'ans' ? ok : mu}" text-anchor="middle">${esc(b.kind === 'ans' ? '答案' : b.label)}</text>`;
+    acc += b.len;
+  });
+  [50, 60, 70, 80].forEach((v) => s += `<line x1="${pl}" y1="${cY(v)}" x2="${W - pr}" y2="${cY(v)}" stroke="${li}" stroke-opacity=".6"/><text x="${pl - 6}" y="${cY(v) + 4}" font-size="${fs}" fill="${mu}" text-anchor="end">${v}%</text>`);
+  s += `<line x1="${pl}" y1="${cY(LIM.closed)}" x2="${W - pr}" y2="${cY(LIM.closed)}" stroke="${mu}" stroke-dasharray="5 4"/><text x="${pl + 4}" y="${cY(LIM.closed) + 16}" font-size="${fs}" fill="${mu}">不给资料 56.1%</text>`;
+  if (k > 1) s += `<path d="${mids.map((x, i) => (i ? 'L' : 'M') + x.toFixed(1) + ',' + cY(accs[i]).toFixed(1)).join('')}" fill="none" stroke="${wa}" stroke-width="2.5"/>`;
+  mids.forEach((x, i) => { const isA = i === at; s += `<circle cx="${x}" cy="${cY(accs[i])}" r="${isA ? 7 : 3.5}" fill="${isA ? ok : wa}"/>`; if (isA) s += `<line x1="${x}" y1="${cY(accs[i]) + 7}" x2="${x}" y2="${barY}" stroke="${ok}" stroke-dasharray="4 3"/>`; });
+  $('#fig4').innerHTML = s;
+  $('#r4a').textContent = total + ' 字'; $('#r4b').textContent = Math.round(xrel(at) * 100) + '%'; $('#r4c').textContent = accs[at].toFixed(1) + '%';
+  $('#r4c').parentElement.className = 'ro ' + (accs[at] < LIM.closed ? 'warn' : 'ok');
+}
+$('#k4').addEventListener('input', draw4); $('#p4').addEventListener('input', draw4);
+
+/* ---------- 05 rerank ---------- */
+fillSelect('#qsel5');
+const ALLDF = (() => { const df = new Map(); [...DOCS, ...BG].forEach((d) => new Set(tokenize(d)).forEach((t) => df.set(t, (df.get(t) || 0) + 1))); return df; })();
+const idfAll = (t) => Math.log((DOCS.length + BG.length + 1) / ((ALLDF.get(t) || 0) + 1)) + 1;
+function rerankScore(q, i, qv, qb) {
+  const d = DOCS[i], qt = [...new Set(tokenize(q))], dt = new Set(tokenize(d)), tt = new Set(tokenize(title(d)));
+  let got = 0, tot = 0; for (const t of qt) { const w = idfAll(t); tot += w; if (dt.has(t)) got += w * (tt.has(t) ? 1.5 : 1); }
+  const cov = tot ? Math.min(1, got / tot) : 0;
+  const db = E.bow(d); let exact = 0; for (const [t, x] of qb) { const y = db.get(t); if (y) exact += x * y; } // 压缩前的完整词袋余弦
+  const qn = /多久|多少|几|哪天|什么时候|几点/.test(q) && /\d/.test(d) ? 0.15 : 0;
+  return cos(qv, DV[i]) + 2 * exact + 0.5 * cov + qn;
+}
+function twoStage(q) {
+  const qv = E.embed(q), qb = E.bow(q), cand = rank(DV.map((d) => cos(qv, d))).slice(0, 20);
+  const rr = cand.slice().sort((a, b) => rerankScore(q, b, qv, qb) - rerankScore(q, a, qv, qb));
+  return { cand, rr, score: (i) => rerankScore(q, i, qv, qb), cosv: (i) => cos(qv, DV[i]) };
+}
+const STAT5 = QUERIES.map((x) => { const { cand, rr } = twoStage(x.q); return { before: bestPos(cand, x.rel), after: bestPos(rr, x.rel) }; });
+function draw5() {
+  const qi = +$('#qsel5').value, x = QUERIES[qi], { cand, rr, score, cosv } = twoStage(x.q);
+  const li = (d, v) => `<li class="${x.rel.includes(d) ? 'rel' : ''}"><span>${esc(DOCS[d])} <span class="rk">${v}</span></span></li>`;
+  $('#l5a').innerHTML = cand.length ? cand.map((d) => li(d, cosv(d).toFixed(2))).join('') : '<li class="empty">一条都没召回（查询向量全为 0）</li>';
+  $('#l5b').innerHTML = rr.length ? rr.slice(0, 5).map((d) => li(d, score(d).toFixed(2))).join('') : '<li class="empty">没有候选，精排无从排起</li>';
+  $('#h5a').textContent = `相关条目${posText(STAT5[qi].before)}`; $('#h5b').textContent = `相关条目${posText(STAT5[qi].after)}`;
+  $('#t5').innerHTML = `<tr><th>查询</th><th>类型</th><th class="num">精排前名次</th><th class="num">精排后</th></tr>` + QUERIES.map((y, i) => { const b = STAT5[i].before, a = STAT5[i].after, cls = a < b ? 'up' : a > b ? 'down' : ''; return `<tr${i === qi ? ' style="background:var(--accent-soft)"' : ''}><td>${esc(y.q)}</td><td>${y.tag}</td><td class="num">${b === Infinity ? '–' : b}</td><td class="num ${cls}">${a === Infinity ? '–' : a}</td></tr>`; }).join('');
+  const h1 = (key) => STAT5.filter((s) => s[key] === 1).length, h5 = (key) => STAT5.filter((s) => s[key] <= 5).length;
+  $('#r5a').textContent = `${h1('before')} / ${QUERIES.length}`; $('#r5b').textContent = `${h1('after')} / ${QUERIES.length}`; $("#r5c").textContent = `${h5("before")} → ${h5("after")}`;
+}
+$('#qsel5').addEventListener('change', draw5);
+$('#qsel5').value = 9;
+
+/* ---------- 启动与重绘 ---------- */
+setQuery0($('#q0').value);
+const all = () => { draw0(); draw1(); draw2(); draw3(); draw4(); draw5(); };
+all();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { draw0(); draw1(); draw2(); draw3(); draw4(); }, 150); });
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>

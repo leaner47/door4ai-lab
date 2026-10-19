@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-19 09:10 America/New_York · 更新者：Claude（会话 session_01HXmwuvnq8Z7skbnkunsKCy）
+最后更新：2026-10-19 09:55 America/New_York · 更新者：Claude（会话 session_01HXmwuvnq8Z7skbnkunsKCy）
 
 ---
 
@@ -140,6 +140,7 @@ door4ai-lab/
 - 课程顺序：注意力 QKV（order 5）在前，KV Cache（order 10）在后，因为 KV cache 建立在 Q/K/V 概念上。
 - 课程顺序：残差连接（order 25）紧接梯度下降（20）：讲深网络为什么训不动。
 - 课程顺序：梯度下降（order 20）放在 KV Cache 之后：前面几讲讲推理，从这一讲开始讲训练（参数从哪来）；后续训练相关的讲（反向传播、LoRA 等）接在 20 之后。课程目录的「第 N 讲」由 order 排序自动生成。
+- **MCP 讲按 2026-07-28 规范写**（2026-10-19 已核对官方 changelog）：无状态，去掉了 `initialize` 握手与 `Mcp-Session-Id`，新增 `server/discover`，结果必带 `resultType`，Streamable HTTP 请求必带 `Mcp-Method` / `Mcp-Name` 头；实验 01 可切回 2025-11-25 握手式对照。规范再更新时改 `public/labs/mcp/` 与文章。
 - **课程三篇结构（2026-10-16 本人决定）**：基础篇（order < 4）→ 模型篇（4 ≤ order < 100）→ **Agent 篇（order ≥ 100）**。Agent 篇的骨架参考了市面上一门 Agent 工程课的目录顺序（工具调用 → Loop → 上下文/记忆 → RAG → MCP → 流式 → Trace/Eval → 网关与编排 → 框架全景），采用的是"先手写、后看框架"的顺序，**不吸收**它的 Node/前端工程内容。本人决定：先立项写出全部讲，缺什么等他自学时发现再补；模型篇先补齐（反向传播 30、LayerNorm 35、LoRA 40、模型评测 45）再写 Agent 篇。
 
 - **账号与计费（2026-10-14 本人确认）**：自建账号，D1 不用 PG；不设密码，Passkey 为主、邮箱验证码注册与兜底、TOTP 可选（未做）；每账号同一时间只允许 1 个会话，新登录踢掉旧会话；只做买断，不做订阅；买全套包含以后新增的讲；收款复用 door4ai.com 的 pay-api（接口文档待本人提供）；记录注册来源（首次/最后触达 UTM、ref 渠道码、来源问卷）。设计文档：https://claude.ai/code/artifact/9679fc7a-0fe4-4323-86f1-65cbb1cc005f
@@ -163,7 +164,8 @@ door4ai-lab/
 - [x] 新增《残差连接为什么必不可少：深网络是怎么训得动的》+「残差连接实验室」00–04 + 两段 Manim 动画（GradientHighway、ResidualStream），order 25，梯度下降之后（2026-10-16）
 - [x] 模型篇补齐 4 讲（2026-10-16）：《反向传播是怎么算梯度的》(order 30，5 实验 + 2 动画)、《LayerNorm 为什么必需》(35，6 实验 + 2 动画)、《LoRA 为什么省参数》(40，6 实验 + 2 动画)、《模型怎么评测》(45，6 实验 + 2 动画)
 - [x] Agent 篇前三讲（2026-10-19）：《大模型怎么调用工具》(order 100，6 实验 + 2 动画)、《Agent Loop》(105，6 实验 + 2 动画)、《上下文窗口是 Agent 的工作记忆》(110，6 实验 + 2 动画)
-- [ ] Agent 篇剩余：`rag-embedding` 115（实验页与动画源码已有草稿、未渲染视频、文章未完成，未入库）、`mcp` 120、`streaming` 125、`trace-eval` 130、`gateway-orchestration` 135、`agent-frameworks` 140；基础篇 `ai-coding-tools` 3.8
+- [x] Agent 篇第 4–7 讲（2026-10-19）：《Embedding 与 RAG》(115)、《MCP》(120)、《流式输出》(125)、《Trace 与 Eval》(130)，各 6 实验 + 2 动画
+- [ ] Agent 篇剩余：`gateway-orchestration` 135、`agent-frameworks` 140（纯文字）；基础篇 `ai-coding-tools` 3.8
 - [ ] 关于页只有两句话，待充实
 - [ ] 没有统计/分析（可考虑 Cloudflare Web Analytics，免费，一行脚本）
 - [x] 账号系统第 0 期代码完成并推送（默认关闭，线上行为不变）：邮箱验证码注册/登录、Passkey、单会话、注册来源、门禁、登录/账号/购买占位页；本地端到端 22/22 通过（2026-10-14）
@@ -181,6 +183,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-19 · Claude** — Agent 篇第 4–7 讲上线（四个子任务并行，主会话统一检查）：`rag-embedding`（115：被限流中断的草稿补完；00 页内 LSA（TF-IDF + SVD，24 维）向量 / 01 切块与答案被切断 / 02 top-k 召回 / 03 BM25、向量、RRF 混合 / 04 片段位置 × 片段数（沿用上一讲 Lost in the Middle 示意曲线）/ 05 rerank（启发式，已标明）；embedding 模型表 2026-10-19 查证）、`mcp`（120：按 2026-07-28 规范，页内两个真的迷你 MCP server 处理 JSON-RPC；00 M×N→M+N / 01 报文时序（可切 2025-11-25 握手式、stdio / Streamable HTTP）/ 02 MCP 工具→模型 tools→tools/call 字段流转 / 03 手发请求看真实响应与错误码 / 04 审批策略 / 05 工具说明里的提示注入（示意）；动画 MxN、MCPRoundTrip）、`streaming`（125：00 TTFT 与总时长 / 01 setTimeout 真推送的 SSE，Anthropic / OpenAI 两种格式，o200k 真分词 / 02 随机字节切块下三种解析器对照，TextDecoder stream 正确 / 03 input_json_delta 拼接 / 04 按 token/s 真打字 / 05 ReadableStream + AbortController 取消；流式格式 2026-10-19 核对官方文档）、`trace-eval`（130：00 span 树 + 甘特图 / 01 耗时成本归因 / 02 结果、轨迹、单步三层判分 / 03 LLM 裁判位置与长度偏差蒙特卡洛——交换顺序判两次不提高期望分，改讲「一致结论更可靠」/ 04 30 题回归矩阵 + McNemar / 05 拦截规则引擎；示例数据已标明）。注：Manim 产物实际落在 `manim-src/media/{videos,images}/scenes/`（按模块名），不是 `<slug>/`。本地 build 29 页通过；headless Chromium 1440 浅色 / 390 深色无横向滚动、iframe 自动长高、无脚本错误；个人信息检索 0。`wip/rag-embedding` 分支已无用，可删。
 
 - **2026-10-19 · Claude** — Agent 篇前三讲上线：`tool-calling`（100：00 一次 tool call 的来回，Anthropic / OpenAI 两种报文可切换，页内真实执行计算器与单位换算 / 01 工具定义占多少 token，**复用同源 `/labs/tokenizer-llm/tiktoken.js`**（移动该文件需同步改这里）/ 02 页内 JSON Schema 校验器与 is_error 重试 / 03 串行 vs 并行时间线 / 04 长结果截断与摘要 / 05 工具选择示意树；动画 ToolCallLoop、SchemaToText）、`agent-loop`（105：00 最小循环与 messages 数组增长 / 01 token 二次方累积与 prompt cache / 02 终止与预算 / 03 失败处理蒙特卡洛 / 04 workflow vs agent / 05 ReAct 轨迹阅读器；动画 WhileLoop、ReActTrace；引 Anthropic《Building effective agents》）、`context-window`（110：00 窗口预算条 / 01 Llama-3-70B KV cache 与注意力 n² 代价 / 02 Lost in the Middle 示意曲线（拟合 Liu et al. 2023 实测点）/ 03 截断、滚动、摘要三种压缩 / 04 持久记忆两次会话 / 05 prompt cache 费用；动画 ContextBudget、MemoryLayers；各家上下文长度为 2026-10-16 查证）。三讲首次在课程文章里用 fenced code。`rag-embedding` 写手中途被限流中断，草稿留在本地未入库。本地 build 25 页通过；headless Chromium 检查 1440 浅色 / 390 深色无横向滚动、iframe 自动长高、无脚本错误；个人信息检索 0。
 

@@ -49,11 +49,23 @@ export const POSTS: Record<string, PostAccess> = {
     "access": "paid",
     "series": "ai-mastery"
   },
+  "mcp": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
   "model-evaluation": {
     "access": "paid",
     "series": "ai-mastery"
   },
+  "rag-embedding": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
   "residual-connection": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
+  "streaming": {
     "access": "paid",
     "series": "ai-mastery"
   },
@@ -62,6 +74,10 @@ export const POSTS: Record<string, PostAccess> = {
     "series": "ai-mastery"
   },
   "tool-calling": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
+  "trace-eval": {
     "access": "paid",
     "series": "ai-mastery"
   }
@@ -78,8 +94,12 @@ export const LABS: Record<string, string> = {
   "labs/kv-cache": "kv-cache-quantization",
   "labs/layernorm": "layernorm",
   "labs/lora": "lora",
+  "labs/mcp": "mcp",
   "labs/model-evaluation": "model-evaluation",
+  "labs/rag-embedding": "rag-embedding",
   "labs/residual-connection": "residual-connection",
+  "labs/streaming": "streaming",
   "labs/tokenizer-llm": "tokenizer-llm",
-  "labs/tool-calling": "tool-calling"
+  "labs/tool-calling": "tool-calling",
+  "labs/trace-eval": "trace-eval"
 };
