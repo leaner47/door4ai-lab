@@ -25,6 +25,10 @@ export const POSTS: Record<string, PostAccess> = {
     "access": "paid",
     "series": "ai-mastery"
   },
+  "browser-computer-use": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
   "cloudflare-basics": {
     "access": "paid",
     "series": "ai-mastery"
@@ -124,6 +128,7 @@ export const LABS: Record<string, string> = {
   "labs/ai-coding-tools": "ai-coding-tools",
   "labs/attention-qkv": "attention-qkv",
   "labs/backpropagation": "backpropagation",
+  "labs/browser-computer-use": "browser-computer-use",
   "labs/computer-anatomy": "computer-anatomy",
   "labs/context-window": "context-window",
   "labs/gateway-orchestration": "gateway-orchestration",

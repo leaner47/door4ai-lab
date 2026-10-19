@@ -157,7 +157,7 @@ data: {"type":"content_block_stop","index":1}
 
 ## 和前后两讲的关系
 
-这一讲接着两条线。一条是模型篇的 Token 讲：那里讲了 prefill 和 decode，这里看它们怎么变成用户感受到的延迟。另一条是上一讲 MCP：MCP 的 Streamable HTTP 传输里，服务器同样可以用 `text/event-stream` 往回推消息，今天讲的 SSE 格式和解析方法在那里原样适用。
+这一讲接着两条线。一条是模型篇的 Token 讲：那里讲了 prefill 和 decode，这里看它们怎么变成用户感受到的延迟。另一条是第 120 讲 MCP：MCP 的 Streamable HTTP 传输里，服务器同样可以用 `text/event-stream` 往回推消息，今天讲的 SSE 格式和解析方法在那里原样适用。
 
 下一讲《Trace 与 Eval》讲怎么看清一个 Agent 到底干了什么、干得好不好。流里的每一个事件都带着时间戳和内容：什么时候开始、首 token 用了多久、调了哪个工具、参数是什么、为什么停、用了多少 token。把这些事件记下来，就是可观测性最直接的数据来源。
 

@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-19 18:00 America/New_York · 更新者：Claude（会话 session_01MmDJEcUExCaMurhqYeS9sy）
+最后更新：2026-10-19 18:15 America/New_York · 更新者：Claude（会话 session_01MmDJEcUExCaMurhqYeS9sy）
 
 ---
 
@@ -174,7 +174,7 @@ door4ai-lab/
 - [x] 课程规划 14 讲全部上线（2026-10-19）：最后一批《AI 写代码是怎么回事》(3.8，5 实验 + 1 动画)、《多模型网关与多 Agent 编排》(135，6 实验 + 2 动画)、《Agent 框架全景》(140，纯文字)
 - [x] 模型篇补充四讲（2026-10-19）：《多头注意力与 GQA》(order 7)、《模型量化》(12)、《MoE 混合专家》(15)、《RLHF 与偏好对齐》(42)，各 6 实验 + 2 动画
 - [x] 新增《Harness 是什么：模型外面那层替它动手的程序》（order 107，Agent Loop 之后、上下文窗口之前，作为 Agent 篇总纲；5 实验 + 2 动画）；RLHF 讲末尾加「Agent 的强化学习」一节 + 实验 06（2026-10-19）
-- [ ] 拟写《AI 怎么浏览网页、操作电脑》（order 122，另一会话提出的方案）：开头一句回扣 107 讲
+- [x] 新增《AI 怎么浏览网页、操作电脑：眼睛、手和权限》（order 122，MCP 之后、流式输出之前；5 实验 + 1 动画）（2026-10-19）
 - [ ] 待补查（写手凭记忆、未找到原文出处）：RLHF 讲里 GPT-3 预训练 300 B token、InstructGPT 每题 4–9 个回答排序、Llama 2 双奖励模型与四档评分；量化讲的困惑度表来自单作者预印本（arXiv 2601.14277），如需更强出处可删
 - [ ] 本人自学时发现缺口再补
 - [ ] 关于页只有两句话，待充实
@@ -194,6 +194,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-19 · Claude（session_01MmDJEcUExCaMurhqYeS9sy）** — 按本人要求写完另一会话提出的 122 讲。新增 `browser-computer-use`（order 122）：文章 `src/content/blog/browser-computer-use.md`；实验页 `public/labs/browser-computer-use/` 的核心是一个用 srcdoc iframe 嵌入的真实 1280 × 800 模拟商城网页（`shopHTML(o)` 可开关：改 id、只剩图标的按钮、截图后才弹出的横幅、四种藏法的注入）。00 页面文字 / 元素清单（按 Playwright MCP 写法自建可访问性快照，`ref=eN`）/ 截图三种看法，文字由 o200k 计数，截图按 Claude 视觉文档 ⌈w/28⌉ × ⌈h/28⌉、标准档长边 1568 & 1568 token、高分辨率档 2576 & 4784 token / 01 在缩小后的截图上点击，三种坐标换算，`elementFromPoint` 查点中什么 / 02 JS、元素编号、截图坐标三种做法真实执行搜索，三种网页变化各让一种失败（执行用的 iframe 是 fixed + opacity 0，放到屏幕外会导致 hit-test 失灵；表单处理函数不能叫 `go`，会被同名按钮遮住）/ 03 8 个动作 × 5 层保护 / 04 注入四种藏法 × 四条通道（真实 DOM 检查）、三种措辞 × 规则检测器。动画 `manim-src/browser-computer-use/scenes.py` → `public/videos/browser-computer-use/ScreenshotClickLoop`。事实 2026-10-19 查证：Claude Vision 与 Computer use 文档（工具集 17 个动作、约 4,500 token 开销、推荐分辨率）、Playwright MCP 快照格式、Claude for Chrome（2025-08-25：123 个用例，23.6% → 11.2%，浏览器特有攻击 35.7% → 0）。衔接：`mcp.md` 末段预告本讲、`streaming.md`「上一讲 MCP」改为第 120 讲。本地 build 39 页通过；Chromium 1440 浅色 / 390 深色无横向滚动、无脚本错误、KaTeX 无报错；个人信息检索 0。
 
 - **2026-10-19 · Claude（session_01MmDJEcUExCaMurhqYeS9sy）** — 本人问「什么是 harness」后要求写成一讲（位置由 Claude 定：107，作为 Agent 篇总纲）。(1) 新增 `agent-harness`（order 107）：文章 `src/content/blog/agent-harness.md`；实验页 `public/labs/agent-harness/`：00 页内迷你 harness（虚拟文件系统、grep / bash / edit / run_tests、o200k 计数、8K 窗口减 2K 输出预留），可关掉循环 / 工具执行 / 错误回填 / 上下文管理 / 权限确认，各自坏法不同（日志 75 行、两次搜索才会撑爆窗口，数字已在 Chromium 里核对）/ 01 14 个动作分「程序 / 再调一次模型」/ 02 按需加载（真实分词器；可切 Anthropic 文中 58 个工具约 55K token 的实测平均）/ 03 整份重写、`str_replace`、`apply_patch` 三个真解析器（apply_patch 按 Codex 的逐级放宽匹配）+ 四种注入错误 / 04 相邻两轮请求逐 token 最长公共前缀，三个打碎缓存的开关。复用同源 `/labs/tokenizer-llm/tiktoken.js`。动画 `manim-src/agent-harness/scenes.py` → `public/videos/agent-harness/{HarnessLayers,ModelInsideHarness}`。(2) `rlhf-alignment` 加一节「从一问一答到多步任务：Agent 的强化学习」（DeepSWE、Search-R1 屏蔽对照、Claude 3.7 Sonnet 系统卡第 6 节）+ 实验 06（三种做法的策略，GRPO 组内优势真实计算；仓库测试可改时改测试文件概率升到 99%+、真实通过率 2%，隐藏测试时学会认真改）；该实验页首次引入 KaTeX，只渲染 `#s6`，旧的 HTML 公式仍待迁移。(3) 衔接：`agent-loop.md` 末段指向 107、`context-window.md` 两处「上一讲」改为第 105 讲并回扣 harness、`agent-frameworks.md` 回顾段加 107。本地 build 38 页通过；Chromium 1440 浅色 / 390 深色无横向滚动、iframe 自动长高、无脚本错误、KaTeX 无报错；个人信息检索 0。
 
@@ -362,7 +364,7 @@ door4ai-lab/
    - 基础篇：`ai-coding-tools` 3.8 AI Coding 入门（Claude Code / Codex 怎么用，接 Resource 页）
    - 模型篇：`backpropagation` 30 反向传播 · `layernorm` 35 LayerNorm · `lora` 40 LoRA · `model-evaluation` 45 模型评测
    - Agent 篇：`tool-calling` 100 工具调用 · `agent-loop` 105 Agent Loop 与 ReAct · `context-window` 110 上下文与记忆 · `rag-embedding` 115 Embedding 与 RAG · `mcp` 120 MCP · `streaming` 125 流式输出（SSE）· `trace-eval` 130 Trace 与 Eval · `gateway-orchestration` 135 多模型网关与多 Agent 编排 · `agent-frameworks` 140 框架全景（纯文字）
-   - 补充（2026-10-19 已写）：`multihead-gqa` 7 · `weight-quantization` 12 · `mixture-of-experts` 15 · `rlhf-alignment` 42 · `agent-harness` 107
+   - 补充（2026-10-19 已写）：`multihead-gqa` 7 · `weight-quantization` 12 · `mixture-of-experts` 15 · `rlhf-alignment` 42 · `agent-harness` 107 · `browser-computer-use` 122
 2. 给文章列表加按 tag 过滤。
 3. 加 Cloudflare Web Analytics。
 
