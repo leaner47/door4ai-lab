@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>工具调用实验室</title>
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+p code,li code,td code{font-family:var(--mono);font-size:.84em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+ul,ol{padding-left:1.2em}
+.formula{font-size:20px;text-align:center;margin:18px 0;letter-spacing:.02em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl b{font-variant-numeric:tabular-nums;min-width:2.4em}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn[disabled]{opacity:.45;cursor:default}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+input[type=range]{accent-color:var(--accent);max-width:200px}
+input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:5px 8px;min-width:0;width:min(100%,320px)}
+textarea{font-family:var(--mono);font-size:13px;line-height:1.6;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:8px;width:100%;box-sizing:border-box;resize:vertical}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.two.wide{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr)}
+@media (max-width:760px){.two,.two.wide{grid-template-columns:minmax(0,1fr)}}
+.cap{font-size:12px;color:var(--muted);margin:4px 0 0}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn{border-color:var(--warn)} .ro.warn b{color:var(--warn)}
+.ro.acc{border-color:var(--accent)} .ro.acc b{color:var(--accent)}
+.ro.ok{border-color:var(--ok)} .ro.ok b{color:var(--ok)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+pre{font-family:var(--mono);font-size:12.5px;line-height:1.55;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:10px 12px;margin:0;overflow-x:auto;white-space:pre}
+pre .k{color:var(--accent)} pre .s{color:var(--ok)} pre .n{color:var(--warn)}
+.msgs{display:flex;flex-direction:column;gap:8px}
+.msg{border:1px solid var(--line);border-left:3px solid var(--muted);border-radius:4px;padding:8px 10px;font-size:14px}
+.msg .role{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block}
+.msg.user{border-left-color:var(--muted)}
+.msg.assistant{border-left-color:var(--accent)}
+.msg.tool{border-left-color:var(--ok)}
+.msg.sys{border-left-color:var(--warn);background:var(--warn-soft)}
+.msg.cur{box-shadow:0 0 0 2px var(--accent-soft)}
+.blk{font-family:var(--mono);font-size:12px;color:var(--fg);margin-top:4px;word-break:break-word}
+.tag{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-radius:3px;padding:0 5px;color:var(--muted);margin-right:6px}
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.steps i{font-style:normal;font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-radius:3px;padding:2px 7px;color:var(--muted)}
+.steps i.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.steps i.done{color:var(--fg)}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.num{text-align:right}
+.tw{overflow-x:auto}
+.tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:4px 16px;margin-bottom:12px}
+.tools label{display:flex;gap:7px;align-items:flex-start;font-size:14px;cursor:pointer}
+.tools input{margin-top:7px;accent-color:var(--accent)}
+.tools code{font-family:var(--mono);font-size:12.5px}
+.err{font-size:13.5px;font-family:var(--mono);color:var(--warn);margin:3px 0}
+.good{font-size:13.5px;font-family:var(--mono);color:var(--ok);margin:3px 0}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">tool call · JSON Schema · 参数校验 · 并行调用</div>
+  <h1>工具调用实验室</h1>
+  <p class="lede">模型只会生成文本，「调用工具」是程序替它跑的。下面的工具都在这个页面里真实执行，token 数用真实分词器数出来。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>一次 tool call 的完整来回</h2>
+  <p>左边是对话里的消息列表，右边是这一步在网络上真正传的 JSON。点「下一步」走完五步：发请求 → 模型生成一段 <code>tool_use</code> → 程序解析并真的执行 → 把结果作为新消息塞回去 → 模型根据结果说出最终回答。</p>
+  <p>右上角可以切换 Anthropic Messages API 和 OpenAI Chat Completions 两种报文形态：字段名不同，流程完全一样。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>工具</label><div class="seg" id="t0"><button data-v="calc" aria-pressed="true">计算器</button><button data-v="weather" aria-pressed="false">查天气</button><button data-v="unit" aria-pressed="false">单位换算</button></div></div>
+      <div class="ctrl"><label>报文形态</label><div class="seg" id="w0"><button data-v="anthropic" aria-pressed="true">Anthropic</button><button data-v="openai" aria-pressed="false">OpenAI</button></div></div>
+    </div>
+    <div class="ctrls">
+      <div class="ctrl"><label for="q0">用户这句话</label><input id="q0" type="text" value="(123 + 877) * 4 / 8 等于多少？"></div>
+      <div class="btns"><button class="btn pri" id="next0">下一步</button><button class="btn" id="reset0">回到第一步</button></div>
+    </div>
+    <div class="steps" id="st0"></div>
+    <div class="two wide">
+      <div><div class="msgs" id="m0"></div><p class="cap">对话里的消息列表（每一步新增的那条带高亮）</p></div>
+      <div><pre id="j0"></pre><p class="cap" id="jc0"></p></div>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r0a">–</b><span>这一步是谁在动</span></div>
+      <div class="ro acc"><b id="r0b">–</b><span>模型要调的工具</span></div>
+      <div class="ro ok"><b id="r0c">–</b><span>程序真实执行的结果</span></div>
+    </div>
+    <p class="note">注意第 2 步：模型没有执行任何东西，它只是生成了一段「我要调 X，参数是 …」的结构化文本。真正跑代码的是第 3 步的程序，它也可以拒绝执行。</p>
+  </div>
+  <p class="cap">计算器与单位换算是页内真实计算；天气来自页内一张固定的示例数据表（不是实时天气），用来代表「一个真的会被调用的外部接口」。</p>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>工具定义占多少 token</h2>
+  <p>工具的名字、说明、参数 schema 每一轮都要完整放进请求里，和系统提示、历史消息挤同一个上下文窗口。勾几个工具、拉一下说明长度，看它涨得有多快。</p>
+  <div class="lab">
+    <div class="tools" id="tl1"></div>
+    <div class="ctrls">
+      <div class="ctrl"><label for="d1">每个工具的说明长度</label><div class="seg" id="d1"><button data-v="0" aria-pressed="false">一句话</button><button data-v="1" aria-pressed="true">一段</button><button data-v="2" aria-pressed="false">带例子和注意事项</button></div></div>
+      <div class="ctrl"><label for="w1">上下文窗口</label><div class="seg" id="w1"><button data-v="8192" aria-pressed="false">8k</button><button data-v="32768" aria-pressed="false">32k</button><button data-v="200000" aria-pressed="true">200k</button></div></div>
+    </div>
+    <svg id="fig1" viewBox="0 0 800 220" role="img" aria-label="每个工具定义的 token 数，以及总量占上下文窗口的比例"></svg>
+    <div class="readout">
+      <div class="ro acc"><b id="r1a">–</b><span>tools 字段的 token 数</span></div>
+      <div class="ro"><b id="r1b">–</b><span>工具带来的系统提示开销</span></div>
+      <div class="ro warn"><b id="r1c">–</b><span>合计占上下文窗口</span></div>
+      <div class="ro"><b id="r1d">–</b><span>序列化后的字节数</span></div>
+    </div>
+    <p class="note">说明写长一点，模型选工具会准一些，但每一轮都要再付一次这笔 token。工具一多（几十个），光工具定义就能吃掉几千 token，这是后面几讲里「工具要分组、要按需加载」的由来。</p>
+    <p class="cap" id="tkinfo"></p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>模型给的参数可能是错的</h2>
+  <p>模型是在「预测下一个 token」的框架下学会输出这种结构的：训练时见过大量带工具调用的对话，于是它学会了在该出 <code>tool_use</code> 的地方出 <code>tool_use</code>。但这是生成，不是执行，所以它可能把类型写错、漏掉必填字段、甚至编出一个不存在的工具名。程序必须先拿 schema 校验，再决定要不要执行。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>模型这次输出</label><div class="seg" id="c2"><button data-v="0" aria-pressed="true">正常</button><button data-v="1" aria-pressed="false">类型错</button><button data-v="2" aria-pressed="false">缺必填</button><button data-v="3" aria-pressed="false">多余字段</button><button data-v="4" aria-pressed="false">枚举外取值</button><button data-v="5" aria-pressed="false">工具名幻觉</button><button data-v="6" aria-pressed="false">不是合法 JSON</button></div></div>
+    </div>
+    <div class="two">
+      <div>
+        <p class="cap">工具的 JSON Schema（固定）</p>
+        <pre id="s2schema"></pre>
+      </div>
+      <div>
+        <p class="cap">模型生成的 <code>tool_use</code>（可以直接改）</p>
+        <textarea id="in2" rows="7" spellcheck="false"></textarea>
+        <div id="out2" style="margin-top:8px"></div>
+      </div>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r2a">–</b><span>校验结果</span></div>
+      <div class="ro warn"><b id="r2b">–</b><span>错误条数</span></div>
+      <div class="ro ok"><b id="r2c">–</b><span>执行结果</span></div>
+    </div>
+    <p class="cap" style="margin-top:14px">校验不过时，不要把异常抛出去中断整个循环，而是把错误当成这次调用的结果回给模型，让它自己改：</p>
+    <pre id="retry2"></pre>
+    <p class="note">官方文档的说法是：失败就回一个 <code>is_error: true</code> 的 <code>tool_result</code>，把错误写得可操作，模型一般会改两三次再放弃。更省事的办法是在工具定义里开 <code>strict</code>（OpenAI）或按文档建议约束 schema，让非法参数一开始就出不来。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>三个工具，串行还是并行</h2>
+  <p>模型可以在一次回复里生成多个 <code>tool_use</code> 块（Anthropic 叫并行工具调用，OpenAI 叫 <code>parallel_tool_calls</code>）。这些调用之间没有依赖时，程序可以同时发出去，总时间从「加起来」变成「取最大」。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="a3">查天气耗时</label><input id="a3" type="range" min="20" max="2000" step="20" value="320"><b id="a3v"></b></div>
+      <div class="ctrl"><label for="b3">查航班耗时</label><input id="b3" type="range" min="20" max="2000" step="20" value="880"><b id="b3v"></b></div>
+      <div class="ctrl"><label for="c3">查汇率耗时</label><input id="c3" type="range" min="20" max="2000" step="20" value="160"><b id="c3v"></b></div>
+      <div class="ctrl"><label for="m3">模型每轮生成耗时</label><input id="m3" type="range" min="0" max="2000" step="20" value="600"><b id="m3v"></b></div>
+    </div>
+    <svg id="fig3" viewBox="0 0 800 300" role="img" aria-label="串行与并行两种时间线对比"></svg>
+    <div class="readout">
+      <div class="ro warn"><b id="r3a">–</b><span>串行（一轮调一个）</span></div>
+      <div class="ro acc"><b id="r3b">–</b><span>并行（一轮调三个）</span></div>
+      <div class="ro ok"><b id="r3c">–</b><span>省下</span></div>
+      <div class="ro"><b id="r3d">–</b><span>模型生成占总时间</span></div>
+    </div>
+    <p class="note">串行方案里模型要来回四轮，每轮都要重新读一遍整个对话再生成；并行只要两轮。把模型耗时滑到 0 看清楚：剩下的差距才是工具本身的延迟差。注意并行只对互不依赖的调用有效，「先查航班号再查这班飞机的天气」只能串行。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>工具结果太长怎么办</h2>
+  <p><code>tool_result</code> 的内容和工具定义一样占上下文，而且会一直留在对话历史里，后面每一轮都要重付。一个「列出目录」或者「跑一条 SQL」的工具，很容易一次吐回几十 KB。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="n4">工具返回的记录条数</label><input id="n4" type="range" min="1" max="400" step="1" value="120"><b id="n4v"></b></div>
+      <div class="ctrl"><label for="k4">截断保留</label><input id="k4" type="range" min="1" max="50" step="1" value="10"><b id="k4v"></b></div>
+      <div class="ctrl"><label for="r4">往后还要聊几轮</label><input id="r4" type="range" min="1" max="20" step="1" value="6"><b id="r4v"></b></div>
+    </div>
+    <svg id="fig4" viewBox="0 0 800 240" role="img" aria-label="原样返回、截断、摘要三种策略的 token 占用"></svg>
+    <div class="readout">
+      <div class="ro warn"><b id="r4a">–</b><span>原样返回</span></div>
+      <div class="ro"><b id="r4b">–</b><span>截断前 N 条</span></div>
+      <div class="ro acc"><b id="r4c">–</b><span>摘要（统计 + 前几条）</span></div>
+      <div class="ro ok"><b id="r4d">–</b><span>原样返回在后续各轮累计多花</span></div>
+    </div>
+    <div class="tw"><table id="t4"><thead><tr><th>策略</th><th>返回给模型的内容</th><th class="num">token</th><th class="num">占 200k 窗口</th></tr></thead><tbody></tbody></table></div>
+    <p class="note">截断要留一句「还有多少条、怎么缩小范围」，不然模型以为自己看到了全部。摘要更省，但压掉的信息模型再也看不到了——该返回什么、该压到多细，是写工具的人的设计决定，不是模型能替你做的。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>「选哪个工具」是怎么决定的</h2>
+  <p>下面用一棵写死的规则树模拟「该调工具还是直接回答」。<b>真模型里没有这棵树</b>：它是在海量带工具调用的对话上学出来的，表现为「在这种话之后，接着生成 tool_use 的概率更高」。规则树只是把这个决策画出来给你看。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="q5">用户这句话</label><input id="q5" type="text" value="帮我算一下 2847 * 193"></div>
+      <div class="btns" id="ex5"></div>
+    </div>
+    <svg id="fig5" viewBox="0 0 800 280" role="img" aria-label="从用户问题到选择工具的规则树"></svg>
+    <div class="readout">
+      <div class="ro acc"><b id="r5a">–</b><span>走到的结论</span></div>
+      <div class="ro"><b id="r5b">–</b><span>命中的线索</span></div>
+    </div>
+    <p class="note">换几句话看看：带算式的走计算器，带「今天 / 现在 / 天气」的走查天气，问定义、问为什么的直接回答。真模型的边界比规则模糊得多，所以才会出现「明明该查却瞎编」和「明明知道却去查」两种毛病。</p>
+  </div>
+</section>
+
+</div>
+<script>
+const $ = (s) => document.getElementById(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function seg(id, cb) {
+  const el = $(id);
+  el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; el.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); cb(b.dataset.v); });
+  return () => el.querySelector('[aria-pressed=true]').dataset.v;
+}
+function vb(id, w, h, nw, nh) { const el = $(id), n = el.clientWidth > 0 && el.clientWidth < 620, W = n ? nw : w, H = n ? nh : h; el.setAttribute('viewBox', `0 0 ${W} ${H}`); return [W, H]; }
+const fmt = (n) => n.toLocaleString('en-US');
+// JSON 高亮：键、字符串、数字
+function hl(obj) {
+  return esc(JSON.stringify(obj, null, 2))
+    .replace(/&quot;([^&]*?)&quot;(\s*:)/g, '<span class="k">"$1"</span>$2')
+    .replace(/:\s&quot;((?:[^&]|&(?!quot;))*)&quot;/g, ': <span class="s">"$1"</span>')
+    .replace(/:\s(-?\d+(?:\.\d+)?|true|false|null)/g, ': <span class="n">$1</span>');
+}
+
+/* ================= 真实执行的三个工具 ================= */
+// 计算器：递归下降解析 + - * / ^ ( )，真算
+function calcEval(src) {
+  const s = String(src).replace(/[×xX]/g, '*').replace(/÷/g, '/').replace(/[（]/g, '(').replace(/[）]/g, ')').replace(/\s/g, '');
+  let i = 0;
+  const peek = () => s[i];
+  const expr = () => { let v = term(); while (peek() === '+' || peek() === '-') { const op = s[i++]; const r = term(); v = op === '+' ? v + r : v - r; } return v; };
+  const term = () => { let v = pow(); while (peek() === '*' || peek() === '/') { const op = s[i++]; const r = pow(); if (op === '/' && r === 0) throw new Error('除以 0'); v = op === '*' ? v * r : v / r; } return v; };
+  const pow = () => { const b = unary(); if (peek() === '^') { i++; return Math.pow(b, pow()); } return b; };
+  const unary = () => { if (peek() === '-') { i++; return -unary(); } if (peek() === '+') { i++; return unary(); } return atom(); };
+  const atom = () => {
+    if (peek() === '(') { i++; const v = expr(); if (s[i] !== ')') throw new Error('括号不配对'); i++; return v; }
+    const m = /^\d+(\.\d+)?/.exec(s.slice(i)); if (!m) throw new Error('看不懂的字符 ' + (peek() ?? '（结尾）'));
+    i += m[0].length; return parseFloat(m[0]);
+  };
+  const v = expr();
+  if (i < s.length) throw new Error('多余的字符 ' + s.slice(i));
+  if (!isFinite(v)) throw new Error('结果不是有限数');
+  return v;
+}
+// 天气：页内固定示例表（不是实时数据）
+const WX = { '北京': { c: 19, w: '晴', h: 34 }, '上海': { c: 24, w: '多云', h: 71 }, '合肥': { c: 22, w: '小雨', h: 83 }, '纽约': { c: 14, w: '阴', h: 62 } };
+function wxTool(city, unit) {
+  const r = WX[city]; if (!r) throw new Error('示例表里没有这个城市，可选：' + Object.keys(WX).join('、'));
+  const t = unit === 'fahrenheit' ? r.c * 9 / 5 + 32 : r.c;
+  return { city, temperature: Math.round(t * 10) / 10, unit: unit === 'fahrenheit' ? 'F' : 'C', condition: r.w, humidity: r.h, source: 'example-table' };
+}
+// 单位换算：真实换算系数
+const UNITS = { km: 1000, m: 1, mi: 1609.344, ft: 0.3048, kg: 1, lb: 0.45359237, g: 0.001 };
+const UGROUP = { km: 'len', m: 'len', mi: 'len', ft: 'len', kg: 'mass', lb: 'mass', g: 'mass' };
+function convTool(value, from, to) {
+  if (!(from in UNITS) || !(to in UNITS)) throw new Error('不支持的单位，可选：' + Object.keys(UNITS).join('、'));
+  if (UGROUP[from] !== UGROUP[to]) throw new Error('量纲不同，不能换算：' + from + ' → ' + to);
+  const v = value * UNITS[from] / UNITS[to];
+  return { value: Math.round(v * 1e6) / 1e6, unit: to };
+}
+
+/* ================= 00 一次 tool call 的来回 ================= */
+const TOOLDEF = {
+  calc: {
+    name: 'calculate', desc: '计算一个算术表达式，支持 + - * / ^ 和括号。需要精确数值时用它，不要自己心算。',
+    schema: { type: 'object', properties: { expression: { type: 'string', description: '要计算的表达式，例如 (2+3)*4' } }, required: ['expression'] },
+    seed: '(123 + 877) * 4 / 8 等于多少？',
+    parse(q) { const m = /([\d().+\-*/^×÷（） ]{3,})/.exec(q.replace(/[^\d().+\-*/^×÷（） 等于多少？?=]/g, ' ')); return { expression: (m ? m[1] : q).trim().replace(/[ ]+$/, '') }; },
+    run(a) { return { result: calcEval(a.expression) }; },
+    say(a, r) { return `${a.expression} = ${r.result}。`; }
+  },
+  weather: {
+    name: 'get_weather', desc: '查询某个城市当前的天气。city 用中文城市名，unit 可选 celsius 或 fahrenheit。',
+    schema: { type: 'object', properties: { city: { type: 'string', description: '城市名，例如 北京' }, unit: { type: 'string', enum: ['celsius', 'fahrenheit'], description: '温度单位，默认 celsius' } }, required: ['city'] },
+    seed: '上海现在天气怎么样？',
+    parse(q) { const city = Object.keys(WX).find((c) => q.includes(c)) || '上海'; return { city, unit: /华氏|fahrenheit|F\b/.test(q) ? 'fahrenheit' : 'celsius' }; },
+    run(a) { return wxTool(a.city, a.unit); },
+    say(a, r) { return `${r.city}现在${r.condition}，${r.temperature} °${r.unit}，湿度 ${r.humidity}%。`; }
+  },
+  unit: {
+    name: 'convert_unit', desc: '长度或质量单位换算。支持 km、m、mi、ft、kg、lb、g，不同量纲之间会报错。',
+    schema: { type: 'object', properties: { value: { type: 'number', description: '要换算的数值' }, from: { type: 'string', description: '原单位' }, to: { type: 'string', description: '目标单位' } }, required: ['value', 'from', 'to'] },
+    seed: '42 km 是多少英里？',
+    parse(q) {
+      const m = /(-?\d+(?:\.\d+)?)\s*(km|m|mi|ft|kg|lb|g)/i.exec(q);
+      const to = /英里|mi\b/i.test(q.slice(m ? m.index + m[0].length : 0)) ? 'mi' : (/磅|lb/i.test(q) ? 'lb' : (/英尺|ft/i.test(q) ? 'ft' : 'mi'));
+      return { value: m ? parseFloat(m[1]) : 42, from: m ? m[2].toLowerCase() : 'km', to };
+    },
+    run(a) { return convTool(a.value, a.from, a.to); },
+    say(a, r) { return `${a.value} ${a.from} = ${r.value} ${r.unit}。`; }
+  }
+};
+const S0 = { step: 0, tool: 'calc', wire: 'anthropic' };
+const ID_A = 'toolu_01A09q90qw90lq917835lq9', ID_O = 'call_9x7K2mQpLs4';
+const STEPNAMES = ['① 发请求', '② 模型回复 tool_use', '③ 程序执行', '④ 回填 tool_result', '⑤ 模型最终回答'];
+const get0t = seg('t0', (v) => { S0.tool = v; $('q0').value = TOOLDEF[v].seed; S0.step = 0; draw0(); });
+const get0w = seg('w0', (v) => { S0.wire = v; draw0(); });
+$('next0').addEventListener('click', () => { S0.step = Math.min(4, S0.step + 1); draw0(); });
+$('reset0').addEventListener('click', () => { S0.step = 0; draw0(); });
+$('q0').addEventListener('input', () => { S0.step = 0; draw0(); });
+
+function toolsField(def, wire) {
+  return wire === 'anthropic'
+    ? [{ name: def.name, description: def.desc, input_schema: def.schema }]
+    : [{ type: 'function', function: { name: def.name, description: def.desc, parameters: def.schema } }];
+}
+function draw0() {
+  const def = TOOLDEF[S0.tool], q = $('q0').value || def.seed, wire = S0.wire, A = wire === 'anthropic';
+  let args = null, res = null, err = null;
+  try { args = def.parse(q); } catch (e) { args = null; }
+  if (args) { try { res = def.run(args); } catch (e) { err = e.message; } }
+
+  $('st0').innerHTML = STEPNAMES.map((n, i) => `<i class="${i === S0.step ? 'on' : (i < S0.step ? 'done' : '')}">${n}</i>`).join('');
+  $('next0').disabled = S0.step >= 4;
+
+  // 消息列表
+  const ms = [];
+  ms.push({ cls: 'sys', role: A ? 'tools（随每次请求一起发）' : 'tools', body: `<span class="tag">${esc(def.name)}</span>说明 + 参数 JSON Schema` });
+  ms.push({ cls: 'user', role: 'user', body: esc(q) });
+  if (S0.step >= 1) ms.push({ cls: 'assistant', role: 'assistant', body: A
+    ? `<span class="tag">tool_use</span><span class="blk">name: ${esc(def.name)}<br>input: ${esc(JSON.stringify(args))}</span>`
+    : `<span class="tag">tool_calls</span><span class="blk">function.name: ${esc(def.name)}<br>function.arguments: ${esc(JSON.stringify(JSON.stringify(args)))}</span>` });
+  if (S0.step >= 2) ms.push({ cls: 'sys', role: '程序（不在对话里）', body: `解析 → 校验 → 执行 ${esc(def.name)}()` });
+  if (S0.step >= 3) ms.push({ cls: 'tool', role: A ? 'user（tool_result 块）' : 'tool', body: `<span class="tag">${A ? 'tool_result' : 'role: tool'}</span><span class="blk">${esc(err ? '错误：' + err : JSON.stringify(res))}</span>` });
+  if (S0.step >= 4) ms.push({ cls: 'assistant', role: 'assistant', body: esc(err ? `这个工具报错了：${err}。要不要换个写法？` : def.say(args, res)) });
+  const cur = { 0: 1, 1: 2, 2: 3, 3: ms.length - 1, 4: ms.length - 1 }[S0.step];
+  $('m0').innerHTML = ms.map((m, i) => `<div class="msg ${m.cls}${i === (S0.step === 0 ? 1 : ms.length - 1) ? ' cur' : ''}"><span class="role">${esc(m.role)}</span>${m.body}</div>`).join('');
+
+  // 右边 JSON
+  let obj, capt;
+  const model = A ? 'claude-sonnet-5-5' : 'gpt-4.1';
+  const userMsg = { role: 'user', content: q };
+  const asstA = { role: 'assistant', content: [{ type: 'tool_use', id: ID_A, name: def.name, input: args }] };
+  const asstO = { role: 'assistant', tool_calls: [{ id: ID_O, type: 'function', function: { name: def.name, arguments: JSON.stringify(args) } }] };
+  const resultText = err ? err : JSON.stringify(res);
+  const resA = { role: 'user', content: [{ type: 'tool_result', tool_use_id: ID_A, content: resultText, ...(err ? { is_error: true } : {}) }] };
+  const resO = { role: 'tool', tool_call_id: ID_O, content: resultText };
+  if (S0.step === 0) {
+    obj = A ? { model, max_tokens: 1024, tools: toolsField(def, wire), messages: [userMsg] }
+            : { model, tools: toolsField(def, wire), messages: [userMsg] };
+    capt = `POST ${A ? 'https://api.anthropic.com/v1/messages' : 'https://api.openai.com/v1/chat/completions'} —— 请求体`;
+  } else if (S0.step === 1) {
+    obj = A ? { id: 'msg_01Aq…', type: 'message', role: 'assistant', model, content: [{ type: 'tool_use', id: ID_A, name: def.name, input: args }], stop_reason: 'tool_use' }
+            : { id: 'chatcmpl-9x…', object: 'chat.completion', model, choices: [{ index: 0, message: asstO, finish_reason: 'tool_calls' }] };
+    capt = '模型的回复 —— 注意它只是生成了这段结构，什么都没执行';
+  } else if (S0.step === 2) {
+    obj = { 本地执行: `${def.name}(${JSON.stringify(args)})`, 返回: err ? { error: err } : res };
+    capt = '这一步不在网络上传：程序自己解析参数、校验、调真正的函数';
+  } else if (S0.step === 3) {
+    obj = A ? { model, max_tokens: 1024, tools: '…（原样再发一次）', messages: [userMsg, asstA, resA] }
+            : { model, tools: '…（原样再发一次）', messages: [userMsg, asstO, resO] };
+    capt = '第二次请求 —— 结果作为一条新消息接在后面，工具定义还要再发一遍';
+  } else {
+    obj = A ? { id: 'msg_01Bz…', role: 'assistant', content: [{ type: 'text', text: err ? `这个工具报错了：${err}。` : def.say(args, res) }], stop_reason: 'end_turn' }
+            : { id: 'chatcmpl-9y…', choices: [{ index: 0, message: { role: 'assistant', content: err ? `这个工具报错了：${err}。` : def.say(args, res) }, finish_reason: 'stop' }] };
+    capt = `模型的最终回答 —— ${A ? 'stop_reason 回到 end_turn' : 'finish_reason 回到 stop'}`;
+  }
+  $('j0').innerHTML = hl(obj); $('jc0').textContent = capt;
+  $('r0a').textContent = ['程序', '模型', '程序', '程序', '模型'][S0.step];
+  $('r0b').textContent = S0.step >= 1 ? def.name : '还没说';
+  $('r0c').textContent = S0.step >= 2 ? (err ? '报错' : (typeof Object.values(res)[0] === 'object' ? JSON.stringify(res).slice(0, 18) + '…' : String(Object.values(res)[0]))) : '还没执行';
+}
+
+/* ================= 01 工具定义的 token ================= */
+const TOOLS1 = [
+  { name: 'get_weather', d: ['查询某城市当前天气。', '查询某个城市当前的天气，返回温度、天气现象和湿度。city 用中文城市名。', '查询某个城市当前的天气，返回温度、天气现象和相对湿度。city 用中文城市名（如 北京、上海）。unit 省略时按摄氏度返回。只能查当前天气，查不了预报和历史；用户问「明天会不会下雨」时不要用这个工具。城市名拼错会直接报错，不要猜。'],
+    s: { type: 'object', properties: { city: { type: 'string', description: '城市名' }, unit: { type: 'string', enum: ['celsius', 'fahrenheit'], description: '温度单位' } }, required: ['city'] }, on: true },
+  { name: 'calculate', d: ['计算一个算术表达式。', '计算一个算术表达式，支持 + - * / ^ 和括号。需要精确数值时用它。', '计算一个算术表达式，支持 + - * / ^ 和括号，按常规优先级求值。涉及金额、比例、多位数乘除等需要精确结果的地方一律用这个工具，不要自己心算。表达式里不能有变量和单位，先把单位化掉再传进来。除以 0 会报错。'],
+    s: { type: 'object', properties: { expression: { type: 'string', description: '要计算的表达式' } }, required: ['expression'] }, on: true },
+  { name: 'search_web', d: ['搜索互联网。', '用关键词搜索互联网，返回前若干条结果的标题、摘要和链接。', '用关键词搜索互联网，返回前若干条结果的标题、摘要和链接。适用于时效性信息、具体数字、人名地名核实。关键词要具体，一次只查一件事；需要查多件事就分多次调用。top_k 默认 5，最大 20，调大会显著增加返回长度。结果只是摘要，需要全文时再用 fetch_url。'],
+    s: { type: 'object', properties: { query: { type: 'string', description: '搜索关键词' }, top_k: { type: 'integer', description: '返回条数，默认 5' } }, required: ['query'] }, on: true },
+  { name: 'read_file', d: ['读一个文件。', '读取工作目录下某个文件的内容，返回纯文本。', '读取工作目录下某个文件的内容，返回纯文本。path 用相对路径，不能越出工作目录。文件很大时用 offset 和 limit 分段读，一次最多 2000 行；二进制文件会报错。读之前可以先用 list_dir 看目录。'],
+    s: { type: 'object', properties: { path: { type: 'string', description: '相对路径' }, offset: { type: 'integer', description: '起始行' }, limit: { type: 'integer', description: '行数' } }, required: ['path'] }, on: false },
+  { name: 'sql_query', d: ['执行一条 SQL。', '在只读副本上执行一条 SELECT 语句，返回结果行。', '在只读副本上执行一条 SELECT 语句，返回结果行（最多 1000 行）。只允许 SELECT，任何写操作都会被拒绝。表结构可以先用 list_tables 和 describe_table 查。大结果集请在 SQL 里加 LIMIT 和聚合，不要把整表拉回来。查询超过 30 s 会被终止。'],
+    s: { type: 'object', properties: { sql: { type: 'string', description: 'SELECT 语句' }, max_rows: { type: 'integer', description: '最大行数' } }, required: ['sql'] }, on: false },
+  { name: 'send_email', d: ['发一封邮件。', '向指定地址发送一封邮件，需要收件人、主题和正文。', '向指定地址发送一封邮件，需要收件人、主题和正文。这是一个有副作用、不可撤销的操作：发出去就收不回来，所以调用之前必须先向用户确认收件人和正文。cc 和 bcc 可选，每个字段最多 20 个地址。附件要先上传再用 attachment_ids 引用。'],
+    s: { type: 'object', properties: { to: { type: 'array', items: { type: 'string' }, description: '收件人' }, subject: { type: 'string', description: '主题' }, body: { type: 'string', description: '正文' }, cc: { type: 'array', items: { type: 'string' }, description: '抄送' } }, required: ['to', 'subject', 'body'] }, on: false },
+  { name: 'create_event', d: ['新建一个日程。', '在日历上新建一个日程，需要标题、开始和结束时间。', '在日历上新建一个日程，需要标题、开始和结束时间（ISO 8601，带时区）。attendees 里的人会收到邀请邮件，所以这同样是有副作用的操作，建日程前先确认时间和参与者。时间冲突不会自动拒绝，需要先用 list_events 检查。重复日程用 recurrence 字段，格式同 RFC 5545。'],
+    s: { type: 'object', properties: { title: { type: 'string', description: '标题' }, start: { type: 'string', description: '开始时间' }, end: { type: 'string', description: '结束时间' }, attendees: { type: 'array', items: { type: 'string' }, description: '参与者' }, recurrence: { type: 'string', description: '重复规则' } }, required: ['title', 'start', 'end'] }, on: false },
+  { name: 'run_bash', d: ['跑一条命令。', '在沙箱里执行一条 shell 命令，返回标准输出和退出码。', '在沙箱里执行一条 shell 命令，返回标准输出、标准错误和退出码。命令在工作目录下以普通用户身份运行，没有网络。默认超时 120 s，可用 timeout 调整，上限 600 s。危险命令（rm -rf、关机、改系统配置）会被拒绝。需要交互输入的命令不能用。'],
+    s: { type: 'object', properties: { command: { type: 'string', description: '要执行的命令' }, timeout: { type: 'integer', description: '超时（s）' } }, required: ['command'] }, on: false }
+];
+// 工具带来的系统提示开销：官方文档给出的固定值（tool_choice 为 auto / none 时）
+const TOOL_SYS_TOKENS = 286;
+let TOKCOUNT = null, TOKNAME = '按字符估算（分词器未加载）';
+function countTok(s) { return TOKCOUNT ? TOKCOUNT(s) : Math.ceil(s.length / 3.2); }
+function onTK() {
+  if (window.TK && window.TK.o200k) { TOKCOUNT = (s) => window.TK.o200k.encode(s).length; TOKNAME = 'o200k_base（GPT-4o / GPT-4.1 的分词器）'; }
+  $('tkinfo').textContent = `token 由 ${TOKNAME} 对紧凑 JSON 序列化后的文本真实计数；真实请求里的序列化由 API 内部决定，量级一致。系统提示开销 ${TOOL_SYS_TOKENS} token 取自 Anthropic 文档（tool_choice 为 auto / none 时的当前模型值）。`;
+  draw1(); draw4();
+}
+window.addEventListener('tk-ready', onTK);
+const get1d = seg('d1', () => draw1());
+const get1w = seg('w1', () => draw1());
+$('tl1').innerHTML = TOOLS1.map((t, i) => `<label><input type="checkbox" data-i="${i}"${t.on ? ' checked' : ''}><code>${t.name}</code></label>`).join('');
+$('tl1').addEventListener('change', (e) => { const i = +e.target.dataset.i; TOOLS1[i].on = e.target.checked; draw1(); });
+function tools1json() {
+  const lv = +get1d();
+  return TOOLS1.filter((t) => t.on).map((t) => ({ name: t.name, description: t.d[lv], input_schema: t.s }));
+}
+function draw1() {
+  const arr = tools1json(), win = +get1w();
+  const per = arr.map((t) => ({ name: t.name, tok: countTok(JSON.stringify(t)) }));
+  const tok = countTok(JSON.stringify(arr)), bytes = new TextEncoder().encode(JSON.stringify(arr)).length;
+  const total = tok + (arr.length ? TOOL_SYS_TOKENS : 0);
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent'), wa = css('--warn');
+  const [W, H] = vb('fig1', 800, 250, 420, 320), pl = 8, pr = 8, pt = 16, pb = 78;
+  let s = '';
+  const barsH = H - pt - pb, n = Math.max(1, per.length), bw = (W - pl - pr) / n, mx = Math.max(1, ...per.map((p) => p.tok));
+  per.forEach((p, i) => {
+    const h = p.tok / mx * (barsH - 22), x = pl + i * bw;
+    s += `<rect x="${x + bw * 0.12}" y="${pt + barsH - h}" width="${bw * 0.76}" height="${h}" rx="3" fill="${ac}"/>`;
+    s += `<text x="${x + bw / 2}" y="${pt + barsH - h - 6}" font-size="${W < 620 ? 13 : 12}" fill="${mu}" text-anchor="middle">${p.tok}</text>`;
+    const nx = x + bw / 2, ny = pt + barsH + 16;
+    s += bw < 78
+      ? `<text x="${nx}" y="${ny}" font-size="11" fill="${mu}" text-anchor="end" transform="rotate(-35 ${nx} ${ny})">${esc(p.name)}</text>`
+      : `<text x="${nx}" y="${ny}" font-size="11.5" fill="${mu}" text-anchor="middle">${esc(p.name)}</text>`;
+  });
+  if (!per.length) s += `<text x="${W / 2}" y="${pt + barsH / 2}" font-size="15" fill="${mu}" text-anchor="middle">一个工具都不给，模型只能自己答</text>`;
+  // 占窗口的条
+  const by = H - 30, frac = Math.min(1, total / win);
+  s += `<rect x="${pl}" y="${by}" width="${W - pl - pr}" height="16" rx="3" fill="none" stroke="${li}"/>`;
+  s += `<rect x="${pl}" y="${by}" width="${Math.max(1, (W - pl - pr) * frac)}" height="16" rx="3" fill="${frac > 0.25 ? wa : ac}"/>`;
+  s += `<text x="${pl}" y="${by - 6}" font-size="12" fill="${mu}">工具定义 + 系统提示开销 在 ${fmt(win)} token 窗口里的位置</text>`;
+  $('fig1').innerHTML = s;
+  $('r1a').textContent = fmt(tok) + ' token';
+  $('r1b').textContent = arr.length ? '+' + TOOL_SYS_TOKENS + ' token' : '0';
+  $('r1c').textContent = (total / win * 100).toFixed(total / win < 0.1 ? 2 : 1) + '%';
+  $('r1d').textContent = fmt(bytes) + ' B';
+}
+
+/* ================= 02 参数校验 ================= */
+const SCHEMA2 = { name: 'get_weather', input_schema: { type: 'object', properties: { city: { type: 'string', description: '城市名' }, unit: { type: 'string', enum: ['celsius', 'fahrenheit'], description: '温度单位' } }, required: ['city'], additionalProperties: false } };
+const CASES2 = [
+  '{"name":"get_weather","input":{"city":"上海","unit":"celsius"}}',
+  '{"name":"get_weather","input":{"city":21,"unit":"celsius"}}',
+  '{"name":"get_weather","input":{"unit":"celsius"}}',
+  '{"name":"get_weather","input":{"city":"上海","unit":"celsius","days":3}}',
+  '{"name":"get_weather","input":{"city":"上海","unit":"摄氏度"}}',
+  '{"name":"get_weather_forecast","input":{"city":"上海","days":3}}',
+  '{"name":"get_weather","input":{"city":"上海",,}}'
+];
+// 最小 JSON Schema 校验器：type / required / enum / additionalProperties / items
+function validate(v, sc, path = 'input') {
+  const out = [];
+  const t = sc.type;
+  const kind = Array.isArray(v) ? 'array' : (v === null ? 'null' : typeof v === 'number' ? (Number.isInteger(v) ? 'integer' : 'number') : typeof v);
+  if (t === 'object') {
+    if (kind !== 'object') return [`${path}: 应为 object，实际是 ${kind}`];
+    for (const k of sc.required || []) if (!(k in v)) out.push(`${path}.${k}: 缺少必填字段`);
+    if (sc.additionalProperties === false) for (const k of Object.keys(v)) if (!(sc.properties || {})[k]) out.push(`${path}.${k}: schema 里没有这个字段`);
+    for (const [k, s2] of Object.entries(sc.properties || {})) if (k in v) out.push(...validate(v[k], s2, `${path}.${k}`));
+    return out;
+  }
+  if (t === 'array') {
+    if (kind !== 'array') return [`${path}: 应为 array，实际是 ${kind}`];
+    v.forEach((x, i) => out.push(...validate(x, sc.items || {}, `${path}[${i}]`)));
+    return out;
+  }
+  if (t === 'integer' && kind !== 'integer') out.push(`${path}: 应为 integer，实际是 ${kind}`);
+  else if (t === 'number' && kind !== 'number' && kind !== 'integer') out.push(`${path}: 应为 number，实际是 ${kind}`);
+  else if (t && t !== 'integer' && t !== 'number' && kind !== t) out.push(`${path}: 应为 ${t}，实际是 ${kind}`);
+  if (sc.enum && !sc.enum.includes(v)) out.push(`${path}: 取值 ${JSON.stringify(v)} 不在 enum [${sc.enum.join(', ')}] 里`);
+  return out;
+}
+$('s2schema').innerHTML = hl(SCHEMA2);
+const get2 = seg('c2', (v) => { $('in2').value = CASES2[+v]; draw2(); });
+$('in2').value = CASES2[0];
+$('in2').addEventListener('input', draw2);
+function draw2() {
+  const src = $('in2').value; let call = null, errs = [], parseErr = null;
+  try { call = JSON.parse(src); } catch (e) { parseErr = e.message; }
+  if (parseErr) errs = [`整段不是合法 JSON：${parseErr}`];
+  else {
+    if (call.name !== SCHEMA2.name) errs.push(`name: 没有叫 ${JSON.stringify(call.name)} 的工具（只注册了 ${SCHEMA2.name}）`);
+    errs.push(...validate(call.input, SCHEMA2.input_schema));
+  }
+  let ran = null, runErr = null;
+  if (!errs.length) { try { ran = wxTool(call.input.city, call.input.unit); } catch (e) { runErr = e.message; } }
+  $('out2').innerHTML = errs.length
+    ? errs.map((e) => `<p class="err">✗ ${esc(e)}</p>`).join('') + `<p class="err">→ 不执行，把错误回给模型</p>`
+    : `<p class="good">✓ 参数合法，可以执行</p><pre style="margin-top:6px">${runErr ? esc('执行时报错：' + runErr) : hl(ran)}</pre>`;
+  $('r2a').textContent = errs.length ? '不通过' : (runErr ? '通过但执行失败' : '通过');
+  $('r2b').textContent = errs.length;
+  $('r2c').textContent = errs.length ? '没执行' : (runErr ? '报错' : ran.temperature + ' °' + ran.unit);
+  const msg = errs.length ? errs.join('；') + '。请按 schema 重新调用。' : (runErr ? runErr : '');
+  $('retry2').innerHTML = hl(errs.length || runErr
+    ? { role: 'user', content: [{ type: 'tool_result', tool_use_id: ID_A, content: msg, is_error: true }] }
+    : { role: 'user', content: [{ type: 'tool_result', tool_use_id: ID_A, content: JSON.stringify(ran) }] });
+}
+
+/* ================= 03 并行 ================= */
+const J3 = [['get_weather', 'a3'], ['search_flights', 'b3'], ['get_fx_rate', 'c3']];
+['a3', 'b3', 'c3', 'm3'].forEach((id) => $(id).addEventListener('input', draw3));
+function draw3() {
+  const t = J3.map(([n, id]) => ({ n, ms: +$(id).value }));
+  const m = +$('m3').value;
+  t.forEach((x, i) => $(J3[i][1] + 'v').textContent = x.ms + ' ms');
+  $('m3v').textContent = m + ' ms';
+  const serial = m * 4 + t.reduce((a, b) => a + b.ms, 0);          // 模型 4 轮（3 次决定调用 + 1 次总结）
+  const par = m * 2 + Math.max(...t.map((x) => x.ms));              // 模型 2 轮（1 次决定 + 1 次总结）
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent'), wa = css('--warn'), ok = css('--ok');
+  const [W, H] = vb('fig3', 800, 300, 420, 380), pl = W < 620 ? 44 : 88, pr = 10, rowH = 26;
+  const span = Math.max(serial, par, 1), X = (ms) => pl + ms / span * (W - pl - pr);
+  const fs = W < 620 ? 12 : 12.5;
+  let s = '', y = 26;
+  const lbl = (txt, yy, col) => `<text x="${pl - 6}" y="${yy + 13}" font-size="${fs}" fill="${col || mu}" text-anchor="end">${esc(txt)}</text>`;
+  const bar = (x0, x1, yy, col, txt) => {
+    let o = `<rect x="${X(x0)}" y="${yy}" width="${Math.max(1.5, X(x1) - X(x0))}" height="18" rx="3" fill="${col}"/>`;
+    if (txt && X(x1) - X(x0) > (W < 620 ? 46 : 58)) o += `<text x="${(X(x0) + X(x1)) / 2}" y="${yy + 13}" font-size="11" fill="#fff" text-anchor="middle">${esc(txt)}</text>`;
+    return o;
+  };
+  s += `<text x="${pl}" y="${y - 8}" font-size="${fs + 1}" fill="${wa}">串行：模型一轮只调一个工具</text>`;
+  let cur = 0;
+  t.forEach((x, i) => {
+    s += lbl('模型', y, mu) + bar(cur, cur + m, y, mu, '生成'); cur += m;
+    s += bar(cur, cur + x.ms, y, wa, x.n); cur += x.ms;
+    y += rowH;
+  });
+  s += lbl('模型', y, mu) + bar(cur, cur + m, y, mu, '总结'); cur += m; y += rowH + 8;
+  s += `<line x1="${pl}" y1="${y - 6}" x2="${W - pr}" y2="${y - 6}" stroke="${li}"/>`;
+  y += 18;
+  s += `<text x="${pl}" y="${y - 8}" font-size="${fs + 1}" fill="${ac}">并行：一次回复里三个 tool_use</text>`;
+  s += lbl('模型', y, mu) + bar(0, m, y, mu, '生成'); y += rowH;
+  t.forEach((x) => { s += lbl(x.n, y, mu) + bar(m, m + x.ms, y, ac, x.ms + ' ms'); y += rowH; });
+  const after = m + Math.max(...t.map((x) => x.ms));
+  s += lbl('模型', y, mu) + bar(after, after + m, y, mu, '总结'); y += rowH;
+  s += `<line x1="${X(par)}" y1="20" x2="${X(par)}" y2="${y}" stroke="${ok}" stroke-dasharray="4 3"/>`;
+  s += `<line x1="${X(serial)}" y1="20" x2="${X(serial)}" y2="${y}" stroke="${wa}" stroke-dasharray="4 3"/>`;
+  s += `<text x="${pl}" y="${y + 18}" font-size="${fs}" fill="${mu}">0</text><text x="${W - pr}" y="${y + 18}" font-size="${fs}" fill="${mu}" text-anchor="end">${fmt(span)} ms</text>`;
+  $('fig3').setAttribute('viewBox', `0 0 ${W} ${y + 28}`);
+  $('fig3').innerHTML = s;
+  $('r3a').textContent = fmt(serial) + ' ms'; $('r3b').textContent = fmt(par) + ' ms';
+  $('r3c').textContent = fmt(serial - par) + ' ms（' + Math.round((1 - par / serial) * 100) + '%）';
+  $('r3d').textContent = Math.round(m * 2 / par * 100) + '%';
+}
+
+/* ================= 04 结果太长 ================= */
+const CITIES4 = ['北京', '上海', '合肥', '纽约'];
+function rows4(n) {
+  const out = []; let h = 2166136261;
+  for (let i = 0; i < n; i++) {
+    h = (h ^ (i + 1)) * 16777619 >>> 0;
+    const c = CITIES4[i % 4], d = new Date(Date.UTC(2026, 0, 1 + i)).toISOString().slice(0, 10);
+    out.push({ id: 10000 + i, city: c, date: d, orders: 20 + (h % 180), revenue: Math.round(((h >>> 7) % 90000) / 100 * 100) / 100, status: (h % 7 === 0) ? 'refunded' : 'paid' });
+  }
+  return out;
+}
+['n4', 'k4', 'r4'].forEach((id) => $(id).addEventListener('input', draw4));
+function draw4() {
+  const n = +$('n4').value, k = Math.min(+$('k4').value, n), rounds = +$('r4').value;
+  $('n4v').textContent = n + ' 条'; $('k4v').textContent = k + ' 条'; $('r4v').textContent = rounds + ' 轮';
+  const all = rows4(n);
+  const full = JSON.stringify(all);
+  const cut = JSON.stringify(all.slice(0, k)) + `\n[只显示前 ${k} 条，共 ${n} 条。加上城市或日期条件可以缩小范围。]`;
+  const agg = {};
+  for (const r of all) { const a = agg[r.city] || (agg[r.city] = { city: r.city, rows: 0, orders: 0, revenue: 0, refunded: 0 }); a.rows++; a.orders += r.orders; a.revenue += r.revenue; if (r.status === 'refunded') a.refunded++; }
+  const sum = { total_rows: n, date_range: [all[0].date, all[n - 1].date], by_city: Object.values(agg).map((a) => ({ ...a, revenue: Math.round(a.revenue * 100) / 100 })), sample: all.slice(0, Math.min(3, n)) };
+  const summ = JSON.stringify(sum) + `\n[已按城市汇总，共 ${n} 条原始记录。需要明细请加条件重查。]`;
+  const S = [
+    { k: '原样返回', txt: full, col: css('--warn') },
+    { k: `截断前 ${k} 条`, txt: cut, col: css('--muted') },
+    { k: '摘要（统计 + 前 3 条）', txt: summ, col: css('--accent') }
+  ].map((x) => ({ ...x, tok: countTok(x.txt), bytes: new TextEncoder().encode(x.txt).length }));
+  const WIN = 200000;
+  const mu = css('--muted'), li = css('--line');
+  const [W, H] = vb('fig4', 800, 240, 420, 260), pl = W < 620 ? 8 : 8, pr = 8, pt = 26, pb = 24;
+  const mx = Math.max(...S.map((x) => x.tok), 1), rowH = (H - pt - pb) / 3;
+  let s = `<text x="${pl}" y="16" font-size="12" fill="${mu}">横条长度 = tool_result 的 token 数（同一份数据，三种返回方式）</text>`;
+  S.forEach((x, i) => {
+    const y = pt + i * rowH + 4, w = Math.max(2, x.tok / mx * (W - pl - pr - 4));
+    s += `<rect x="${pl}" y="${y}" width="${w}" height="${rowH - 18}" rx="3" fill="${x.col}"/>`;
+    s += `<text x="${pl + 6}" y="${y + rowH - 26}" font-size="${W < 620 ? 12 : 13}" fill="${css('--paper')}">${esc(x.k)}</text>`;
+    s += `<text x="${Math.min(W - pr, pl + w + 6)}" y="${y + rowH - 26}" font-size="${W < 620 ? 12 : 13}" fill="${mu}" text-anchor="${pl + w + 6 > W - pr - 70 ? 'end' : 'start'}">${fmt(x.tok)} token</text>`;
+  });
+  $('fig4').innerHTML = s;
+  $('r4a').textContent = fmt(S[0].tok) + ' token';
+  $('r4b').textContent = fmt(S[1].tok) + ' token';
+  $('r4c').textContent = fmt(S[2].tok) + ' token';
+  $('r4d').textContent = fmt((S[0].tok - S[2].tok) * rounds) + ' token';
+  $('t4').tBodies[0].innerHTML = S.map((x) => `<tr><td>${esc(x.k)}</td><td class="num">${fmt(x.bytes)} B</td><td class="num">${fmt(x.tok)}</td><td class="num">${(x.tok / WIN * 100).toFixed(2)}%</td></tr>`).join('');
+}
+
+/* ================= 05 决策树 ================= */
+const EX5 = ['帮我算一下 2847 * 193', '上海现在天气怎么样', '42 km 是多少英里', '什么是 tool call', '为什么模型自己不能执行代码'];
+$('ex5').innerHTML = EX5.map((t, i) => `<button class="btn" data-i="${i}">${esc(t.length > 12 ? t.slice(0, 11) + '…' : t)}</button>`).join('');
+$('ex5').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; $('q5').value = EX5[+b.dataset.i]; draw5(); });
+$('q5').addEventListener('input', draw5);
+function route5(q) {
+  if (/[0-9]\s*[+\-*/^×÷]\s*[0-9]|[0-9]{3,}\s*(乘|除|加|减)/.test(q)) return { node: 2, tool: 'calculate', why: '有算式形状的 token' };
+  if (/(km|mi|kg|lb|ft|英里|公里|磅|英尺)/i.test(q) && /[0-9]/.test(q)) return { node: 3, tool: 'convert_unit', why: '数字 + 单位词' };
+  if (/(天气|气温|下雨|现在|今天|明天|最新|实时)/.test(q)) return { node: 4, tool: 'get_weather', why: '问的是当下的外部状态' };
+  if (/(什么是|是什么|为什么|怎么理解|解释)/.test(q)) return { node: 5, tool: null, why: '问的是概念，模型自己知道' };
+  return { node: 5, tool: null, why: '没命中任何线索' };
+}
+function draw5() {
+  const q = $('q5').value, r = route5(q);
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent'), ok = css('--ok');
+  const [W, H] = vb('fig5', 800, 280, 420, 400), nr = W < 620;
+  const leaf = nr
+    ? [[0.27, 0.52], [0.75, 0.52], [0.27, 0.78], [0.75, 0.78]]
+    : [[0.14, 0.62], [0.38, 0.62], [0.63, 0.62], [0.87, 0.62]];
+  const lw = nr ? Math.min(150, W * 0.42) : 130;
+  const nodes = [
+    { id: 0, x: 0.5, y: 0.08, t: '用户这句话', w: nr ? Math.min(160, W * 0.45) : 150 },
+    { id: 1, x: 0.5, y: 0.28, t: nr ? '要页面外的东西吗' : '需要页面外的东西吗', w: nr ? Math.min(205, W * 0.56) : 210 },
+    { id: 2, x: leaf[0][0], y: leaf[0][1], t: 'calculate', w: lw },
+    { id: 3, x: leaf[1][0], y: leaf[1][1], t: 'convert_unit', w: lw },
+    { id: 4, x: leaf[2][0], y: leaf[2][1], t: 'get_weather', w: lw },
+    { id: 5, x: leaf[3][0], y: leaf[3][1], t: '直接回答', w: lw }
+  ];
+  const P = (nd) => [nd.x * W, 24 + nd.y * (H - 60)];
+  let s = '';
+  [[0, 1], [1, 2], [1, 3], [1, 4], [1, 5]].forEach(([a, b]) => {
+    const [x1, y1] = P(nodes[a]), [x2, y2] = P(nodes[b]);
+    const on = (a === 0 && b === 1) || b === r.node;
+    s += `<path d="M${x1},${y1 + 14} C${x1},${(y1 + y2) / 2} ${x2},${(y1 + y2) / 2} ${x2},${y2 - 16}" fill="none" stroke="${on ? ac : li}" stroke-width="${on ? 2.6 : 1.4}"/>`;
+  });
+  nodes.forEach((nd) => {
+    const [x, y] = P(nd), on = nd.id === r.node || nd.id <= 1;
+    const col = nd.id === r.node ? (nd.id === 5 ? ok : ac) : li;
+    s += `<rect x="${x - nd.w / 2}" y="${y - 16}" width="${nd.w}" height="32" rx="6" fill="${nd.id === r.node ? col : css('--paper')}" stroke="${on ? col : li}" stroke-width="1.6"/>`;
+    s += `<text x="${x}" y="${y + 5}" font-size="${W < 620 ? 13 : 14}" fill="${nd.id === r.node ? (nd.id === 5 ? '#fff' : '#fff') : css('--fg')}" text-anchor="middle">${esc(nd.t)}</text>`;
+  });
+  s += `<text x="${W / 2}" y="${H - 14}" font-size="${nr ? 13 : 14}" fill="${mu}" text-anchor="middle">${esc(r.tool ? `生成 tool_use：${r.tool}` : '不生成 tool_use，直接出文本')}</text>`;
+  $('fig5').innerHTML = s;
+  $('r5a').textContent = r.tool || '直接回答';
+  $('r5b').textContent = r.why;
+}
+
+/* ---------- 启动与重绘 ---------- */
+$('q0').value = TOOLDEF.calc.seed;
+const all = () => { draw0(); draw1(); draw2(); draw3(); draw4(); draw5(); };
+all();
+onTK();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { draw1(); draw3(); draw4(); draw5(); }, 150); });
+</script>
+<script src="/labs/tokenizer-llm/tiktoken.js" defer></script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-17 07:08 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
+最后更新：2026-10-19 09:10 America/New_York · 更新者：Claude（会话 session_01HXmwuvnq8Z7skbnkunsKCy）
 
 ---
 
@@ -162,7 +162,8 @@ door4ai-lab/
 - [x] 新增《梯度下降是什么：模型是怎么把参数一点点调对的》+「梯度下降实验室」五个实验 + 两段 Manim 动画（Descent1D、Gradient2D），order 20，排在 KV Cache 之后，作为训练相关内容的第一讲（2026-10-16）
 - [x] 新增《残差连接为什么必不可少：深网络是怎么训得动的》+「残差连接实验室」00–04 + 两段 Manim 动画（GradientHighway、ResidualStream），order 25，梯度下降之后（2026-10-16）
 - [x] 模型篇补齐 4 讲（2026-10-16）：《反向传播是怎么算梯度的》(order 30，5 实验 + 2 动画)、《LayerNorm 为什么必需》(35，6 实验 + 2 动画)、《LoRA 为什么省参数》(40，6 实验 + 2 动画)、《模型怎么评测》(45，6 实验 + 2 动画)
-- [ ] Agent 篇 9 讲 + 基础篇 AI Coding 入门（规划见第 7 节）
+- [x] Agent 篇前三讲（2026-10-19）：《大模型怎么调用工具》(order 100，6 实验 + 2 动画)、《Agent Loop》(105，6 实验 + 2 动画)、《上下文窗口是 Agent 的工作记忆》(110，6 实验 + 2 动画)
+- [ ] Agent 篇剩余：`rag-embedding` 115（实验页与动画源码已有草稿、未渲染视频、文章未完成，未入库）、`mcp` 120、`streaming` 125、`trace-eval` 130、`gateway-orchestration` 135、`agent-frameworks` 140；基础篇 `ai-coding-tools` 3.8
 - [ ] 关于页只有两句话，待充实
 - [ ] 没有统计/分析（可考虑 Cloudflare Web Analytics，免费，一行脚本）
 - [x] 账号系统第 0 期代码完成并推送（默认关闭，线上行为不变）：邮箱验证码注册/登录、Passkey、单会话、注册来源、门禁、登录/账号/购买占位页；本地端到端 22/22 通过（2026-10-14）
@@ -180,6 +181,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-19 · Claude** — Agent 篇前三讲上线：`tool-calling`（100：00 一次 tool call 的来回，Anthropic / OpenAI 两种报文可切换，页内真实执行计算器与单位换算 / 01 工具定义占多少 token，**复用同源 `/labs/tokenizer-llm/tiktoken.js`**（移动该文件需同步改这里）/ 02 页内 JSON Schema 校验器与 is_error 重试 / 03 串行 vs 并行时间线 / 04 长结果截断与摘要 / 05 工具选择示意树；动画 ToolCallLoop、SchemaToText）、`agent-loop`（105：00 最小循环与 messages 数组增长 / 01 token 二次方累积与 prompt cache / 02 终止与预算 / 03 失败处理蒙特卡洛 / 04 workflow vs agent / 05 ReAct 轨迹阅读器；动画 WhileLoop、ReActTrace；引 Anthropic《Building effective agents》）、`context-window`（110：00 窗口预算条 / 01 Llama-3-70B KV cache 与注意力 n² 代价 / 02 Lost in the Middle 示意曲线（拟合 Liu et al. 2023 实测点）/ 03 截断、滚动、摘要三种压缩 / 04 持久记忆两次会话 / 05 prompt cache 费用；动画 ContextBudget、MemoryLayers；各家上下文长度为 2026-10-16 查证）。三讲首次在课程文章里用 fenced code。`rag-embedding` 写手中途被限流中断，草稿留在本地未入库。本地 build 25 页通过；headless Chromium 检查 1440 浅色 / 390 深色无横向滚动、iframe 自动长高、无脚本错误；个人信息检索 0。
 
 - **2026-10-17 · Claude** — 按本人反馈去掉分隔线：课程列表改为无线条、悬停整行圆角浅底且整行可点；页眉下边线、页脚上边线、翻页上边线、Resource 分组上边线删除。改 `Base.astro`。第 4 节加总规矩，skill 同步。
 

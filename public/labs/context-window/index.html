@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>上下文窗口实验室</title>
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
+  --sys:#1f5fd1; --tool:#b8860b; --hist:#7a828c; --res:#2a8a5c; --rag:#7c3aed;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f;
+  --sys:#6f9cf0; --tool:#f2b84b; --hist:#9aa1ab; --res:#5fc9a8; --rag:#a78bfa; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f;
+  --sys:#6f9cf0; --tool:#f2b84b; --hist:#9aa1ab; --res:#5fc9a8; --rag:#a78bfa; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+p code,li code,td code{font-size:.88em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+ul,ol{padding-left:1.2em}
+.formula{font-size:20px;text-align:center;margin:18px 0;letter-spacing:.02em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl b{font-variant-numeric:tabular-nums;min-width:3.2em}
+.ctrl i.sw{display:inline-block;width:12px;height:12px;border-radius:3px}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px}
+.toggle input{accent-color:var(--accent)}
+input[type=range]{accent-color:var(--accent);max-width:200px}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.two{grid-template-columns:1fr}}
+.cap{font-size:12px;color:var(--muted);margin:4px 0 0;text-align:center}
+.key{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;margin:0 0 8px}
+.key i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+.key i.b{width:12px;height:12px;border-radius:3px}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn{border-color:var(--warn)} .ro.warn b{color:var(--warn)}
+.ro.acc{border-color:var(--accent)} .ro.acc b{color:var(--accent)}
+.ro.ok{border-color:var(--ok)} .ro.ok b{color:var(--ok)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.sliders{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px 24px;margin-bottom:14px}
+.sliders .ctrl label{min-width:5em}
+pre.mem{font-size:13px;line-height:1.5;background:var(--accent-soft);border-radius:4px;padding:10px 12px;margin:0;white-space:pre-wrap;word-break:break-all;font-family:var(--sans)}
+.chat{display:flex;flex-direction:column;gap:6px;font-size:14px}
+.msg{border:1px solid var(--line);border-radius:6px;padding:6px 10px;line-height:1.6}
+.msg.u{border-color:var(--accent)} .msg.a{border-color:var(--line)} .msg.m{border-color:var(--ok);background:var(--accent-soft)} .msg.w{border-color:var(--warn)}
+.msg small{display:block;color:var(--muted);font-size:12px}
+.msg.dim{opacity:.4}
+.colh{font-size:14px;color:var(--muted);margin:0 0 6px}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">上下文窗口 · 工作记忆 · Lost in the Middle · 压缩 · 持久记忆 · Prompt Cache</div>
+  <h1>上下文窗口实验室</h1>
+  <p class="lede">模型一次只能看见窗口里的 token。下面的显存和计算量按 Llama-3-70B 的公开参数真实计算，费用按公开的缓存计价比例计算。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>窗口里有什么</h2>
+  <p>每次调用模型，送进去的不只是你刚打的那句话。系统提示、工具定义、整段历史、每次工具返回的结果、检索来的片段，全都排在同一条长度有限的窗口里。拖动五种内容的长度，看谁把窗口挤爆。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>窗口大小</label><div class="seg" id="w0"><button data-v="8192">8K</button><button data-v="32768" aria-pressed="true">32K</button><button data-v="131072">128K</button><button data-v="200000">200K</button><button data-v="1000000">1M</button></div></div>
+    </div>
+    <div class="sliders" id="sl0"></div>
+    <svg id="fig0" viewBox="0 0 800 150" role="img" aria-label="上下文窗口被五种内容填满的容量条"></svg>
+    <div class="readout">
+      <div class="ro acc"><b id="r0a">–</b><span>已占用 ÷ 窗口</span></div>
+      <div class="ro" id="r0bw"><b id="r0b">–</b><span>超出窗口的 token</span></div>
+      <div class="ro"><b id="r0c">–</b><span>最大的一块</span></div>
+      <div class="ro ok"><b id="r0d">–</b><span>留给本轮输出的空间</span></div>
+    </div>
+    <p class="note">红色部分进不了模型：要么调用直接报错（prompt is too long），要么你得先把什么东西删掉。注意历史消息和工具结果最容易失控，它们每一轮都在长。</p>
+  </div>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>窗口越长，越贵、越慢</h2>
+  <p>长度不是免费的。KV Cache 那一讲算过：每个 token 在每一层都要存一份 K 和 V，显存随长度线性增长。而注意力里每个 token 都要和前面所有 token 算一次相似度，计算量随长度平方增长。下面用 Llama-3-70B 的公开参数（80 层、64 个 query 头、8 个 KV 头、头维度 128、参数 70.6 B，bf16）真实算。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="n1">上下文长度</label><input id="n1" type="range" min="10" max="20" step="0.25" value="17"><b id="n1v"></b></div>
+    </div>
+    <div class="two">
+      <div><div class="key"><span><i style="background:var(--accent)"></i>KV cache 显存</span><span><i style="background:var(--muted)"></i>一张 H100 的 80 GB</span></div><svg id="fig1a" viewBox="0 0 400 260" role="img" aria-label="KV cache 显存随上下文长度线性增长"></svg><p class="cap">横轴：上下文长度；纵轴：KV cache 显存（GB）</p></div>
+      <div><div class="key"><span><i style="background:var(--warn)"></i>注意力计算量 ∝ n²</span><span><i style="background:var(--ok)"></i>矩阵乘法计算量 ∝ n</span></div><svg id="fig1b" viewBox="0 0 400 260" role="img" aria-label="注意力与矩阵乘法的计算量随上下文长度变化"></svg><p class="cap">横轴：上下文长度；纵轴：一次 prefill 的浮点运算次数（PFLOP）</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro acc"><b id="r1a">–</b><span>KV cache（bf16）</span></div>
+      <div class="ro warn"><b id="r1b">–</b><span>注意力：QKᵀ 与 AV</span></div>
+      <div class="ro ok"><b id="r1c">–</b><span>矩阵乘法：2 × 参数量 × n</span></div>
+      <div class="ro"><b id="r1d">–</b><span>注意力 ÷ 矩阵乘法</span></div>
+      <div class="ro"><b id="r1e">–</b><span>按一张 H100 bf16 峰值 989 TFLOPS 算的计算时间下限</span></div>
+    </div>
+    <p class="note">显存是一条直线，注意力计算量是一条抛物线。短上下文时矩阵乘法占大头；到几万 token 之后，注意力的 n² 反超并一路拉开。这就是为什么把一整本书塞进窗口要等很久、花很多钱。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>Lost in the Middle：放在中间的信息最容易被忽略</h2>
+  <p>窗口装得下，不等于模型都看得见。Liu 等人 2023 年把一条答案所在的文档放进 20 篇文档的不同位置，发现模型在开头和结尾表现最好，放在中间时正确率掉到接近不看任何文档的水平。拖动关键事实的位置，看命中率怎么变。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="p2">关键事实的位置</label><input id="p2" type="range" min="1" max="20" step="1" value="10"><b id="p2v"></b></div>
+    </div>
+    <div class="key"><span><i style="background:var(--accent)"></i>示意曲线（首因 + 近因两段指数衰减）</span><span><i style="background:var(--warn);height:12px;width:12px;border-radius:6px"></i>论文实测点（gpt-3.5-turbo-0613，20 篇文档）</span><span><i style="background:var(--muted)"></i>闭卷：不给任何文档</span></div>
+    <svg id="fig2" viewBox="0 0 800 300" role="img" aria-label="正确率随关键信息位置变化的 U 形曲线"></svg>
+    <p class="cap">横轴：关键事实在 20 块内容里的位置（1 = 开头）；纵轴：答对的比例</p>
+    <div class="readout">
+      <div class="ro acc"><b id="r2a">–</b><span>当前位置的命中率</span></div>
+      <div class="ro"><b id="r2b">–</b><span>比放在开头低</span></div>
+      <div class="ro warn"><b id="r2c">–</b><span>比闭卷（56.1%）高</span></div>
+    </div>
+    <p class="note">曲线是示意模型：命中率 = 底线 + 首因项 × e<sup>−位置/τ₁</sup> + 近因项 × e<sup>−(距结尾)/τ₂</sup>，参数用最小二乘拟合论文表 6 的五个实测点。它只刻画形状，不是任何现役模型的测量值。结论对上下文工程很实际：最要紧的指令放开头，最新的任务放结尾，别把关键事实埋在一大堆工具结果中间。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>对话不断变长：三种压缩策略</h2>
+  <p>Agent 跑几十轮，历史和工具结果会把窗口填满。到那时只有三条路：截断（删掉最早的）、滚动窗口（只留最近 <i>k</i> 轮）、摘要（把早期内容压成一段总结）。下面模拟一段 40 轮的对话，第 2 轮里用户说了一条关键事实（「项目用 Python 3.12，不能用 3.13」），看三种策略下它还在不在窗口里。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>窗口</label><div class="seg" id="w3"><button data-v="16384" aria-pressed="true">16K</button><button data-v="32768">32K</button><button data-v="65536">64K</button></div></div>
+      <div class="ctrl"><label for="t3">进行到第几轮</label><input id="t3" type="range" min="1" max="40" step="1" value="40"><b id="t3v"></b></div>
+      <div class="ctrl"><label for="k3">滚动窗口保留轮数</label><input id="k3" type="range" min="2" max="20" step="1" value="6"><b id="k3v"></b></div>
+    </div>
+    <div class="key"><span><i style="background:var(--muted)"></i>不压缩</span><span><i style="background:var(--warn)"></i>截断</span><span><i style="background:var(--tool)"></i>滚动窗口</span><span><i style="background:var(--accent)"></i>摘要</span></div>
+    <svg id="fig3" viewBox="0 0 800 320" role="img" aria-label="三种压缩策略下窗口占用随轮数的变化"></svg>
+    <p class="cap">横轴：第几轮；纵轴：窗口占用（token）。虚线是窗口上限。下方的点：这一轮关键事实是否还在窗口里</p>
+    <div class="readout">
+      <div class="ro"><b id="r3a">–</b><span>不压缩：总长度</span></div>
+      <div class="ro warn"><b id="r3b">–</b><span>截断：关键事实</span></div>
+      <div class="ro" style="border-color:var(--tool)"><b id="r3c">–</b><span>滚动窗口：关键事实</span></div>
+      <div class="ro acc"><b id="r3d">–</b><span>摘要：关键事实</span></div>
+    </div>
+    <p class="note">每轮的长度由固定种子生成（用户 100–400 token，助手 200–800 token，约三分之一的轮次带 1 000–5 000 token 的工具结果）。截断和滚动窗口迟早把第 2 轮扔掉；摘要策略在占用超过 80% 时把前一半压成 600 token，并把标记为关键的事实写进去，所以它还在，只是变成了一句总结。注意摘要本身也要调用一次模型，而且会丢细节。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>持久记忆：这次写下来，下次读回来</h2>
+  <p>窗口是工作记忆，会话一结束就清空。要让 Agent 下次还记得你，就得在会话结束前把要紧的东西写到窗口外面（一个文件、一张表），下次开始时再读回来。下面模拟两次会话。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="btns"><button class="btn pri" id="next4">下一步</button><button class="btn" id="reset4">重来</button></div>
+      <label class="toggle"><input type="checkbox" id="mem4" checked>第二次会话开始时读取记忆文件</label>
+    </div>
+    <div class="two">
+      <div><p class="colh">会话 1（第一天）</p><div class="chat" id="chat4a"></div></div>
+      <div><p class="colh">会话 2（第二天）</p><div class="chat" id="chat4b"></div></div>
+    </div>
+    <p class="colh" style="margin-top:14px">记忆文件 <code>memory.json</code></p>
+    <pre class="mem" id="mem4f">（空）</pre>
+    <div class="readout">
+      <div class="ro"><b id="r4a">–</b><span>会话 1 全部对话（字符）</span></div>
+      <div class="ro ok"><b id="r4b">–</b><span>记忆文件（字符）</span></div>
+      <div class="ro acc"><b id="r4c">–</b><span>会话 2 第一轮要带的上下文（字符）</span></div>
+      <div class="ro"><b id="r4d">–</b><span>会话 2 能否直接回答</span></div>
+    </div>
+    <p class="note">记忆文件只有几行，却让第二次会话一开始就知道用户是谁、在做什么。不读记忆，要么模型只能反问，要么得把第一天的对话整段塞回去。字符数由页内文本直接数出；token 数大致与它成比例（Token 那一讲）。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>Prompt Cache：固定前缀只付一次全价</h2>
+  <p>每一轮的输入都是「同样的前缀 + 新增的一小段」：系统提示和工具定义一字不变，历史只在末尾追加。KV Cache 那一讲说过，前文不变则它的 K、V 就不变，所以服务商可以把算过的前缀存起来，下一轮直接复用，只按很低的价格收「读缓存」的费用。拖三个滑块，看多轮对话的累计费用差多少。</p>
+  <div class="lab">
+    <div class="sliders">
+      <div class="ctrl"><label for="p5">固定前缀</label><input id="p5" type="range" min="1000" max="60000" step="1000" value="20000"><b id="p5v"></b></div>
+      <div class="ctrl"><label for="inc5">每轮新增</label><input id="inc5" type="range" min="200" max="4000" step="100" value="1000"><b id="inc5v"></b></div>
+      <div class="ctrl"><label for="t5">轮数</label><input id="t5" type="range" min="1" max="60" step="1" value="30"><b id="t5v"></b></div>
+    </div>
+    <div class="key"><span><i style="background:var(--warn)"></i>不用缓存</span><span><i style="background:var(--accent)"></i>增量缓存整个前缀</span></div>
+    <svg id="fig5" viewBox="0 0 800 300" role="img" aria-label="多轮对话累计输入费用，有无缓存对比"></svg>
+    <p class="cap">横轴：第几轮；纵轴：累计输入费用（美元）。按输入 $3 / 百万 token，缓存写入 1.25×、缓存读取 0.1× 计算（示例比例）</p>
+    <div class="readout">
+      <div class="ro"><b id="r5a">–</b><span>累计输入 token</span></div>
+      <div class="ro warn"><b id="r5b">–</b><span>不用缓存</span></div>
+      <div class="ro acc"><b id="r5c">–</b><span>用缓存</span></div>
+      <div class="ro ok"><b id="r5d">–</b><span>省下</span></div>
+    </div>
+    <p class="note">第 <i>t</i> 轮的输入是 前缀 + <i>t</i> × 新增。不用缓存时每轮按全价重算；用缓存时上一轮的全部内容按 0.1× 读回，只有新增的那一段按 1.25× 写入。轮数越多、前缀越长，省得越多。代价是前缀必须一字不差地固定：把时间戳、随机数放在系统提示开头，缓存就全废了。输出 token 两种情况一样，这里不算。</p>
+  </div>
+</section>
+
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmtK = (n) => n >= 1e6 ? (n / 1e6).toFixed(n % 1e6 ? 2 : 0) + 'M' : n >= 1000 ? (n % 1024 === 0 ? n / 1024 : n >= 1e5 ? Math.round(n / 1000) : +(n / 1000).toFixed(1)) + 'K' : String(Math.round(n));
+const fmtN = (n) => Math.round(n).toLocaleString('en-US');
+const SUP = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
+const sup = (n) => String(n).split('').map((c) => SUP[c] ?? c).join('');
+function vb(id, w, h, nw, nh) { const el = $(id), n = el.clientWidth > 0 && el.clientWidth < 600, W = n ? nw : w, H = n ? nh : h; el.setAttribute('viewBox', `0 0 ${W} ${H}`); return [W, H, n]; }
+function polyline(pts, col, w = 2, extra = '') { if (!pts.length) return ''; return `<path d="${pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('')}" fill="none" stroke="${col}" stroke-width="${w}" ${extra}/>`; }
+function seg(id, cb) {
+  const el = $(id);
+  el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; el.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); cb(b.dataset.v); });
+  return () => +el.querySelector('[aria-pressed=true]').dataset.v;
+}
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+/* ---------- 00 窗口里有什么 ---------- */
+const BLOCKS = [
+  { k: 'sys', name: '系统提示', max: 20000, v: 2000 },
+  { k: 'tool', name: '工具定义', max: 50000, v: 6000 },
+  { k: 'hist', name: '历史消息', max: 500000, v: 12000 },
+  { k: 'res', name: '工具结果', max: 500000, v: 10000 },
+  { k: 'rag', name: '检索片段', max: 100000, v: 4000 },
+];
+let win0 = 32768;
+$('#sl0').innerHTML = BLOCKS.map((b, i) => `<div class="ctrl"><i class="sw" style="background:var(--${b.k})"></i><label for="b0${i}">${b.name}</label><input id="b0${i}" type="range" min="0" max="${b.max}" step="${b.max >= 100000 ? 1000 : 250}" value="${b.v}"><b id="b0${i}v"></b></div>`).join('');
+const get0 = seg('#w0', (v) => { win0 = +v; draw0(); });
+function draw0() {
+  const vals = BLOCKS.map((b, i) => { const v = +$(`#b0${i}`).value; $(`#b0${i}v`).textContent = fmtK(v); return v; });
+  const total = vals.reduce((a, b) => a + b, 0), over = Math.max(0, total - win0);
+  const [W, H, narrow] = vb('#fig0', 800, 150, 420, 190), pl = 10, pr = 10, y0 = narrow ? 50 : 40, bh = narrow ? 60 : 50;
+  const scale = Math.max(win0, total) * 1.02, X = (t) => pl + t / scale * (W - pl - pr);
+  const mu = css('--muted'), li = css('--line'), wn = css('--warn'), fs = narrow ? 15 : 13;
+  let s = `<rect x="${X(0)}" y="${y0}" width="${X(win0) - X(0)}" height="${bh}" rx="4" fill="none" stroke="${li}" stroke-dasharray="4 3"/>`;
+  let acc = 0;
+  BLOCKS.forEach((b, i) => {
+    const v = vals[i]; if (!v) return;
+    const a0 = acc, a1 = acc + v; acc = a1;
+    const inW = Math.max(a0, Math.min(a1, win0)), col = css('--' + b.k);
+    if (inW > a0) s += `<rect x="${X(a0)}" y="${y0}" width="${Math.max(1, X(inW) - X(a0))}" height="${bh}" fill="${col}"/>`;
+    if (a1 > Math.max(a0, win0)) { const o0 = Math.max(a0, win0); s += `<rect x="${X(o0)}" y="${y0}" width="${Math.max(1, X(a1) - X(o0))}" height="${bh}" fill="${wn}"/><rect x="${X(o0)}" y="${y0}" width="${Math.max(1, X(a1) - X(o0))}" height="${bh}" fill="url(#hatch0)"/>`; }
+    const cx = (X(a0) + X(a1)) / 2, wpx = X(a1) - X(a0);
+    if (wpx > (narrow ? 44 : 60)) s += `<text x="${cx}" y="${y0 + bh / 2 + 5}" font-size="${fs}" fill="#fff" text-anchor="middle">${b.name}</text>`;
+    if (wpx > (narrow ? 30 : 36)) s += `<text x="${cx}" y="${y0 + bh + 18}" font-size="${fs}" fill="${mu}" text-anchor="middle">${fmtK(v)}</text>`;
+  });
+  s = `<defs><pattern id="hatch0" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="#fff" stroke-opacity=".45" stroke-width="3"/></pattern></defs>` + s;
+  s += `<line x1="${X(win0)}" y1="${y0 - 14}" x2="${X(win0)}" y2="${y0 + bh + 6}" stroke="${over ? wn : mu}" stroke-width="2"/><text x="${X(win0)}" y="${y0 - 20}" font-size="${fs}" fill="${over ? wn : mu}" text-anchor="${X(win0) > W - 70 ? 'end' : 'middle'}">窗口上限 ${fmtK(win0)}</text>`;
+  if (!over && total < win0) s += `<text x="${(X(total) + X(win0)) / 2}" y="${y0 + bh / 2 + 5}" font-size="${fs}" fill="${mu}" text-anchor="middle">${X(win0) - X(total) > 70 ? '空余 ' + fmtK(win0 - total) : ''}</text>`;
+  $('#fig0').innerHTML = s;
+  const pct = total / win0 * 100;
+  $('#r0a').textContent = `${fmtK(total)} ÷ ${fmtK(win0)} = ${pct.toFixed(0)}%`;
+  $('#r0b').textContent = over ? fmtK(over) : '0'; $('#r0bw').className = 'ro' + (over ? ' warn' : '');
+  const mi = vals.indexOf(Math.max(...vals)); $('#r0c').textContent = `${BLOCKS[mi].name} ${(vals[mi] / Math.max(1, total) * 100).toFixed(0)}%`;
+  $('#r0d').textContent = over ? '没有' : fmtK(win0 - total);
+}
+BLOCKS.forEach((b, i) => $(`#b0${i}`).addEventListener('input', draw0));
+
+/* ---------- 01 长度与代价（Llama-3-70B 公开参数） ---------- */
+const L70 = { layers: 80, qHeads: 64, kvHeads: 8, dHead: 128, params: 70.6e9, bytes: 2 };
+const kvBytesPerToken = 2 * L70.layers * L70.kvHeads * L70.dHead * L70.bytes;   // 327 680 B
+const kvGB = (n) => n * kvBytesPerToken / 1e9;
+const attnFlops = (n) => 4 * n * n * L70.dHead * L70.qHeads * L70.layers;        // QKᵀ 与 AV 各 2·n²·d，每头每层
+const mmFlops = (n) => 2 * L70.params * n;
+const H100 = 989e12;
+const fmtF = (f) => f >= 1e18 ? (f / 1e18).toFixed(2) + ' EFLOP' : f >= 1e15 ? (f / 1e15).toFixed(2) + ' PFLOP' : (f / 1e12).toFixed(1) + ' TFLOP';
+function draw1() {
+  const n = Math.round(2 ** +$('#n1').value); $('#n1v').textContent = fmtK(n) + ' token';
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent'), wn = css('--warn'), ok = css('--ok');
+  const [W, H, narrow] = vb('#fig1a', 400, 260, 400, 280), pl = 52, pr = 12, pt = 14, pb = 30, fs = narrow ? 15 : 12;
+  const X = (t) => pl + t / n * (W - pl - pr);
+  // 左：KV cache
+  const gmax = Math.max(kvGB(n), 1) * 1.08, Y1 = (g) => pt + (1 - g / gmax) * (H - pt - pb);
+  let s = '';
+  const step1 = niceStep(gmax);
+  for (let g = 0; g <= gmax; g += step1) s += `<line x1="${pl}" y1="${Y1(g)}" x2="${W - pr}" y2="${Y1(g)}" stroke="${li}"/><text x="${pl - 6}" y="${Y1(g) + 4}" font-size="${fs}" fill="${mu}" text-anchor="end">${+g.toFixed(2)}</text>`;
+  [0, 0.5, 1].forEach((f, i) => s += `<text x="${X(n * f)}" y="${H - 8}" font-size="${fs}" fill="${mu}" text-anchor="${['start', 'middle', 'end'][i]}">${fmtK(n * f)}</text>`);
+  if (80 < gmax) s += `<line x1="${pl}" y1="${Y1(80)}" x2="${W - pr}" y2="${Y1(80)}" stroke="${mu}" stroke-dasharray="5 4" stroke-width="1.5"/>`;
+  s += polyline([[X(0), Y1(0)], [X(n), Y1(kvGB(n))]], ac, 2.5);
+  $('#fig1a').innerHTML = s;
+  // 右：FLOPs
+  vb('#fig1b', 400, 260, 400, 280);
+  const fmax = Math.max(attnFlops(n), mmFlops(n)) / 1e15 * 1.08, Y2 = (f) => pt + (1 - f / fmax) * (H - pt - pb);
+  s = '';
+  const step2 = niceStep(fmax);
+  for (let f = 0; f <= fmax; f += step2) s += `<line x1="${pl}" y1="${Y2(f)}" x2="${W - pr}" y2="${Y2(f)}" stroke="${li}"/><text x="${pl - 6}" y="${Y2(f) + 4}" font-size="${fs}" fill="${mu}" text-anchor="end">${+f.toFixed(3)}</text>`;
+  [0, 0.5, 1].forEach((f, i) => s += `<text x="${X(n * f)}" y="${H - 8}" font-size="${fs}" fill="${mu}" text-anchor="${['start', 'middle', 'end'][i]}">${fmtK(n * f)}</text>`);
+  const pa = [], pm = [];
+  for (let i = 0; i <= 60; i++) { const t = n * i / 60; pa.push([X(t), Y2(attnFlops(t) / 1e15)]); pm.push([X(t), Y2(mmFlops(t) / 1e15)]); }
+  s += polyline(pm, ok, 2.5) + polyline(pa, wn, 2.5);
+  const cross = 2 * L70.params / (4 * L70.dHead * L70.qHeads * L70.layers);
+  if (cross < n) s += `<circle cx="${X(cross)}" cy="${Y2(mmFlops(cross) / 1e15)}" r="4" fill="${mu}"/><text x="${pl + 8}" y="${pt + 14}" font-size="${fs}" fill="${mu}">注意力在 ${fmtK(cross)} 处反超</text>`;
+  $('#fig1b').innerHTML = s;
+  $('#r1a').textContent = kvGB(n) >= 1 ? kvGB(n).toFixed(1) + ' GB' : (kvGB(n) * 1000).toFixed(0) + ' MB';
+  $('#r1b').textContent = fmtF(attnFlops(n)); $('#r1c').textContent = fmtF(mmFlops(n));
+  $('#r1d').textContent = (attnFlops(n) / mmFlops(n)).toFixed(2) + '×';
+  const sec = (attnFlops(n) + mmFlops(n)) / H100;
+  $('#r1e').textContent = sec >= 1 ? sec.toFixed(1) + ' s' : (sec * 1000).toFixed(0) + ' ms';
+}
+function niceStep(max) { const raw = max / 4, p = 10 ** Math.floor(Math.log10(raw)), m = raw / p; return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p; }
+$('#n1').addEventListener('input', draw1);
+
+/* ---------- 02 Lost in the Middle ---------- */
+// 论文（Liu et al. 2023, Table 6）gpt-3.5-turbo-0613 在 20 篇文档里的实测：位置 1/5/10/15/20
+const LIM = { pos: [1, 5, 10, 15, 20], acc: [75.8, 57.2, 53.8, 55.4, 63.2], closed: 56.1, N: 20 };
+// 示意模型：acc(x) = c + p·exp(−x/τ1) + r·exp(−(1−x)/τ2)，x = (位置−1)/(N−1)；在网格上对 (p, r, τ1, τ2, c) 做最小二乘
+const LIMFIT = (() => {
+  const xs = LIM.pos.map((p) => (p - 1) / (LIM.N - 1));
+  let best = null;
+  for (let t1 = 0.05; t1 <= 0.6; t1 += 0.01) for (let t2 = 0.05; t2 <= 0.6; t2 += 0.01) {
+    // 给定 τ1, τ2，对 c, p, r 做线性最小二乘（3×3 正规方程）
+    const F = xs.map((x) => [1, Math.exp(-x / t1), Math.exp(-(1 - x) / t2)]);
+    const A = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], b = [0, 0, 0];
+    F.forEach((f, i) => { for (let r = 0; r < 3; r++) { b[r] += f[r] * LIM.acc[i]; for (let c = 0; c < 3; c++) A[r][c] += f[r] * f[c]; } });
+    const sol = solve3(A, b); if (!sol) continue;
+    const err = F.reduce((e, f, i) => e + (f[0] * sol[0] + f[1] * sol[1] + f[2] * sol[2] - LIM.acc[i]) ** 2, 0);
+    if (!best || err < best.err) best = { err, c: sol[0], p: sol[1], r: sol[2], t1, t2 };
+  }
+  return best;
+})();
+function solve3(A, b) {
+  const M = A.map((r, i) => [...r, b[i]]);
+  for (let i = 0; i < 3; i++) { let p = i; for (let r = i + 1; r < 3; r++) if (Math.abs(M[r][i]) > Math.abs(M[p][i])) p = r; [M[i], M[p]] = [M[p], M[i]]; if (Math.abs(M[i][i]) < 1e-12) return null; for (let r = 0; r < 3; r++) if (r !== i) { const f = M[r][i] / M[i][i]; for (let c = i; c < 4; c++) M[r][c] -= f * M[i][c]; } }
+  return M.map((r, i) => r[3] / r[i]);
+}
+const limAcc = (pos) => { const x = (pos - 1) / (LIM.N - 1), f = LIMFIT; return f.c + f.p * Math.exp(-x / f.t1) + f.r * Math.exp(-(1 - x) / f.t2); };
+function draw2() {
+  const pos = +$('#p2').value; $('#p2v').textContent = `第 ${pos} / 20 块`;
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent'), wn = css('--warn');
+  const [W, H, narrow] = vb('#fig2', 800, 300, 420, 300), pl = 48, pr = 16, pt = 14, pb = 56, fs = narrow ? 15 : 13;
+  const lo = 45, hi = 85, X = (p) => pl + (p - 1) / (LIM.N - 1) * (W - pl - pr), Y = (a) => pt + (hi - a) / (hi - lo) * (H - pt - pb);
+  let s = '';
+  for (let a = 50; a <= 80; a += 10) s += `<line x1="${pl}" y1="${Y(a)}" x2="${W - pr}" y2="${Y(a)}" stroke="${li}"/><text x="${pl - 6}" y="${Y(a) + 4}" font-size="${fs}" fill="${mu}" text-anchor="end">${a}%</text>`;
+  s += `<line x1="${pl}" y1="${Y(LIM.closed)}" x2="${W - pr}" y2="${Y(LIM.closed)}" stroke="${mu}" stroke-dasharray="5 4" stroke-width="1.5"/>`;
+  const pts = []; for (let i = 0; i <= 100; i++) { const p = 1 + i * (LIM.N - 1) / 100; pts.push([X(p), Y(limAcc(p))]); }
+  s += polyline(pts, ac, 2.5);
+  LIM.pos.forEach((p, i) => s += `<circle cx="${X(p)}" cy="${Y(LIM.acc[i])}" r="5" fill="${wn}"/>`);
+  // 20 块内容的小方格 + 关键事实
+  const by = H - pb + 14, bw = (W - pl - pr) / LIM.N;
+  for (let i = 1; i <= LIM.N; i++) s += `<rect x="${pl + (i - 1) * bw + 1}" y="${by}" width="${bw - 2}" height="14" rx="2" fill="${i === pos ? wn : li}"/>`;
+  s += `<text x="${pl}" y="${by + 32}" font-size="${fs}" fill="${mu}">开头</text><text x="${W - pr}" y="${by + 32}" font-size="${fs}" fill="${mu}" text-anchor="end">结尾</text>`;
+  s += `<line x1="${X(pos)}" y1="${Y(limAcc(pos))}" x2="${pl + (pos - 0.5) * bw}" y2="${by}" stroke="${wn}" stroke-dasharray="3 3"/><circle cx="${X(pos)}" cy="${Y(limAcc(pos))}" r="7" fill="none" stroke="${wn}" stroke-width="2"/>`;
+  $('#fig2').innerHTML = s;
+  const a = limAcc(pos), a1 = limAcc(1);
+  $('#r2a').textContent = a.toFixed(1) + '%'; $('#r2b').textContent = (a1 - a).toFixed(1) + ' 个百分点';
+  const d = a - LIM.closed; $('#r2c').textContent = (d >= 0 ? '+' : '') + d.toFixed(1) + ' 个百分点';
+}
+$('#p2').addEventListener('input', draw2);
+
+/* ---------- 03 三种压缩策略 ---------- */
+const TURNS3 = 40, KEY_TURN = 2, SUM_LEN = 600, SYS3 = 1500;
+const CONV3 = (() => { const r = rng(7); const a = []; for (let t = 1; t <= TURNS3; t++) { const u = 100 + Math.floor(r() * 300), as = 200 + Math.floor(r() * 600), tool = r() < 0.34 ? 1000 + Math.floor(r() * 4000) : 0; a.push({ t, u, a: as, tool, len: u + as + tool }); } return a; })();
+let win3 = 16384;
+const get3 = seg('#w3', (v) => { win3 = +v; draw3(); });
+// 返回每一轮 { used, key } ：这一轮调用模型时窗口占用，以及关键事实是否还在
+function simulate3(win, k) {
+  const raw = [], trunc = [], roll = [], summ = [];
+  let sumState = { summary: 0, keyInSummary: false, from: 0 }; // from: 摘要覆盖到第几轮
+  for (let t = 1; t <= TURNS3; t++) {
+    const hist = CONV3.slice(0, t);
+    // 不压缩
+    const total = SYS3 + hist.reduce((s, x) => s + x.len, 0);
+    raw.push({ used: total, key: true });
+    // 截断：从最早的轮开始删，直到装得下
+    let i0 = 0, used = total; while (used > win && i0 < t - 1) { used -= hist[i0].len; i0++; }
+    trunc.push({ used, key: i0 < KEY_TURN });
+    // 滚动窗口：只留最近 k 轮
+    const j0 = Math.max(0, t - k); let ru = SYS3 + hist.slice(j0).reduce((s, x) => s + x.len, 0);
+    roll.push({ used: ru, key: j0 < KEY_TURN });
+    // 摘要：占用超过 80% 时把「摘要 + 前一半轮次」压成 600 token
+    let su = SYS3 + sumState.summary + hist.slice(sumState.from).reduce((s, x) => s + x.len, 0);
+    if (su > win * 0.8) {
+      const kept = hist.slice(sumState.from), half = sumState.from + Math.ceil(kept.length / 2);
+      sumState = { summary: SUM_LEN, keyInSummary: sumState.keyInSummary || (sumState.from < KEY_TURN && half >= KEY_TURN), from: half };
+      su = SYS3 + sumState.summary + hist.slice(sumState.from).reduce((s, x) => s + x.len, 0);
+    }
+    summ.push({ used: su, key: sumState.from < KEY_TURN || sumState.keyInSummary, viaSummary: sumState.keyInSummary && sumState.from >= KEY_TURN });
+  }
+  return { raw, trunc, roll, summ };
+}
+function draw3() {
+  const T = +$('#t3').value, k = +$('#k3').value; $('#t3v').textContent = T; $('#k3v').textContent = k + ' 轮';
+  const R = simulate3(win3, k);
+  const mu = css('--muted'), li = css('--line'), cols = { raw: mu, trunc: css('--warn'), roll: css('--tool'), summ: css('--accent') };
+  const [W, H, narrow] = vb('#fig3', 800, 320, 420, 350), pl = narrow ? 78 : 54, pr = 14, pt = 14, pb = narrow ? 96 : 86, fs = narrow ? 15 : 13;
+  const ymax = Math.max(win3 * 1.15, R.raw[T - 1].used * 1.05), X = (t) => pl + (t - 1) / (TURNS3 - 1) * (W - pl - pr), Y = (v) => pt + (1 - v / ymax) * (H - pt - pb);
+  let s = '';
+  const st = niceStep(ymax);
+  for (let v = 0; v <= ymax; v += st) s += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/><text x="${pl - 6}" y="${Y(v) + 4}" font-size="${fs}" fill="${mu}" text-anchor="end">${fmtK(v)}</text>`;
+  s += `<line x1="${pl}" y1="${Y(win3)}" x2="${W - pr}" y2="${Y(win3)}" stroke="${cols.trunc}" stroke-dasharray="5 4" stroke-width="1.5"/>`;
+  [1, 10, 20, 30, 40].forEach((t) => s += `<text x="${X(t)}" y="${H - pb + 16}" font-size="${fs}" fill="${mu}" text-anchor="middle">${t}</text>`);
+  const names = { raw: '不压缩', trunc: '截断', roll: '滚动窗口', summ: '摘要' };
+  ['raw', 'trunc', 'roll', 'summ'].forEach((key) => s += polyline(R[key].slice(0, T).map((r, i) => [X(i + 1), Y(Math.min(r.used, ymax))]), cols[key], key === 'raw' ? 2 : 2.5, key === 'raw' ? 'stroke-dasharray="2 3"' : ''));
+  // 关键事实是否还在：三行点
+  ['trunc', 'roll', 'summ'].forEach((key, row) => {
+    const y = H - pb + 36 + row * (narrow ? 20 : 16);
+    s += `<text x="${pl - 6}" y="${y + 4}" font-size="${fs - 1}" fill="${cols[key]}" text-anchor="end">${names[key]}</text>`;
+    for (let t = 1; t <= T; t++) { const r = R[key][t - 1]; s += `<circle cx="${X(t)}" cy="${y}" r="${narrow ? 3.5 : 3}" fill="${r.key ? cols[key] : 'none'}" stroke="${cols[key]}" stroke-width="1"${r.viaSummary ? ' fill-opacity=".45"' : ''}/>`; }
+  });
+  $('#fig3').innerHTML = s;
+  const cur = (key) => R[key][T - 1];
+  $('#r3a').textContent = fmtK(cur('raw').used) + ' token' + (cur('raw').used > win3 ? '（已超窗）' : '');
+  const word = (r) => r.key ? (r.viaSummary ? '在摘要里' : '还在') : '已丢失';
+  $('#r3b').textContent = word(cur('trunc')); $('#r3c').textContent = word(cur('roll')); $('#r3d').textContent = word(cur('summ'));
+}
+$('#t3').addEventListener('input', draw3); $('#k3').addEventListener('input', draw3);
+
+/* ---------- 04 持久记忆 ---------- */
+const S1 = [
+  { r: 'u', t: '我在做一个给北京的中学做课表排课的网站，后端用 Python 3.12。' },
+  { r: 'a', t: '好的。排课本质上是约束满足问题，先定教师、教室、时段三类约束，再做搜索。要我先搭数据模型吗？' },
+  { r: 'u', t: '先搭数据模型。另外，数据库定了用 PostgreSQL，不要给我推荐别的。' },
+  { r: 'a', t: '明白，PostgreSQL。我给出 teachers、rooms、slots、lessons 四张表的定义，外键如下……（略）' },
+  { r: 'u', t: '可以。我习惯用中文写注释，变量名用英文。下周二要给校方演示。' },
+  { r: 'a', t: '记下了：中文注释、英文变量名、下周二演示。今天就到这里？' },
+  { r: 'u', t: '对，明天继续。' },
+];
+const MEM = { 项目: '北京某中学排课网站', 技术栈: 'Python 3.12 + PostgreSQL（不换）', 代码习惯: '中文注释，英文变量名', 截止: '下周二给校方演示', 进度: '数据模型四张表已定' };
+const S2Q = { r: 'u', t: '接着昨天的做，下一步写什么？' };
+const S2A_MEM = { r: 'a', t: '昨天四张表已经定了，下一步写 lessons 的约束检查：教师同一时段不能排两门，教室容量要够。继续用 Python 3.12 + PostgreSQL，中文注释。离周二演示还有几天，先把能跑的最小版本做出来。' };
+const S2A_NOMEM = { r: 'w', t: '我没有昨天的记录。你能告诉我是什么项目、用什么语言和数据库、做到了哪一步吗？' };
+let step4 = 0;
+const S4_STEPS = S1.length + 2; // S1 各轮 → 写记忆 → 会话 2
+function draw4() {
+  const useMem = $('#mem4').checked;
+  const msg = (m, extra = '') => `<div class="msg ${m.r}${extra}"><small>${m.r === 'u' ? '用户' : m.r === 'm' ? '读取记忆' : 'Agent'}</small>${m.t}</div>`;
+  const shown = S1.slice(0, Math.min(step4, S1.length));
+  let a = shown.map((m) => msg(m)).join('');
+  const wrote = step4 >= S1.length + 1;
+  if (wrote) a += `<div class="msg m"><small>会话结束前</small>把要紧的事写进 memory.json</div>`;
+  $('#chat4a').innerHTML = a || '<div class="msg dim">点「下一步」开始</div>';
+  const memText = JSON.stringify(MEM, null, 1);
+  $('#mem4f').textContent = wrote ? memText : '（空）';
+  let b = '';
+  const s2 = step4 >= S1.length + 2;
+  if (s2) {
+    if (useMem) b += msg({ r: 'm', t: '开始前读 memory.json：' + Object.entries(MEM).map(([k, v]) => `${k}=${v}`).join('；') });
+    b += msg(S2Q) + msg(useMem ? S2A_MEM : S2A_NOMEM);
+  } else b = '<div class="msg dim">第二天</div>';
+  $('#chat4b').innerHTML = b;
+  const c1 = S1.reduce((s, m) => s + m.t.length, 0), cm = memText.length;
+  $('#r4a').textContent = fmtN(c1); $('#r4b').textContent = wrote ? fmtN(cm) : '–';
+  $('#r4c').textContent = s2 ? fmtN(S2Q.t.length + (useMem ? cm : 0)) + (useMem ? '' : '（不含记忆）') : '–';
+  $('#r4d').textContent = s2 ? (useMem ? '能' : '不能，只能反问') : '–';
+  $('#next4').disabled = step4 >= S4_STEPS;
+  $('#next4').textContent = step4 >= S4_STEPS ? '演示完了' : step4 === S1.length ? '写入记忆' : step4 === S1.length + 1 ? '开始会话 2' : '下一步';
+}
+$('#next4').addEventListener('click', () => { if (step4 < S4_STEPS) step4++; draw4(); });
+$('#reset4').addEventListener('click', () => { step4 = 0; draw4(); });
+$('#mem4').addEventListener('change', draw4);
+
+/* ---------- 05 Prompt Cache ---------- */
+const PRICE = { input: 3 / 1e6, write: 1.25, read: 0.1 };   // 输入 $3 / 百万 token；写缓存 1.25×、读缓存 0.1×（示例比例）
+function cost5(P, S, T) {
+  const nc = [], wc = []; let a = 0, b = 0, tok = 0;
+  for (let t = 1; t <= T; t++) {
+    const ctx = P + t * S; tok += ctx;
+    a += ctx * PRICE.input;
+    b += t === 1 ? ctx * PRICE.input * PRICE.write : (P + (t - 1) * S) * PRICE.input * PRICE.read + S * PRICE.input * PRICE.write;
+    nc.push(a); wc.push(b);
+  }
+  return { nc, wc, tok };
+}
+function draw5() {
+  const P = +$('#p5').value, S = +$('#inc5').value, T = +$('#t5').value;
+  $('#p5v').textContent = fmtK(P); $('#inc5v').textContent = fmtK(S); $('#t5v').textContent = T;
+  const R = cost5(P, S, T);
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent'), wn = css('--warn');
+  const [W, H, narrow] = vb('#fig5', 800, 300, 420, 300), pl = 58, pr = 14, pt = 14, pb = 30, fs = narrow ? 15 : 13;
+  const ymax = R.nc[T - 1] * 1.08, X = (t) => pl + (T === 1 ? 0.5 : (t - 1) / (T - 1)) * (W - pl - pr), Y = (v) => pt + (1 - v / ymax) * (H - pt - pb);
+  let s = ''; const st = niceStep(ymax);
+  for (let v = 0; v <= ymax; v += st) s += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/><text x="${pl - 6}" y="${Y(v) + 4}" font-size="${fs}" fill="${mu}" text-anchor="end">$${+v.toFixed(2)}</text>`;
+  [1, Math.round(T / 2), T].forEach((t) => s += `<text x="${X(t)}" y="${H - 8}" font-size="${fs}" fill="${mu}" text-anchor="middle">${t}</text>`);
+  s += polyline(R.nc.map((v, i) => [X(i + 1), Y(v)]), wn, 2.5) + polyline(R.wc.map((v, i) => [X(i + 1), Y(v)]), ac, 2.5);
+  $('#fig5').innerHTML = s;
+  const a = R.nc[T - 1], b = R.wc[T - 1];
+  $('#r5a').textContent = fmtK(R.tok); $('#r5b').textContent = '$' + a.toFixed(2); $('#r5c').textContent = '$' + b.toFixed(2);
+  $('#r5d').textContent = ((1 - b / a) * 100).toFixed(0) + '%';
+}
+['#p5', '#inc5', '#t5'].forEach((id) => $(id).addEventListener('input', draw5));
+
+/* ---------- 启动与重绘 ---------- */
+const all = () => { draw0(); draw1(); draw2(); draw3(); draw4(); draw5(); };
+all();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { draw0(); draw1(); draw2(); draw3(); draw5(); }, 150); });
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>

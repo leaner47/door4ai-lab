@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>Agent Loop 实验室</title>
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c; --ok-soft:#dcefe4;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --ok-soft:#1d3a2c; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --ok-soft:#1d3a2c; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+p code,li code,.note code{font-size:.88em;background:var(--accent-soft);padding:1px 5px;border-radius:3px;font-family:var(--mono)}
+.formula{font-size:20px;text-align:center;margin:18px 0;letter-spacing:.02em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl b{font-variant-numeric:tabular-nums;min-width:2.4em}
+.ctrl select{font:inherit;font-size:13px;color:var(--fg);background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:4px 6px}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px}
+.toggle input{accent-color:var(--warn)}
+input[type=range]{accent-color:var(--accent);max-width:200px}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+svg text.mono{font-family:var(--mono)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:720px){.two{grid-template-columns:1fr}}
+.cap{font-size:12px;color:var(--muted);margin:4px 0 0;text-align:center}
+.key{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;margin:0 0 8px}
+.key i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn{border-color:var(--warn)} .ro.warn b{color:var(--warn)}
+.ro.acc{border-color:var(--accent)} .ro.acc b{color:var(--accent)}
+.ro.ok{border-color:var(--ok)} .ro.ok b{color:var(--ok)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.num{text-align:right}
+/* 00：消息数组 */
+.msgs{font-family:var(--mono);font-size:12.5px;line-height:1.55;border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-height:200px;max-height:420px;overflow:auto;background:var(--bg)}
+.msg{margin:0 0 8px;padding:6px 8px;border-left:3px solid var(--line);border-radius:3px;white-space:pre-wrap;word-break:break-word}
+.msg.user{border-color:var(--muted)} .msg.assistant{border-color:var(--accent)} .msg.tool{border-color:var(--ok)}
+.msg.new{background:var(--accent-soft)}
+.msg .role{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.msg .tu{color:var(--accent)} .msg .tr{color:var(--ok)} .msg .th{color:var(--muted)}
+.stage{font-size:15px;margin:8px 0 0;min-height:1.8em}
+.stage b{color:var(--accent)}
+/* 05：轨迹 */
+.trace{font-family:var(--mono);font-size:13.5px;line-height:1.6;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.trace .ln{display:block;padding:6px 12px;border:0;border-bottom:1px solid var(--line);background:none;width:100%;text-align:left;font:inherit;color:var(--fg);cursor:pointer;white-space:pre-wrap;word-break:break-word}
+.trace .ln:last-child{border-bottom:0}
+.trace .ln .k{font-weight:700;display:inline-block;min-width:9.4em}
+.trace .ln.q .k{color:var(--muted)} .trace .ln.t .k{color:var(--accent)} .trace .ln.a .k{color:#b8860b} .trace .ln.o .k{color:var(--ok)}
+.trace .ln[aria-pressed=true]{background:var(--accent-soft)}
+.expl{font-size:15px;margin:10px 0 0;min-height:3.6em}
+.expl b{color:var(--accent)}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">Agent Loop · ReAct · 上下文累积 · 终止条件 · Harness</div>
+  <h1>Agent Loop 实验室</h1>
+  <p class="lede">一个 Agent 就是模型 + 工具 + 一个 while 循环。下面把这个循环拆开，一圈一圈地看它在做什么、花了多少 token、在哪里停下来。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>最小的 Agent Loop，一步一步播</h2>
+  <p>任务：比较两个城市现在哪个更热。工具只有一个 <code>get_temperature(city)</code>。左边是循环本身，右边是真实格式的消息数组：每转一圈，数组就长两条。这里的「模型」是页内规则模拟的（它的思考是写死的模板，不是真的大模型），温度来自页内的一张假数据表，不是实时天气。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="c0a">城市 A</label><select id="c0a"></select></div>
+      <div class="ctrl"><label for="c0b">城市 B</label><select id="c0b"></select></div>
+      <div class="btns"><button class="btn pri" id="next0">下一步</button><button class="btn" id="auto0">自动播放</button><button class="btn" id="reset0">重置</button></div>
+    </div>
+    <div class="two">
+      <div>
+        <svg id="fig0" viewBox="0 0 420 300" role="img" aria-label="Agent Loop 流程图，高亮当前环节"></svg>
+        <p class="stage" id="stage0"></p>
+      </div>
+      <div><div class="msgs" id="msgs0"></div><p class="cap">messages 数组（每次调模型都把它整个发过去）</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r0a">0</b><span>循环转了几圈</span></div>
+      <div class="ro acc"><b id="r0b">1</b><span>消息条数</span></div>
+      <div class="ro"><b id="r0c">–</b><span>数组总字符数（JSON）</span></div>
+    </div>
+    <p class="note">注意看：模型从来不「执行」工具，它只是输出一条 <code>tool_use</code>；执行的是循环外面的程序（harness），再把 <code>tool_result</code> 追加回数组。模型什么时候不再输出 tool_use，循环就在什么时候退出。</p>
+  </div>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>上下文每圈变长，发送总量二次方增长</h2>
+  <p>每次调模型都要把整个 messages 数组重新发一遍。设第一圈发 <i>c</i><sub>0</sub> 个 token，之后每圈多出一条工具结果（<i>k</i> 个）和一条模型输出（<i>m</i> 个），那么第 <i>i</i> 圈发送的长度是 <i>c</i><sub>0</sub> + (<i>i</i> − 1)(<i>k</i> + <i>m</i>)，<i>n</i> 圈的总发送量：</p>
+  <p class="formula">Σ = <i>n c</i><sub>0</sub> + (<i>k</i> + <i>m</i>) · <i>n</i>(<i>n</i> − 1)/2</p>
+  <p>有 prompt cache 时，前一圈已经发过的前缀只按折扣价计，只有新追加的 <i>k</i> + <i>m</i> 个 token 按原价。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="k1">每步工具结果长度 k</label><input id="k1" type="range" min="50" max="4000" step="50" value="400"><b id="k1v"></b></div>
+      <div class="ctrl"><label for="n1">步数 n</label><input id="n1" type="range" min="1" max="40" step="1" value="20"><b id="n1v"></b></div>
+      <div class="ctrl"><label for="r1">cache 命中部分的价格比例</label><input id="r1" type="range" min="0" max="1" step="0.05" value="0.1"><b id="r1v"></b></div>
+    </div>
+    <div class="key"><span><i style="background:var(--warn)"></i>无 cache</span><span><i style="background:var(--accent)"></i>有 cache（计价当量）</span></div>
+    <div class="two">
+      <div><svg id="fig1a" viewBox="0 0 400 260" role="img" aria-label="每一步发送的上下文长度"></svg><p class="cap">每一步发送的上下文长度（token）</p></div>
+      <div><svg id="fig1b" viewBox="0 0 400 260" role="img" aria-label="累计发送 token"></svg><p class="cap">累计发送（无 cache）与计价当量（有 cache）</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r1a">–</b><span>最后一步的上下文长度</span></div>
+      <div class="ro warn"><b id="r1b">–</b><span>无 cache：累计发送 token</span></div>
+      <div class="ro acc"><b id="r1c">–</b><span>有 cache：计价当量</span></div>
+      <div class="ro ok"><b id="r1d">–</b><span>cache 省下的比例</span></div>
+    </div>
+    <p class="note">固定 <i>c</i><sub>0</sub> = 800、每步模型输出 <i>m</i> = 80。步数翻一倍，累计发送量约翻四倍。价格比例 0.1 只是占位：各家 API 对 cache 命中的折扣不同，按你用的那家改这个滑块。这里没有算 cache 写入的额外费用。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>终止条件：循环在哪里停下</h2>
+  <p>循环有三种退出方式：模型给出最终回答（正常）、达到最大步数、花完 token 预算。拖「任务需要的工具调用数」看正常情况；勾上「模型卡住」，模型每一圈都还想再调一次工具，看两个兜底哪个先把它拦下来。每步追加的 token 数沿用 01 的设定（<i>c</i><sub>0</sub> = 800，每步 +480）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="need2">任务需要的工具调用数</label><input id="need2" type="range" min="1" max="40" step="1" value="6"><b id="need2v"></b></div>
+      <div class="ctrl"><label for="max2">最大步数</label><input id="max2" type="range" min="1" max="40" step="1" value="12"><b id="max2v"></b></div>
+      <div class="ctrl"><label for="bud2">token 预算（k）</label><input id="bud2" type="range" min="2" max="400" step="2" value="60"><b id="bud2v"></b></div>
+      <label class="toggle"><input type="checkbox" id="stuck2">模型卡住：每圈都还想调工具</label>
+    </div>
+    <svg id="fig2" viewBox="0 0 800 260" role="img" aria-label="循环每一步的累计 token 与三种终止条件"></svg>
+    <p class="cap">横轴：第几圈；纵轴：到这一圈为止累计发送的 token。三条竖线是三种退出条件各自会在哪一圈触发</p>
+    <div class="readout">
+      <div class="ro acc"><b id="r2a">–</b><span>循环停在第几圈</span></div>
+      <div class="ro" id="r2bw"><b id="r2b">–</b><span>停止原因</span></div>
+      <div class="ro"><b id="r2c">–</b><span>停下时累计发送 token</span></div>
+      <div class="ro warn"><b id="r2d">–</b><span>如果没有任何兜底</span></div>
+    </div>
+    <p class="note">最大步数是按「圈」拦，预算是按「钱」拦。因为上下文是二次方增长的，预算这条线往往比你以为的来得早：把预算放到 300k、步数放到 40，看预算在第几圈比最大步数先触发。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>工具会失败：三种处理策略的成功率</h2>
+  <p>任务需要连续调 <i>N</i> 次工具，每次调用独立地以概率 <i>p</i> 失败（超时、报错、返回空）。三种策略：<b>直接放弃</b>（任何一次失败整个任务失败）；<b>把错误回给模型重试</b>（错误信息作为 tool_result 追加回去，模型再试，最多重试 <i>R</i> 次）；<b>换工具</b>（失败后改用一个备用工具，它自己的失败率是 <i>q</i>，只换一次）。下面是 20000 次蒙特卡洛模拟，细线是解析解。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="p3">单次失败概率 p</label><input id="p3" type="range" min="0" max="0.9" step="0.05" value="0.2"><b id="p3v"></b></div>
+      <div class="ctrl"><label for="n3">需要的工具调用数 N</label><input id="n3" type="range" min="1" max="12" step="1" value="4"><b id="n3v"></b></div>
+      <div class="ctrl"><label for="rr3">最多重试 R</label><input id="rr3" type="range" min="0" max="5" step="1" value="2"><b id="rr3v"></b></div>
+      <div class="ctrl"><label for="q3">备用工具失败概率 q</label><input id="q3" type="range" min="0" max="0.9" step="0.05" value="0.3"><b id="q3v"></b></div>
+    </div>
+    <svg id="fig3" viewBox="0 0 800 260" role="img" aria-label="三种失败处理策略的任务成功率"></svg>
+    <div class="readout">
+      <div class="ro warn"><b id="r3a">–</b><span>直接放弃：成功率</span></div>
+      <div class="ro acc"><b id="r3b">–</b><span>回填重试：成功率</span></div>
+      <div class="ro ok"><b id="r3c">–</b><span>换工具：成功率</span></div>
+      <div class="ro"><b id="r3d">–</b><span>平均工具调用次数（放弃 / 重试 / 换工具）</span></div>
+    </div>
+    <p class="note">解析解：放弃 (1 − <i>p</i>)<sup><i>N</i></sup>；重试 (1 − <i>p</i><sup><i>R</i>+1</sup>)<sup><i>N</i></sup>；换工具 (1 − <i>pq</i>)<sup><i>N</i></sup>。重试几乎总是最划算的兜底，代价是多花几圈、多发几次上下文。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>Workflow 还是 Agent：步数的分布</h2>
+  <p>同一个任务「查 <i>N</i> 个城市的温度并比较」，两种做法。<b>Workflow</b>：代码写死步骤，不管问题里有没有现成信息，一律查 <i>N</i> 次再比较，永远 <i>N</i> + 1 步。<b>Agent</b>：模型自己决定下一步，题目里已经给了温度的城市它会跳过，但每次查完也可能多走一步（再确认一次、或者先调错了工具）。下面是规则模拟的 5000 个任务。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="n4">城市数 N</label><input id="n4" type="range" min="2" max="8" step="1" value="4"><b id="n4v"></b></div>
+      <div class="ctrl"><label for="f4">题目里已给出温度的比例</label><input id="f4" type="range" min="0" max="1" step="0.05" value="0.3"><b id="f4v"></b></div>
+      <div class="ctrl"><label for="w4">Agent 每次查完多走一步的概率</label><input id="w4" type="range" min="0" max="0.6" step="0.05" value="0.2"><b id="w4v"></b></div>
+    </div>
+    <div class="key"><span><i style="background:var(--muted)"></i>Workflow</span><span><i style="background:var(--accent)"></i>Agent</span></div>
+    <svg id="fig4" viewBox="0 0 800 260" role="img" aria-label="两种做法的步数分布直方图"></svg>
+    <p class="cap">横轴：完成任务用了几步；纵轴：占比</p>
+    <div class="readout">
+      <div class="ro"><b id="r4a">–</b><span>Workflow：步数（固定）</span></div>
+      <div class="ro acc"><b id="r4b">–</b><span>Agent：平均步数</span></div>
+      <div class="ro acc"><b id="r4c">–</b><span>Agent：最少 / 95 分位 / 最多</span></div>
+    </div>
+    <p class="note">Workflow 的步数、成本、延迟都是常数，可预测；Agent 平均可能更省，但有一条长尾。Anthropic 的建议是：能用 workflow 的就别用 agent，只有当下一步真的得看情况决定时才让模型来决定。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>读一条 ReAct 轨迹</h2>
+  <p>ReAct 的轨迹就是 Thought / Action / Observation 三种行交替。点任意一行，看它对应循环里的哪个环节、在消息数组里是什么角色。</p>
+  <div class="lab">
+    <div class="two">
+      <div class="trace" id="trace5"></div>
+      <div>
+        <svg id="fig5" viewBox="0 0 420 300" role="img" aria-label="Agent Loop 流程图，高亮被点的那一行对应的环节"></svg>
+        <p class="expl" id="expl5">点左边的一行。</p>
+      </div>
+    </div>
+    <p class="note">Thought 和 Action 是同一次模型输出里的两部分（先想再做），Observation 是 harness 执行工具后追加的。一组 Thought → Action → Observation 就是循环的一圈；最后一个 Action 是 Finish，循环退出。</p>
+  </div>
+</section>
+
+</div>
+<script>
+/* ===== CORE：纯计算，浏览器与 node 共用 ===== */
+const TEMPS = { '北京': 22, '上海': 26, '合肥': 24, '纽约': 18, '广州': 30, '成都': 21 };   // 页内假数据，不是实时天气
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+// 00：规则模拟的「模型」把任务展开成一串事件；messages 是真实格式
+function planEvents(a, b) {
+  const ev = [], msgs = [{ role: 'user', content: `${a}和${b}现在哪个更热？差多少？` }];
+  const snap = () => JSON.parse(JSON.stringify(msgs));
+  ev.push({ stage: 'start', text: '用户的问题是数组里的第一条消息。把整个数组发给模型。', msgs: snap() });
+  let loops = 0;
+  for (const [i, city] of [a, b].entries()) {
+    const thought = i === 0 ? `要比较两个城市，先查 ${city} 的温度。` : `${a} 查到了，再查 ${city}。`;
+    msgs.push({ role: 'assistant', content: [{ type: 'text', text: thought }, { type: 'tool_use', id: `call_${i + 1}`, name: 'get_temperature', input: { city } }] });
+    ev.push({ stage: 'model', text: `<b>模型</b>读完整个数组，输出一段思考和一条 tool_use：get_temperature(${city})。`, msgs: snap() });
+    ev.push({ stage: 'check', text: '<b>判断</b>：输出里有 tool_use → 留在循环里。', msgs: snap(), yes: true });
+    ev.push({ stage: 'exec', text: `<b>harness 执行工具</b>：查表得到 ${TEMPS[city]} °C。模型本身不执行任何东西。`, msgs: snap() });
+    msgs.push({ role: 'user', content: [{ type: 'tool_result', tool_use_id: `call_${i + 1}`, content: `${TEMPS[city]} °C` }] });
+    loops++;
+    ev.push({ stage: 'append', text: `<b>追加</b> tool_result 到数组末尾，回到循环开头。第 ${loops} 圈结束，数组长了两条。`, msgs: snap(), loops });
+  }
+  const d = TEMPS[a] - TEMPS[b];
+  const final = d === 0 ? `两个城市一样热，都是 ${TEMPS[a]} °C。` : `${d > 0 ? a : b}更热：${d > 0 ? a : b} ${Math.max(TEMPS[a], TEMPS[b])} °C，${d > 0 ? b : a} ${Math.min(TEMPS[a], TEMPS[b])} °C，高 ${Math.abs(d)} °C。`;
+  msgs.push({ role: 'assistant', content: [{ type: 'text', text: final }], stop_reason: 'end_turn' });
+  ev.push({ stage: 'model', text: '<b>模型</b>再读一遍数组，两个温度都在里面了，直接写出回答，没有 tool_use。', msgs: snap(), loops });
+  ev.push({ stage: 'done', text: '<b>判断</b>：没有 tool_use → 退出循环，把最后一条消息交给用户。', msgs: snap(), loops });
+  return ev;
+}
+// 01：上下文长度与累计发送量
+function tokenSeries(c0, k, m, n, r) {
+  const ctx = [], cum = [], cumC = []; let s = 0, sc = 0;
+  for (let i = 1; i <= n; i++) {
+    const c = c0 + (i - 1) * (k + m); ctx.push(c); s += c;
+    sc += i === 1 ? c : r * ctx[i - 2] + (k + m);     // 前一圈的输入已是 cache 前缀，只有新追加的 k+m 按原价
+    cum.push(s); cumC.push(sc);
+  }
+  return { ctx, cum, cumC, total: s, totalC: sc, closed: n * c0 + (k + m) * n * (n - 1) / 2 };
+}
+// 02：三种终止条件各在第几圈触发
+function stopAnalysis(need, maxSteps, budget, stuck, c0 = 800, add = 480) {
+  const finalAt = stuck ? Infinity : need + 1;        // 第 need+1 圈模型给出最终回答
+  let cum = 0, budgetAt = Infinity; const cums = [];
+  for (let i = 1; i <= 60; i++) { cum += c0 + (i - 1) * add; cums.push(cum); if (budgetAt === Infinity && cum > budget) budgetAt = i; }
+  const stopAt = Math.min(finalAt, maxSteps, budgetAt);
+  const reason = stopAt === finalAt ? 'final' : stopAt === maxSteps ? 'max' : 'budget';
+  return { finalAt, budgetAt, stopAt, reason, cums, spent: cums[Math.min(stopAt, 60) - 1] };
+}
+// 03：失败处理，蒙特卡洛 + 解析解
+function failureSim(p, N, R, q, trials, seed) {
+  const r = rng(seed), out = { give: [0, 0], retry: [0, 0], swap: [0, 0] };   // [成功数, 工具调用总数]
+  for (let t = 0; t < trials; t++) {
+    let ok = true, calls = 0;
+    for (let i = 0; i < N && ok; i++) { calls++; if (r() < p) ok = false; }
+    out.give[0] += ok; out.give[1] += calls;
+    ok = true; calls = 0;
+    for (let i = 0; i < N && ok; i++) { let tries = 0, done = false; while (!done && tries <= R) { tries++; calls++; done = r() >= p; } ok = done; }
+    out.retry[0] += ok; out.retry[1] += calls;
+    ok = true; calls = 0;
+    for (let i = 0; i < N && ok; i++) { calls++; if (r() < p) { calls++; if (r() < q) ok = false; } }
+    out.swap[0] += ok; out.swap[1] += calls;
+  }
+  const exact = { give: (1 - p) ** N, retry: (1 - p ** (R + 1)) ** N, swap: (1 - p * q) ** N };
+  return { sim: { give: out.give[0] / trials, retry: out.retry[0] / trials, swap: out.swap[0] / trials }, calls: { give: out.give[1] / trials, retry: out.retry[1] / trials, swap: out.swap[1] / trials }, exact };
+}
+// 04：workflow 固定 N+1 步；agent 跳过已知城市，每次查完以概率 w 多走一步
+function stepsSim(N, f, w, trials, seed) {
+  const r = rng(seed), hist = new Map(); let sum = 0; const all = [];
+  for (let t = 0; t < trials; t++) {
+    let steps = 1;
+    for (let i = 0; i < N; i++) { if (r() < f) continue; steps++; if (r() < w) steps++; }
+    hist.set(steps, (hist.get(steps) || 0) + 1); sum += steps; all.push(steps);
+  }
+  all.sort((a, b) => a - b);
+  return { hist, mean: sum / trials, min: all[0], max: all[all.length - 1], p95: all[Math.floor(0.95 * (trials - 1))], meanExact: N * (1 - f) * (1 + w) + 1, workflow: N + 1 };
+}
+/* ===== /CORE ===== */
+
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmt = (n) => Math.round(n).toLocaleString('en-US');
+const pct = (v) => (v * 100).toFixed(1) + '%';
+function vb(id, w, h, nw, nh) { const el = $(id), n = el.clientWidth > 0 && el.clientWidth < 600, W = n ? nw : w, H = n ? nh : h; el.setAttribute('viewBox', `0 0 ${W} ${H}`); return [W, H]; }
+function polyline(pts, col, w = 2, extra = '') { if (!pts.length) return ''; return `<path d="${pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('')}" fill="none" stroke="${col}" stroke-width="${w}" ${extra}/>`; }
+function esc(s) { return String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
+function niceMax(v) { const e = 10 ** Math.floor(Math.log10(v || 1)); const m = v / e; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * e; }
+
+/* ---------- 循环流程图（00 与 05 共用） ---------- */
+function loopDiagram(id, active, opts = {}) {
+  const fg = css('--fg'), mu = css('--muted'), li = css('--line'), acc = css('--accent'), ok = css('--ok'), warn = css('--warn'), paper = css('--paper');
+  const nodes = { model: [110, 50, '模型：读整个数组，输出'], check: [110, 125, '输出里有 tool_use？'], exec: [110, 200, 'harness 执行工具'], append: [110, 275, '追加 tool_result'], done: [330, 125, '最终回答'] };
+  const box = (k, label, w = 190) => { const [x, y] = nodes[k]; const on = active === k; const col = k === 'done' ? ok : acc; return `<rect x="${x - w / 2}" y="${y - 18}" width="${w}" height="36" rx="6" fill="${on ? col : paper}" stroke="${on ? col : li}" stroke-width="${on ? 2 : 1.2}"/><text x="${x}" y="${y + 5}" font-size="13" text-anchor="middle" fill="${on ? '#fff' : fg}">${label}</text>`; };
+  const arrow = (x1, y1, x2, y2, col, label) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="1.6" marker-end="url(#ah)"/>${label ? `<text x="${(x1 + x2) / 2 + 6}" y="${(y1 + y2) / 2 + 4}" font-size="12" fill="${col}">${label}</text>` : ''}`;
+  let s = `<defs><marker id="ah" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="${mu}"/></marker></defs>`;
+  s += `<rect x="4" y="4" width="412" height="292" rx="10" fill="none" stroke="${li}" stroke-dasharray="4 4"/><text x="16" y="24" font-size="11" fill="${mu}" letter-spacing="1">HARNESS（模型外面的程序）</text>`;
+  s += arrow(110, 68, 110, 105, mu) + arrow(110, 143, 110, 180, mu, '是') + arrow(110, 218, 110, 255, mu);
+  s += `<path d="M15,275 L8,275 L8,50 L13,50" fill="none" stroke="${active === 'append' ? acc : mu}" stroke-width="1.6" marker-end="url(#ah)"/>`;
+  s += `<line x1="205" y1="125" x2="232" y2="125" stroke="${mu}" stroke-width="1.6" marker-end="url(#ah)"/><text x="212" y="118" font-size="12" fill="${mu}">否</text>`;
+  s += box('model', nodes.model[2]) + box('check', nodes.check[2]) + box('exec', nodes.exec[2]) + box('append', nodes.append[2]) + box('done', nodes.done[2], 110);
+  if (opts.loops != null) s += `<text x="330" y="275" font-size="12" fill="${mu}" text-anchor="middle">已转 ${opts.loops} 圈</text>`;
+  $(id).innerHTML = s;
+}
+
+/* ---------- 00 最小循环 ---------- */
+const s0 = { ev: [], i: 0, timer: 0 };
+for (const id of ['#c0a', '#c0b']) $(id).innerHTML = Object.keys(TEMPS).map((c) => `<option>${c}</option>`).join('');
+$('#c0b').value = '上海';
+function reset0() { clearTimeout(s0.timer); s0.timer = 0; $('#auto0').textContent = '自动播放'; s0.ev = planEvents($('#c0a').value, $('#c0b').value); s0.i = 0; draw0(); }
+function step0() { if (s0.i < s0.ev.length - 1) { s0.i++; draw0(); } }
+function auto0() {
+  if (s0.timer) { clearTimeout(s0.timer); s0.timer = 0; $('#auto0').textContent = '自动播放'; return; }
+  if (s0.i >= s0.ev.length - 1) { s0.i = 0; draw0(); }
+  $('#auto0').textContent = '暂停';
+  const tick = () => { step0(); if (s0.i < s0.ev.length - 1) s0.timer = setTimeout(tick, 1100); else { s0.timer = 0; $('#auto0').textContent = '自动播放'; } };
+  s0.timer = setTimeout(tick, 1100);
+}
+function renderMsg(m, isNew) {
+  const role = m.role === 'user' && Array.isArray(m.content) ? 'tool' : m.role;
+  let body;
+  if (typeof m.content === 'string') body = esc(m.content);
+  else body = m.content.map((c) => c.type === 'text' ? `<span class="th">text: ${esc(c.text)}</span>` : c.type === 'tool_use' ? `<span class="tu">tool_use: ${c.name}(${esc(JSON.stringify(c.input))})</span>` : `<span class="tr">tool_result[${c.tool_use_id}]: ${esc(c.content)}</span>`).join('\n');
+  if (m.stop_reason) body += `\n<span class="th">stop_reason: ${m.stop_reason}</span>`;
+  return `<div class="msg ${role}${isNew ? ' new' : ''}"><span class="role">${m.role}${role === 'tool' ? ' (tool_result)' : ''}</span>${body}</div>`;
+}
+function draw0() {
+  const e = s0.ev[s0.i], prev = s0.ev[s0.i - 1];
+  const loops = e.loops ?? (prev && prev.loops) ?? 0;
+  loopDiagram('#fig0', e.stage === 'start' ? 'model' : e.stage === 'done' ? 'done' : e.stage, { loops });
+  $('#stage0').innerHTML = `${s0.i + 1} / ${s0.ev.length} · ${e.text}`;
+  const n = e.msgs.length, prevN = prev ? prev.msgs.length : 0;
+  $('#msgs0').innerHTML = e.msgs.map((m, i) => renderMsg(m, i >= prevN && n > prevN)).join('');
+  const box = $('#msgs0'); box.scrollTop = box.scrollHeight;
+  $('#r0a').textContent = loops; $('#r0b').textContent = n; $('#r0c').textContent = fmt(JSON.stringify(e.msgs).length);
+  $('#next0').disabled = s0.i >= s0.ev.length - 1;
+}
+$('#next0').addEventListener('click', step0); $('#auto0').addEventListener('click', auto0); $('#reset0').addEventListener('click', reset0);
+$('#c0a').addEventListener('change', reset0); $('#c0b').addEventListener('change', reset0);
+
+/* ---------- 01 token 累积 ---------- */
+const C0 = 800, M1 = 80;
+function draw1() {
+  const k = +$('#k1').value, n = +$('#n1').value, r = +$('#r1').value;
+  $('#k1v').textContent = k; $('#n1v').textContent = n; $('#r1v').textContent = r.toFixed(2);
+  const T = tokenSeries(C0, k, M1, n, r);
+  const mu = css('--muted'), li = css('--line'), warn = css('--warn'), acc = css('--accent');
+  const W = 400, H = 260, pl = 58, pr = 10, pt = 12, pb = 28, fs = 12;
+  // 左：每步上下文（阶梯）
+  let s = ''; const ymax = niceMax(T.ctx[n - 1] * 1.05), Y = (v) => pt + (1 - v / ymax) * (H - pt - pb), X = (i) => pl + (i - 1) / Math.max(n, 2) * (W - pl - pr), bw = (W - pl - pr) / Math.max(n, 2);
+  for (let g = 0; g <= 4; g++) { const v = ymax * g / 4; s += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/><text x="${pl - 6}" y="${Y(v) + 4}" font-size="${fs}" fill="${mu}" text-anchor="end">${fmt(v)}</text>`; }
+  T.ctx.forEach((c, i) => s += `<rect x="${X(i + 1) + 1}" y="${Y(c)}" width="${Math.max(1, bw - 2)}" height="${Y(0) - Y(c)}" fill="${warn}" fill-opacity="0.85"/>`);
+  [1, Math.ceil(n / 2), n].forEach((i) => s += `<text x="${X(i) + bw / 2}" y="${H - 8}" font-size="${fs}" fill="${mu}" text-anchor="middle">${i}</text>`);
+  $('#fig1a').innerHTML = s;
+  // 右：累计（面积 + 线）
+  s = ''; const ymax2 = niceMax(T.total * 1.05), Y2 = (v) => pt + (1 - v / ymax2) * (H - pt - pb), X2 = (i) => pl + (i - 1) / Math.max(n - 1, 1) * (W - pl - pr);
+  for (let g = 0; g <= 4; g++) { const v = ymax2 * g / 4; s += `<line x1="${pl}" y1="${Y2(v)}" x2="${W - pr}" y2="${Y2(v)}" stroke="${li}"/><text x="${pl - 6}" y="${Y2(v) + 4}" font-size="${fs}" fill="${mu}" text-anchor="end">${v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1000 ? Math.round(v / 1000) + 'k' : fmt(v)}</text>`; }
+  const ptsA = T.cum.map((v, i) => [X2(i + 1), Y2(v)]), ptsB = T.cumC.map((v, i) => [X2(i + 1), Y2(v)]);
+  if (n > 1) s += `<path d="M${ptsA[0][0]},${Y2(0)} ${ptsA.map((p) => 'L' + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')} L${ptsA[n - 1][0]},${Y2(0)} z" fill="${warn}" fill-opacity="0.15"/>`;
+  s += polyline(ptsA, warn, 2.5) + polyline(ptsB, acc, 2.5);
+  if (n === 1) s += `<circle cx="${ptsA[0][0]}" cy="${ptsA[0][1]}" r="4" fill="${warn}"/><circle cx="${ptsB[0][0]}" cy="${ptsB[0][1]}" r="4" fill="${acc}"/>`;
+  [1, Math.ceil(n / 2), n].forEach((i) => s += `<text x="${X2(i)}" y="${H - 8}" font-size="${fs}" fill="${mu}" text-anchor="middle">${i}</text>`);
+  $('#fig1b').innerHTML = s;
+  $('#r1a').textContent = fmt(T.ctx[n - 1]); $('#r1b').textContent = fmt(T.total); $('#r1c').textContent = fmt(T.totalC); $('#r1d').textContent = pct(1 - T.totalC / T.total);
+}
+['#k1', '#n1', '#r1'].forEach((id) => $(id).addEventListener('input', draw1));
+
+/* ---------- 02 终止条件 ---------- */
+function draw2() {
+  const need = +$('#need2').value, mx = +$('#max2').value, bud = +$('#bud2').value * 1000, stuck = $('#stuck2').checked;
+  $('#need2v').textContent = need; $('#max2v').textContent = mx; $('#bud2v').textContent = bud / 1000 + 'k';
+  const A = stopAnalysis(need, mx, bud, stuck);
+  const mu = css('--muted'), li = css('--line'), warn = css('--warn'), acc = css('--accent'), ok = css('--ok'), fg = css('--fg');
+  const [W, H] = vb('#fig2', 800, 260, 420, 300), pl = 54, pr = 14, pt = 30, pb = 30, fs = W < 600 ? 14 : 12;
+  const shown = Math.min(60, Math.max(mx, Math.min(A.finalAt, 60), Math.min(A.budgetAt, 60)) + 3);
+  const ymax = niceMax(Math.max(A.cums[shown - 1], bud) * 1.05), Y = (v) => pt + (1 - v / ymax) * (H - pt - pb), X = (i) => pl + (i - 0.5) / shown * (W - pl - pr);
+  let s = '';
+  for (let g = 0; g <= 4; g++) { const v = ymax * g / 4; s += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/><text x="${pl - 6}" y="${Y(v) + 4}" font-size="${fs}" fill="${mu}" text-anchor="end">${v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : Math.round(v / 1000) + 'k'}</text>`; }
+  s += `<line x1="${pl}" y1="${Y(bud)}" x2="${W - pr}" y2="${Y(bud)}" stroke="${acc}" stroke-dasharray="5 4"/><text x="${W - pr}" y="${Y(bud) - 5}" font-size="${fs}" fill="${acc}" text-anchor="end">预算 ${bud / 1000}k</text>`;
+  const bw = (W - pl - pr) / shown;
+  A.cums.slice(0, shown).forEach((c, i) => { const n = i + 1, past = n > A.stopAt; s += `<rect x="${X(n) - bw * 0.4}" y="${Y(c)}" width="${bw * 0.8}" height="${Y(0) - Y(c)}" fill="${past ? li : warn}" fill-opacity="${past ? 0.6 : 0.85}"/>`; });
+  const vline = (at, col, label, dy) => { if (at === Infinity || at > shown) { s += `<text x="${W - pr}" y="${pt - 16 + dy}" font-size="${fs}" fill="${col}" text-anchor="end">${label}：不会触发</text>`; return; } s += `<line x1="${X(at)}" y1="${pt - 4}" x2="${X(at)}" y2="${Y(0)}" stroke="${col}" stroke-width="2"/><text x="${X(at) + 5}" y="${pt - 16 + dy}" font-size="${fs}" fill="${col}">${label}</text>`; };
+  vline(A.finalAt, ok, '模型给出回答', 0); vline(mx, warn, '最大步数', 12); vline(A.budgetAt, acc, '预算用完', 24);
+  s += `<circle cx="${X(A.stopAt)}" cy="${Y(A.cums[A.stopAt - 1])}" r="6" fill="${fg}"/>`;
+  [1, Math.ceil(shown / 2), shown].forEach((i) => s += `<text x="${X(i)}" y="${H - 8}" font-size="${fs}" fill="${mu}" text-anchor="middle">${i}</text>`);
+  $('#fig2').innerHTML = s;
+  const names = { final: '模型给出最终回答', max: '达到最大步数', budget: 'token 预算用完' };
+  $('#r2a').textContent = A.stopAt; $('#r2b').textContent = names[A.reason]; $('#r2bw').className = 'ro ' + (A.reason === 'final' ? 'ok' : A.reason === 'max' ? 'warn' : 'acc');
+  $('#r2c').textContent = fmt(A.spent);
+  $('#r2d').textContent = stuck ? '永远转下去' : `第 ${A.finalAt} 圈正常停`;
+}
+['#need2', '#max2', '#bud2'].forEach((id) => $(id).addEventListener('input', draw2)); $('#stuck2').addEventListener('change', draw2);
+
+/* ---------- 03 失败处理 ---------- */
+function draw3() {
+  const p = +$('#p3').value, N = +$('#n3').value, R = +$('#rr3').value, q = +$('#q3').value;
+  $('#p3v').textContent = p.toFixed(2); $('#n3v').textContent = N; $('#rr3v').textContent = R; $('#q3v').textContent = q.toFixed(2);
+  const F = failureSim(p, N, R, q, 20000, 7);
+  const mu = css('--muted'), li = css('--line'), fg = css('--fg'), cols = { give: css('--warn'), retry: css('--accent'), swap: css('--ok') };
+  const [W, H] = vb('#fig3', 800, 260, 420, 280), pl = 54, pr = 14, pt = 16, pb = 46, fs = W < 600 ? 14 : 13;
+  const Y = (v) => pt + (1 - v) * (H - pt - pb); let s = '';
+  [0, 0.25, 0.5, 0.75, 1].forEach((v) => s += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/><text x="${pl - 6}" y="${Y(v) + 4}" font-size="${fs}" fill="${mu}" text-anchor="end">${v * 100}%</text>`);
+  const keys = ['give', 'retry', 'swap'], labels = ['直接放弃', '回给模型重试', '换工具'], bw = (W - pl - pr) / 3;
+  keys.forEach((k, i) => { const x = pl + i * bw + bw * 0.25, w = bw * 0.5, v = F.sim[k], e = F.exact[k];
+    s += `<rect x="${x}" y="${Y(v)}" width="${w}" height="${Y(0) - Y(v)}" fill="${cols[k]}" fill-opacity="0.85"/><line x1="${x - 8}" y1="${Y(e)}" x2="${x + w + 8}" y2="${Y(e)}" stroke="${fg}" stroke-width="1.5"/>`;
+    s += `<text x="${x + w / 2}" y="${Y(v) - 6}" font-size="${fs + 1}" fill="${fg}" text-anchor="middle">${pct(v)}</text><text x="${x + w / 2}" y="${H - 24}" font-size="${fs}" fill="${mu}" text-anchor="middle">${labels[i]}</text>`;
+    s += `<text x="${x + w / 2}" y="${H - 8}" font-size="${fs - 1}" fill="${mu}" text-anchor="middle">平均 ${F.calls[k].toFixed(2)} 次调用</text>`; });
+  $('#fig3').innerHTML = s;
+  $('#r3a').textContent = pct(F.sim.give); $('#r3b').textContent = pct(F.sim.retry); $('#r3c').textContent = pct(F.sim.swap);
+  $('#r3d').textContent = `${F.calls.give.toFixed(2)} / ${F.calls.retry.toFixed(2)} / ${F.calls.swap.toFixed(2)}`;
+}
+['#p3', '#n3', '#rr3', '#q3'].forEach((id) => $(id).addEventListener('input', draw3));
+
+/* ---------- 04 workflow vs agent ---------- */
+function draw4() {
+  const N = +$('#n4').value, f = +$('#f4').value, w = +$('#w4').value;
+  $('#n4v').textContent = N; $('#f4v').textContent = f.toFixed(2); $('#w4v').textContent = w.toFixed(2);
+  const S = stepsSim(N, f, w, 5000, 11);
+  const mu = css('--muted'), li = css('--line'), acc = css('--accent');
+  const [W, H] = vb('#fig4', 800, 260, 420, 280), pl = 50, pr = 14, pt = 16, pb = 30, fs = W < 600 ? 14 : 12;
+  const xmax = Math.max(S.max, S.workflow) + 1, xmin = 1, bins = xmax - xmin + 1, bw = (W - pl - pr) / bins;
+  let top = 0; S.hist.forEach((c) => top = Math.max(top, c / 5000)); top = Math.max(top, 1);
+  const Y = (v) => pt + (1 - v / top) * (H - pt - pb), X = (k) => pl + (k - xmin) * bw; let s = '';
+  [0, 0.25, 0.5, 0.75, 1].forEach((v) => { if (v <= top) s += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/><text x="${pl - 6}" y="${Y(v) + 4}" font-size="${fs}" fill="${mu}" text-anchor="end">${v * 100}%</text>`; });
+  s += `<rect x="${X(S.workflow) + bw * 0.08}" y="${Y(1)}" width="${bw * 0.4}" height="${Y(0) - Y(1)}" fill="${mu}" fill-opacity="0.8"/>`;
+  S.hist.forEach((c, k) => s += `<rect x="${X(k) + bw * 0.52}" y="${Y(c / 5000)}" width="${bw * 0.4}" height="${Y(0) - Y(c / 5000)}" fill="${acc}" fill-opacity="0.85"/>`);
+  for (let k = xmin; k <= xmax; k++) s += `<text x="${X(k) + bw / 2}" y="${H - 8}" font-size="${fs}" fill="${mu}" text-anchor="middle">${k}</text>`;
+  $('#fig4').innerHTML = s;
+  $('#r4a').textContent = S.workflow; $('#r4b').textContent = S.mean.toFixed(2); $('#r4c').textContent = `${S.min} / ${S.p95} / ${S.max}`;
+}
+['#n4', '#f4', '#w4'].forEach((id) => $(id).addEventListener('input', draw4));
+
+/* ---------- 05 ReAct 轨迹 ---------- */
+const TRACE = [
+  ['q', 'Question:', '北京和上海现在哪个更热？差多少？', 'model', '用户的问题，消息数组里的第一条（role = user）。循环从这里开始：把数组发给模型。'],
+  ['t', 'Thought 1:', '要比较两个城市，先查北京的温度。', 'model', '<b>模型输出</b>的前半段：写下推理（Reason）。ReAct 要求先想再做，这段文字留在消息数组里，下一圈模型还会读到它。'],
+  ['a', 'Action 1:', 'get_temperature[北京]', 'check', '<b>模型输出</b>的后半段：行动（Act）。在消息 API 里就是那条 tool_use；harness 看到它，判断「有 tool_use」，留在循环里。'],
+  ['o', 'Observation 1:', '22 °C', 'append', '<b>harness</b> 执行工具后得到的结果，以 tool_result（role = user）追加到数组末尾。模型没有参与这一行。第 1 圈结束。'],
+  ['t', 'Thought 2:', '北京查到了，再查上海。', 'model', '第 2 圈开始：模型重新读整个数组（包括 Observation 1），再写推理。'],
+  ['a', 'Action 2:', 'get_temperature[上海]', 'check', '第二条 tool_use，循环继续。'],
+  ['o', 'Observation 2:', '26 °C', 'append', '第二条 tool_result 追加进数组。第 2 圈结束。'],
+  ['t', 'Thought 3:', '上海 26 °C，北京 22 °C，上海更热 4 °C。', 'model', '第 3 圈：两个温度都在数组里了，模型推理出答案。'],
+  ['a', 'Action 3:', 'Finish[上海更热，高 4 °C]', 'done', 'Finish 不是工具，是「没有 tool_use」的信号（消息 API 里 stop_reason = end_turn）。harness 据此退出循环，把回答交给用户。'],
+];
+$('#trace5').innerHTML = TRACE.map((l, i) => `<button class="ln ${l[0]}" data-i="${i}" aria-pressed="false"><span class="k">${l[1]}</span>${esc(l[2])}</button>`).join('');
+let pick5 = -1;
+function draw5() {
+  loopDiagram('#fig5', pick5 >= 0 ? TRACE[pick5][3] : null);
+  document.querySelectorAll('#trace5 .ln').forEach((b, i) => b.setAttribute('aria-pressed', i === pick5));
+  $('#expl5').innerHTML = pick5 >= 0 ? TRACE[pick5][4] : '点左边的一行。';
+}
+$('#trace5').addEventListener('click', (e) => { const b = e.target.closest('.ln'); if (!b) return; pick5 = +b.dataset.i; draw5(); });
+
+/* ---------- 启动与重绘 ---------- */
+reset0();
+const all = () => { draw0(); draw1(); draw2(); draw3(); draw4(); draw5(); };
+all();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { draw2(); draw3(); draw4(); }, 150); });
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>

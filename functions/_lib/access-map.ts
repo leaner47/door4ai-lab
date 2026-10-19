@@ -1,6 +1,10 @@
 // 自动生成，勿手改：scripts/gen-access-map.mjs（npm run build 时运行）
 export type PostAccess = { access: 'free' | 'paid'; series?: string };
 export const POSTS: Record<string, PostAccess> = {
+  "agent-loop": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
   "attention-qkv": {
     "access": "paid",
     "series": "ai-mastery"
@@ -14,6 +18,10 @@ export const POSTS: Record<string, PostAccess> = {
     "series": "ai-mastery"
   },
   "computer-anatomy": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
+  "context-window": {
     "access": "paid",
     "series": "ai-mastery"
   },
@@ -52,12 +60,18 @@ export const POSTS: Record<string, PostAccess> = {
   "tokenizer-llm": {
     "access": "paid",
     "series": "ai-mastery"
+  },
+  "tool-calling": {
+    "access": "paid",
+    "series": "ai-mastery"
   }
 };
 export const LABS: Record<string, string> = {
+  "labs/agent-loop": "agent-loop",
   "labs/attention-qkv": "attention-qkv",
   "labs/backpropagation": "backpropagation",
   "labs/computer-anatomy": "computer-anatomy",
+  "labs/context-window": "context-window",
   "labs/git-github": "git-github",
   "labs/gradient-descent": "gradient-descent",
   "labs/internet-basics": "internet-basics",
@@ -66,5 +80,6 @@ export const LABS: Record<string, string> = {
   "labs/lora": "lora",
   "labs/model-evaluation": "model-evaluation",
   "labs/residual-connection": "residual-connection",
-  "labs/tokenizer-llm": "tokenizer-llm"
+  "labs/tokenizer-llm": "tokenizer-llm",
+  "labs/tool-calling": "tool-calling"
 };
