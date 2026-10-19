@@ -13,7 +13,10 @@
     "@simplewebauthn/browser": "^13.3.0",
     "@simplewebauthn/server": "^13.3.3",
     "astro": "^5.13.0",
-    "qrcode": "^1.5.4"
+    "katex": "^0.16.47",
+    "qrcode": "^1.5.4",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261014.1",

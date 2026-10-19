@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-19 16:20 America/New_York · 更新者：Claude（会话 session_01HXmwuvnq8Z7skbnkunsKCy）
+最后更新：2026-10-19 17:00 America/New_York · 更新者：Claude（会话 session_01CwRcH6yXZUA6quuw1MJimQ）
 
 ---
 
@@ -34,7 +34,9 @@
 
 ## 3. 技术栈与目录结构
 
-Astro 5 静态站，无 UI 框架，无 Tailwind。依赖只有 `astro`、`@astrojs/rss`、`@astrojs/sitemap`、`qrcode`（构建时生成 WhatsApp 群二维码 SVG）。
+Astro 5 静态站，无 UI 框架，无 Tailwind。依赖只有 `astro`、`@astrojs/rss`、`@astrojs/sitemap`、`qrcode`（构建时生成 WhatsApp 群二维码 SVG），以及公式排版用的 `remark-math` + `rehype-katex` + `katex@0.16.47`。
+
+**公式（2026-10-19 起）**：文章 markdown 里写 LaTeX，行内 `$...$`、独立 `$$...$$`，构建时由 rehype-katex 渲染；**正文里的美元金额必须写成 `\$`**（否则会被当成公式）。实验页用本站自带的 KaTeX：`<link rel="stylesheet" href="/vendor/katex/katex.min.css">` + `/vendor/katex/katex.min.js` + `auto-render.min.js`，分隔符 `\( \)`（行内）与 `\[ \]`（独立），JS 里拼出的公式用 `katex.renderToString`。`public/vendor/katex/` 是从 `node_modules/katex/dist` 复制的（只留 woff2 字体，CSS 里删了 woff/ttf 引用），**版本必须与 rehype-katex 依赖的 katex 一致**（现为 0.16.47；版本不一致时文章里的上下标会错位）。升级 rehype-katex 后要重新复制。
 
 ```
 door4ai-lab/
@@ -101,6 +103,7 @@ door4ai-lab/
 ## 4. 已做的关键决定（不要反复讨论）
 
 - **Manim 可视化（2026-10-16）**：动画源码放 `manim-src/<slug>/scenes.py`，统一导入 `manim-src/door4ai_style.py`（背景 `#111214`、强调色 `#6f9cf0`、中文苹方/Noto CJK、数字 Times New Roman）。产物 `public/videos/<slug>/<Scene>.webm` + 同名 `.png` 海报，用 `<figure class="clip"><video …>` 嵌入文章或实验页（`Base.astro` 与实验页模板都有 `.clip` 样式）。渲染在云端工作区装 Manim（Python 3.12 + `libpango1.0-dev` + `dvisvgm`，步骤见 skill）；本人 Mac 的 `~/.venvs/manim` 不在可用 shell 里。参考文档：claude.ai 项目里的 `manim/使用说明.md`。
+- **【总规矩】公式按标准数学排版**（2026-10-19 本人要求：公式一定要跟平时书写见到的一样，不要让用户去想式子写出来是什么样子）：用 KaTeX 写成教科书里的样子（分数线、上下标、根号、求和号、斜体变量），不要用 `QKᵀ/√d`、`W<sub>Q</sub>·x`、`e^s / Σ e^s` 这类纯文本或 HTML 拼法。SVG 图里的变量用斜体 tspan（`mt()` 小工具），带下标的用 baseline 偏移。窄屏放不下的长公式拆成两行（`aligned` 或两个独立公式）。写法见第 3 节。**现有其他讲的 HTML 公式尚未迁移**（见第 5 节待办）。
 - **【总规矩】不用横线分隔内容**（2026-10-17 本人：线分割太生硬，深色背景下尤其难看）：页面分段、列表项之间靠留白区分；需要强调某一项时用圆角浅底（`var(--paper)`）而不是加线。页眉、页脚、课程列表、翻页、Resource 分组都已去掉分隔线。表格行线、菜单内分隔、卡片外框不算分隔线。
 - **【总规矩】科学单位一律用英文缩写**（2026-10-16 本人要求）：s、ms、μs、m、km、kg、Hz、W 等，数字与单位空一格（`300 s`、`204 km/ms`、`1 TB/s`、`token/s`）；正文、实验页、JS 拼出的读数、Manim 画面都一样。「秒级」这类量级说法可保留。
 - **【总规矩】教材里不出现指向本人的个人信息**（2026-10-16 本人要求）：不用本人所在/家乡城市（如扬州、高邮、波士顿）、学校、真名、GitHub 用户名、邮箱、自家设备/服务器等做例子。需要城市就用北京、上海、合肥、纽约这类中性城市；需要用户名用 `your-name`；本站域名 `lab.door4ai.com` 作为课程网站自身的例子可以用。
@@ -156,6 +159,8 @@ door4ai-lab/
 - [x] 首页改为入口模块布局；新增 /ai/ 课程目录与 /resources/ 资源库（2026-10-13）
 - [x] 安装包镜像上线并验证：12 个文件（FlClash v0.9.0 ×6、Claude 2.37337.1 ×5、Codex/ChatGPT.dmg ×1），登录后点击即下，支持断点续传（2026-10-14）
 - [x] 新增《注意力里的 Q、K、V 到底在干什么》+「注意力实验室」六个实验，排为第 1 讲（order 5），KV Cache 顺延为第 2 讲（2026-10-14）
+- [x] 注意力讲重写为一词多义主线 + Qwen3-0.6B 真实数据（00–07 八个实验 + 动画 ScaledDotProduct）；多头、参数量、MLP 移出，新增《MLP：注意力之后，每个词自己查一查》(order 8，4 实验)；全站接入 KaTeX（2026-10-19）
+- [ ] 其他各讲里用 HTML/Unicode 拼的公式迁移到 KaTeX（本人要求公式按标准排版；目前只有 attention-qkv、mlp 两讲已迁移）
 - [x] 新增入门讲《电脑里到底有什么：CPU、GPU、内存、显存与 Docker》+ 五个等距图解实验，排在课程最前（order 2）（2026-10-14）
 - [x] 新增《Token 是什么：一句话是怎么进出大模型的》+「Token 实验室」七个实验（00–06），排为第 2 讲（order 4，在硬件讲与注意力讲之间）（2026-10-14）
 - [x] 新增入门讲《Git 和 GitHub：代码的时光机与云端仓库》+「Git 实验室」五个实验，排为 order 3（硬件讲之后、Token 讲之前）（2026-10-15）
@@ -187,6 +192,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-19 · Claude（session_01CwRcH6yXZUA6quuw1MJimQ）** — 本人看了一个讲 QKV 的抖音视频后要求重写注意力讲，并要求「公式一定要跟平时书写见到的一样」。(1) **全站接入 KaTeX**：`astro.config.mjs` 加 remark-math + rehype-katex；`Base.astro` 引 `/vendor/katex/katex.min.css` 与 `.prose .katex*` 样式；`public/vendor/katex/`（0.16.47）；`context-window.md`、`gateway-orchestration.md` 里的美元金额改成 `\$`。(2) **`attention-qkv` 重写**（order 5 不变，标题改为《注意力里的 Q、K、V：模型怎么知道「小米」是粮食还是手机》）：例子统一为「我在粮油店买了两斤小米 / 我在数码店买了一部小米」（另附「长城」城墙 / 汽车一组），实验 00 嵌入表最近邻 + 两个「小米」逐层夹角 / 01 第 1 层第 11 头真实份额 / 02 余弦相似度 vs q·k（第 1 层两个「小米」的 q 实测完全相同）/ 03 二维点积示意 / 04 softmax vs 只给第一名（梯度）/ 05 真实分数缩放前后 + 随机向量验证 √d / 06 v 与残差二维示意 / 07 28 层 × 16 头浏览器 + 热力图（attention sink）；数据 `public/labs/attention-qkv/qwen-data.js`，生成脚本 `labs-src/attention-qkv/`（`qwen_attn.py` 手算第 1 层 Q/K（含 q_norm、RoPE、GQA 展开）与 transformers 输出对照误差 < 1e-4；`emb.py` 嵌入最近邻）。动画 `manim-src/attention-qkv/scenes.py` → `public/videos/attention-qkv/ScaledDotProduct`。权重由本人 Mac 的内置浏览器从 Hugging Face 分 5 段下载后传到云端（云端与 Mac 的 shell 都连不上 HF），用后已删除。(3) 原来的多头 / 参数构成 / MLP 三个实验移出：多头已由同日另一会话的 `multihead-gqa`(7) 覆盖；新增 **`mlp`(order 8)**：00 参数构成（加 Qwen3-0.6B）/ 01 ReLU、SiLU、GELU 与 SwiGLU / 02 与门 / 03 Qwen3-0.6B 每层激活差别最大的神经元及其 W_down 列的最近词（第 9 层 #2190 → 面粉、米饭、淀粉），数据 `public/labs/mlp/mlp-data.js`，脚本 `labs-src/mlp/`。衔接句：`multihead-gqa.md` 末段改为「下一讲 MLP，再下一讲 KV Cache」，并去掉「QKV 那讲提到了多头和 W_O」。本地 build 37 页通过；两个实验页 1440 浅色 / 390 深色无横向滚动、无脚本错误、KaTeX 无报错；个人信息检索 0。
 
 - **2026-10-19 · Claude** — 模型篇补充四讲（第 7 节原「之后可补」四题）：`multihead-gqa`（7：00 切头参数不变 / 01 构造头 + 随机头的注意力热力图 / 02 拼接与 W_O，两种写法数值相等 / 03 MHA→GQA→MQA 分组 / 04 KV cache 计算器（Llama-2-70B、Llama-3-8B/70B config 核实）/ 05 decode 读 KV 的带宽时间；动画 SplitHeads、GroupedKV）、`weight-quantization`（12：00 FP32/FP16/BF16 位模式（DataView 真转换）/ 01 位数与对称性 / 02 按张量、按通道、按组 / 03 矩阵乘误差 RTN vs 简化 AWQ / 04 模型 × 精度 × 显卡的显存与 token/s / 05 小 MLP 量化；动画 FloatBits、QuantGrid）、`mixture-of-experts`（15：00 路由 top-k / 01 负载均衡三种训练方式真训练 / 02 容量因子蒙特卡洛 / 03 总参数 vs 激活参数（Mixtral 8x7B、DeepSeek-V3、DeepSeek-V4-Flash 逐项核对官方数字；V4-Flash 发布月份各来源不一，只写年份）/ 04 稠密 vs MoE 不同 batch 读权重量 / 05 小型 MoE 真训练；动画 RouterTopK、TotalVsActive）、`rlhf-alignment`（42：00 Bradley–Terry 拟合 / 01 奖励模型学到长度偏好 / 02 奖励黑客 / 03 KL 惩罚与解析解对照 / 04 DPO 与 RLHF 结果一致（差 1e-15）/ 05 InstructGPT、Llama 2 三段式；动画 PreferencePair、RLHFLoop）。衔接句最小改动：`attention-qkv.md`（下一讲改为多头）、`gradient-descent.md`（前面几讲加上量化、MoE）、`lora.md`（下一讲改为 RLHF）、`model-evaluation.md`（上一讲改为对齐）；`public/labs/attention-qkv/` 实验 05 note 里「上一讲 KV cache」笔误改为「后面 KV Cache 那讲」。本地 build 36 页通过；全部 28 讲 1440 浅色 / 390 深色无横向滚动、无脚本错误；个人信息检索 0。
 

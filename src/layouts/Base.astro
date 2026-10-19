@@ -13,6 +13,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
   <meta name="description" content={description} />
   <link rel="canonical" href={canonical} />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/vendor/katex/katex.min.css" />
   <link rel="alternate" type="application/rss+xml" title="Door4AI Lab" href="/rss.xml" />
   <meta property="og:title" content={title} />
   <meta property="og:description" content={description} />
@@ -93,6 +94,9 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     .prose figure.clip video{display:block;width:100%;max-width:min(100%,calc(min(62vh,620px) * 16 / 9));margin-inline:auto;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
     .prose figcaption{font-size:14px;color:var(--muted);margin-top:8px;text-align:center}
     .prose p.formula{font-size:20px;text-align:center;margin:18px 0;letter-spacing:.02em}
+    .prose .katex{font-size:1.08em}
+    .prose .katex-display{margin:20px 0;overflow-x:auto;overflow-y:hidden;padding:4px 0}
+    .prose .katex-display>.katex{font-size:1.25em}
     .prose details{margin:16px 0;padding:10px 14px;border:1px solid var(--line);border-radius:6px;background:var(--paper)}
     .prose summary{cursor:pointer;font-weight:700}
     /* 文章页里的实验：不加边框，整宽嵌入，看起来和单独打开实验页一样 */

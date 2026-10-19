@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>MLP 实验室</title>
+<link rel="stylesheet" href="/vendor/katex/katex.min.css">
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+ul,ol{padding-left:1.2em}
+.eq{margin:18px 0;overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.eq .katex-display{margin:0}
+.katex{font-size:1.08em}
+.eq .katex-display>.katex{font-size:1.22em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl input[type=range]{width:min(220px,48vw);accent-color:var(--accent)}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+.seg.q button[aria-pressed=true]{background:var(--warn)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px}
+.toggle input{accent-color:var(--warn)}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{background:var(--bg);border-radius:6px;padding:6px 10px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn b{color:var(--warn)} .ro.ok b{color:var(--ok)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.sum{font-size:15px;margin-top:10px;line-height:1.9}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.num{text-align:right}
+.tw{overflow-x:auto}
+.key{margin-top:72px}
+.key ul{line-height:2}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">MLP · SwiGLU · neurons · Qwen3-0.6B</div>
+  <h1>MLP 实验室：注意力之后，每个词自己查一查</h1>
+  <p class="lede">注意力让词和词交换信息，紧接着的 MLP 让每个词单独"想一想"。模型的大部分参数在这里。四个实验：参数花在哪、MLP 长什么样、一个神经元怎样像与门，以及 Qwen3-0.6B 里真正在分辨两个「小米」的神经元。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>参数都花在哪：注意力还是 MLP</h2>
+  <p>一层注意力后面紧跟一个 MLP，这一对组成一个 Transformer 块，模型就是把这种块叠几十层。设向量维度为 \(d\)，查询头数 \(h\)，键值头数 \(h_{kv}\)，每头维度 \(d_h\)，MLP 中间维度 \(d_{ff}\)，每层的参数量是（忽略偏置和归一化层）：</p>
+  <div class="eq">\[ N_{\text{attn}} = \underbrace{2\,d\,h\,d_h}_{W_Q,\ W_O} + \underbrace{2\,d\,h_{kv}\,d_h}_{W_K,\ W_V} \]</div>
+  <div class="eq">\[ N_{\text{MLP}} = m\,d\,d_{ff} \]</div>
+  <p>\(m\) 是 MLP 里矩阵的个数：GPT-3 是 2 个，Llama 和 Qwen 用 SwiGLU，是 3 个。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>模型</label><div class="seg" id="seg2"></div></div>
+    </div>
+    <svg id="svg2" viewBox="0 0 800 150" role="img" aria-label="注意力与 MLP 参数占比"></svg>
+    <div class="tw"><table id="tb2"></table></div>
+    <p class="note">按公开架构参数计算。GPT-3 算出来约 1750 亿，Qwen3-0.6B 约 6 亿，都和官方数字对得上。不管哪个模型，MLP 都是最大的一块。</p>
+  </div>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>MLP 长什么样：升维、激活、降维</h2>
+  <p>MLP 对每个位置单独计算，位置之间不交流：先把 \(d\) 维向量升到 \(d_{ff}\) 维（通常是 3～4 倍），逐个数过一个非线性函数，再降回 \(d\) 维，通过残差加回原向量。最早的写法用 ReLU：</p>
+  <div class="eq">\[ \operatorname{MLP}(x) = W_{\text{down}}\,\operatorname{ReLU}\!\left(W_{\text{up}}\,x + b\right) \]</div>
+  <p>Llama、Qwen 用的是 SwiGLU：多一个"门"矩阵 \(W_{\text{gate}}\)，它算出的数经过 SiLU 后，逐个乘到 \(W_{\text{up}}\,x\) 上，决定每一路放行多少：</p>
+  <div class="eq">\[ \operatorname{MLP}(x) = W_{\text{down}}\left(\operatorname{SiLU}\!\left(W_{\text{gate}}\,x\right)\odot W_{\text{up}}\,x\right) \qquad \operatorname{SiLU}(z) = \frac{z}{1+e^{-z}} \]</div>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="z1">输入 \(z\)</label><input id="z1" type="range" min="-5" max="5" step="0.05" value="-1"><b id="z1v">−1.00</b></div>
+    </div>
+    <svg id="svg1" viewBox="0 0 800 300" role="img" aria-label="ReLU、SiLU、GELU 三种激活函数"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r1a">—</b><span>ReLU(z)</span></div>
+      <div class="ro warn"><b id="r1b">—</b><span>SiLU(z)</span></div>
+      <div class="ro ok"><b id="r1c">—</b><span>GELU(z)</span></div>
+    </div>
+    <p class="note">ReLU 在 0 处折一下，负数全部清零；SiLU、GELU 是它的平滑版本，负数一侧留一点点，处处可导。正因为有这个"折"，MLP 才能表达"满足条件才输出"这类非线性的判断。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>一个神经元像一个与门</h2>
+  <p>把 MLP 拆成一个个神经元来看（3Blue1Brown 的讲法）：</p>
+  <ol>
+    <li><b>升维 \(W_{\text{up}}\)</b>：每一行是一个"问题"，和向量做点积。比如一行问："这是不是迈克尔·乔丹？"</li>
+    <li><b>\(\operatorname{ReLU}\)</b>：负数清零，正数保留。配合偏置 \(b\)，它像一个"与门"：只有"迈克尔"和"乔丹"同时出现，这个神经元才亮。</li>
+    <li><b>降维 \(W_{\text{down}}\)</b>：每个亮起的神经元往向量里加一个方向。"迈克尔·乔丹"神经元加的是"篮球"方向。</li>
+  </ol>
+  <p>经过注意力后，「乔丹」这个位置的向量里已经带上了"名字是迈克尔"的信息。勾选它里面有哪些成分，看 MLP 会往里加什么。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <label class="toggle"><input type="checkbox" class="f3" data-i="0" checked> 名：迈克尔</label>
+      <label class="toggle"><input type="checkbox" class="f3" data-i="1" checked> 姓：乔丹</label>
+      <label class="toggle"><input type="checkbox" class="f3" data-i="2"> 姓：菲尔普斯</label>
+      <label class="toggle"><input type="checkbox" class="f3" data-i="3"> 姓：杰克逊</label>
+      <label class="toggle"><input type="checkbox" id="nob3"> 去掉偏置 \(b\)</label>
+    </div>
+    <svg id="svg3" viewBox="0 0 800 330" role="img" aria-label="MLP：输入特征经过神经元，输出方向"></svg>
+    <div class="sum" id="sum3"></div>
+    <p class="note">只勾"迈克尔"：三个神经元的点积都是 1，偏置 −1 把它们全部压到 0，模型不会乱联想。勾上"去掉偏置"再试：只有"迈克尔"也会同时亮起篮球、游泳、音乐。这是理想化的版本，真实的神经元见下一个实验。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>真实模型：谁在分辨两个「小米」</h2>
+  <p>Qwen3-0.6B 每层 MLP 有 3072 个神经元。把两句话分别送进模型，在「小米」这个位置记下每个神经元的激活，找出两句话里差得最多的几个；再看每个神经元通过 \(W_{\text{down}}\) 往向量里加的方向，和词表里哪些词最接近。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>多义词</label><div class="seg" id="seg4p"></div></div>
+      <div class="ctrl"><label for="l4">第几层</label><input id="l4" type="range" min="1" max="28" step="1" value="9"><b id="l4v">9</b></div>
+    </div>
+    <svg id="svg4" viewBox="0 0 800 450" role="img" aria-label="两句话里激活差别最大的神经元"></svg>
+    <p class="note">第 9 层的 2190 号神经元：粮油店那句里激活 6.9，数码店那句里几乎为 0，它加进去的方向最接近"面粉、米饭、淀粉"。第 21 层的 2170 号神经元在「小米」（手机）和「长城」（汽车）两组里都出现了，方向接近"系列、配备、造价"，像是一个"商品"特征。也有很多神经元的方向读不出意思：一个神经元往往同时参与好几件事。</p>
+  </div>
+</section>
+
+<section class="key">
+  <h2>小结</h2>
+  <ul>
+    <li>注意力负责词与词之间交换信息，MLP 负责每个词单独加工，参数大部分在 MLP。</li>
+    <li>MLP = 升维、非线性、降维；Llama、Qwen 用带门的 SwiGLU。</li>
+    <li>一个神经元先用点积"提问"，激活函数决定亮不亮，亮了就往向量里加一个方向；真实模型里有些神经元能读出意思，很多读不出。</li>
+  </ul>
+</section>
+</div>
+
+<script src="mlp-data.js"></script>
+<script src="/vendor/katex/katex.min.js"></script>
+<script src="/vendor/katex/auto-render.min.js"></script>
+<script>
+try{renderMathInElement(document.body,{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});}catch(e){}
+const NS='http://www.w3.org/2000/svg';
+function E(tag,a,p,t){const e=document.createElementNS(NS,tag);for(const k in a)e.setAttribute(k,a[k]);if(t!=null)e.textContent=t;if(p)p.appendChild(e);return e;}
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function seg(id,labels,init,cb){const s=document.getElementById(id);s.innerHTML='';labels.forEach((l,i)=>{const b=document.createElement('button');b.textContent=l;b.setAttribute('aria-pressed',i===init);b.onclick=()=>{[...s.children].forEach((c,j)=>c.setAttribute('aria-pressed',j===i));cb(i);};s.appendChild(b);});}
+const pct=x=>(x>=0.995?'100':x<0.005?(x>0?'<1':'0'):Math.round(x*100))+'%';
+function marker(svg,id,color){const d=E('defs',{},svg);const m=E('marker',{id,viewBox:'0 0 10 10',refX:8,refY:5,markerWidth:6,markerHeight:6,orient:'auto-start-reverse'},d);E('path',{d:'M2 1L8 5L2 9',fill:'none',stroke:color,'stroke-width':1.6,'stroke-linecap':'round','stroke-linejoin':'round'},m);}
+function W(svg,h){const w=Math.round(Math.max(340,Math.min(800,svg.getBoundingClientRect().width||800)));svg.setAttribute('viewBox',`0 0 ${w} ${h}`);svg.innerHTML='';return w;}
+function mt(p,x,y,parts,o={}){const t=E('text',Object.assign({x,y,'font-size':15},o),p);parts.forEach(([s,k])=>{const sp=E('tspan',{},t,s);if(k==='i')sp.setAttribute('font-style','italic');if(k==='sub'){sp.setAttribute('font-size','.72em');sp.setAttribute('dy','4');}});return t;}
+
+/* 02 参数量 */
+const M2=[
+ {n:'Qwen3-0.6B',d:1024,L:28,h:16,hkv:8,dh:128,ff:3072,mm:3,vocab:151936,tied:true},
+ {n:'Llama-3-8B',d:4096,L:32,h:32,hkv:8,dh:128,ff:14336,mm:3,vocab:128256,tied:false},
+ {n:'Llama-3-70B',d:8192,L:80,h:64,hkv:8,dh:128,ff:28672,mm:3,vocab:128256,tied:false},
+ {n:'GPT-3 175B',d:12288,L:96,h:96,hkv:96,dh:128,ff:49152,mm:2,vocab:50257,tied:true}];
+let m2=0;
+const B=x=>x>=1e9?(x/1e9).toFixed(1)+' B':(x/1e6).toFixed(0)+' M';
+function draw2(){
+ const m=M2[m2];const at=2*m.d*m.h*m.dh+2*m.d*m.hkv*m.dh,ml=m.mm*m.d*m.ff,emb=m.vocab*m.d*(m.tied?1:2);
+ const A=at*m.L,Mt=ml*m.L,tot=A+Mt+emb;
+ const svg=document.getElementById('svg2');const w=W(svg,150);
+ const warn=css('--warn'),acc=css('--accent'),line=css('--line'),fg=css('--fg'),mu=css('--muted');
+ let x=0;
+ [[A,warn,'注意力'],[Mt,acc,'MLP'],[emb,line,'词表嵌入']].forEach(([v,c,t])=>{const bw=w*v/tot;E('rect',{x,y:30,width:bw,height:46,fill:c},svg);
+  if(bw>90)E('text',{x:x+bw/2,y:53,fill:t==='词表嵌入'?fg:'#fff','font-size':14,'font-weight':600,'text-anchor':'middle','dominant-baseline':'central'},svg,t+' '+pct(v/tot));x+=bw;});
+ E('text',{x:0,y:18,fill:mu,'font-size':13},svg,m.n+' 参数构成（合计约 '+B(tot)+'）');
+ E('text',{x:0,y:108,fill:mu,'font-size':13},svg,'每层：注意力 '+B(at)+'，MLP '+B(ml)+'；共 '+m.L+' 层');
+ E('text',{x:0,y:132,fill:mu,'font-size':13},svg,'词表 '+m.vocab+' × '+m.d+(m.tied?'（输入输出共用）':'（输入输出各一份）'));
+ document.getElementById('tb2').innerHTML='<tr><th>模型</th><th>层数</th>'+['d','h','h_{kv}','d_h','d_{ff}','m'].map(t=>'<th>'+(window.katex?katex.renderToString(t,{throwOnError:false}):t)+'</th>').join('')+'</tr>'+
+  M2.map((o,i)=>`<tr${i===m2?' style="color:var(--warn)"':''}><td>${o.n}</td><td class="num">${o.L}</td><td class="num">${o.d}</td><td class="num">${o.h}</td><td class="num">${o.hkv}</td><td class="num">${o.dh}</td><td class="num">${o.ff}</td><td class="num">${o.mm}</td></tr>`).join('');
+}
+seg('seg2',M2.map(m=>m.n),0,i=>{m2=i;draw2();});
+
+/* 03 MLP 与门 */
+const F3=['迈克尔','乔丹','菲尔普斯','杰克逊'];
+const N3=[{n:'迈克尔·乔丹？',s:'乔丹？',w:[1,1,0,0],o:0},{n:'迈克尔·菲尔普斯？',s:'菲尔普斯？',w:[1,0,1,0],o:1},{n:'迈克尔·杰克逊？',s:'杰克逊？',w:[1,0,0,1],o:2}];
+const O3=['篮球','游泳','音乐'];
+function draw3(){
+ const x=[...document.querySelectorAll('.f3')].map(c=>c.checked?1:0);const nob=document.getElementById('nob3').checked;const b=nob?0:-1;
+ const pre=N3.map(n=>n.w.reduce((a,w,i)=>a+w*x[i],0)+b),post=pre.map(v=>Math.max(0,v));
+ const out=O3.map((_,k)=>N3.reduce((a,n,i)=>a+(n.o===k?post[i]:0),0));
+ const svg=document.getElementById('svg3');const w=W(svg,330);const s=w/800,X=v=>v*s;const fs=w<520?12:14;
+ const warn=css('--warn'),acc=css('--accent'),line=css('--line'),fg=css('--fg'),mu=css('--muted'),ok=css('--ok'),paper=css('--paper');
+ E('text',{x:X(80),y:22,fill:mu,'font-size':12,'text-anchor':'middle'},svg,'输入');
+ mt(svg,X(400),22,[['W','i'],['up','sub'],[' x',''],[' + b','']],{fill:mu,'font-size':12,'text-anchor':'middle'});
+ mt(svg,X(700),22,[['W','i'],['down','sub'],[' 加上的方向','']],{fill:mu,'font-size':12,'text-anchor':'middle'});
+ const iy=i=>70+i*70,ny=i=>90+i*85,oy=i=>90+i*85;
+ N3.forEach((n,j)=>n.w.forEach((wt,i)=>{if(!wt)return;E('line',{x1:X(140),y1:iy(i),x2:X(290),y2:ny(j),stroke:x[i]?warn:line,'stroke-width':x[i]?2:1,opacity:x[i]?.8:.6},svg);}));
+ N3.forEach((n,j)=>E('line',{x1:X(510),y1:ny(j),x2:X(630),y2:oy(n.o),stroke:post[j]>0?ok:line,'stroke-width':post[j]>0?2+2*post[j]:1},svg));
+ F3.forEach((f,i)=>{E('rect',{x:X(20),y:iy(i)-20,width:X(120),height:40,rx:5,fill:x[i]?css('--warn-soft'):paper,stroke:x[i]?warn:line},svg);
+  E('text',{x:X(80),y:iy(i),fill:x[i]?fg:mu,'font-size':fs,'text-anchor':'middle','dominant-baseline':'central'},svg,f);});
+ N3.forEach((n,j)=>{const y=ny(j);E('rect',{x:X(290),y:y-28,width:X(220),height:56,rx:5,fill:post[j]>0?css('--accent-soft'):paper,stroke:post[j]>0?acc:line},svg);
+  E('text',{x:X(400),y:y-10,fill:fg,'font-size':fs,'font-weight':600,'text-anchor':'middle','dominant-baseline':'central'},svg,w<520?n.s:n.n);
+  E('text',{x:X(400),y:y+12,fill:post[j]>0?acc:mu,'font-size':fs-1,'text-anchor':'middle','dominant-baseline':'central'},svg,(w<520?'':(nob?'点积 ':'点积 + b = '))+(pre[j]<0?'−'+(-pre[j]):pre[j])+' → '+post[j]);});
+ O3.forEach((o,k)=>{const y=oy(k);E('rect',{x:X(630),y:y-20,width:X(140),height:40,rx:5,fill:out[k]>0?css('--accent-soft'):paper,stroke:out[k]>0?ok:line},svg);
+  E('text',{x:X(700),y:y,fill:out[k]>0?ok:mu,'font-size':fs,'font-weight':out[k]>0?600:400,'text-anchor':'middle','dominant-baseline':'central'},svg,'+ '+out[k]+' × '+o);});
+ const on=O3.filter((_,k)=>out[k]>0);
+ document.getElementById('sum3').innerHTML=on.length?'MLP 往这个位置的向量里加入：<b>'+on.join('、')+'</b>':'没有神经元被激活，MLP 不往向量里加任何东西';
+}
+document.querySelectorAll('.f3,#nob3').forEach(c=>c.onchange=draw3);
+
+/* 01 激活函数 */
+let z1=-1;
+const relu=z=>Math.max(0,z),silu=z=>z/(1+Math.exp(-z)),gelu=z=>0.5*z*(1+Math.tanh(Math.sqrt(2/Math.PI)*(z+0.044715*z**3)));
+function draw1(){
+ const svg=document.getElementById('svg1');const w=W(svg,300);
+ const warn=css('--warn'),acc=css('--accent'),ok=css('--ok'),line=css('--line'),fg=css('--fg'),mu=css('--muted');
+ const x0=40,x1=w-12,y0=260,y1=20,lo=-5,hi=5,ylo=-1,yhi=5;
+ const X=v=>x0+(x1-x0)*(v-lo)/(hi-lo),Y=v=>y0-(y0-y1)*(v-ylo)/(yhi-ylo);
+ E('line',{x1:x0,y1:Y(0),x2:x1,y2:Y(0),stroke:line},svg);E('line',{x1:X(0),y1:y0,x2:X(0),y2:y1,stroke:line},svg);
+ for(let v=lo;v<=hi;v++)E('text',{x:X(v),y:Y(0)+16,fill:mu,'font-size':11,'text-anchor':'middle'},svg,v<0?'−'+(-v):String(v));
+ for(let v=1;v<=yhi;v++)E('text',{x:X(0)-6,y:Y(v),fill:mu,'font-size':11,'text-anchor':'end','dominant-baseline':'central'},svg,String(v));
+ [[relu,acc,'ReLU'],[silu,warn,'SiLU'],[gelu,ok,'GELU']].forEach(([f,c,n],k)=>{let d='';for(let i=0;i<=200;i++){const v=lo+(hi-lo)*i/200;d+=(i?'L':'M')+X(v).toFixed(1)+' '+Y(f(v)).toFixed(1);}
+  E('path',{d,fill:'none',stroke:c,'stroke-width':k===0?2:2.5,'stroke-dasharray':k===0?'6 4':'none'},svg);
+  E('text',{x:x0+6,y:y1+14+k*18,fill:c,'font-size':13},svg,n);
+  E('circle',{cx:X(z1),cy:Y(f(z1)),r:5,fill:c},svg);});
+ E('line',{x1:X(z1),y1:y0,x2:X(z1),y2:y1,stroke:mu,'stroke-dasharray':'3 3',opacity:.6},svg);
+ const f=v=>(v<0?'−':'')+Math.abs(v).toFixed(3);
+ document.getElementById('r1a').textContent=f(relu(z1));document.getElementById('r1b').textContent=f(silu(z1));document.getElementById('r1c').textContent=f(gelu(z1));
+}
+document.getElementById('z1').oninput=e=>{z1=+e.target.value;document.getElementById('z1v').textContent=(z1<0?'−':'')+Math.abs(z1).toFixed(2);draw1();};
+
+/* 03 真实神经元 */
+const MN=window.MLPN;let p4=0,l4=9;
+function draw4(){
+ const pr=MN[p4],L=pr.layers[l4-1];
+ const svg=document.getElementById("svg4");const w=W(svg,450);
+ const warn=css('--warn'),acc=css('--accent'),line=css('--line'),fg=css('--fg'),mu=css('--muted');
+ const narrow=w<620;const top=L.top.slice(0,6);
+ const mx=Math.max(...top.map(t=>Math.max(Math.abs(t.a),Math.abs(t.b))));
+ const labW=narrow?54:70,barW=narrow?(w-labW)/2-10:220,mid=labW+barW+8;
+ E('text',{x:labW,y:16,fill:warn,'font-size':12},svg,'句 A：'+pr.a);
+ E('text',{x:labW,y:34,fill:acc,'font-size':12},svg,'句 B：'+pr.b);
+ top.forEach((t,i)=>{const y=58+i*60;
+  E('text',{x:0,y:y+14,fill:fg,'font-size':13,'dominant-baseline':'central'},svg,'#'+t.n);
+  [[t.a,warn,0],[t.b,acc,1]].forEach(([v,c,k])=>{const yy=y+k*16,bw=Math.max(1,barW*Math.abs(v)/mx);
+   E('rect',{x:labW,y:yy,width:bw,height:12,rx:2,fill:c,opacity:v<0?.5:1},svg);
+   E('text',{x:labW+bw+5,y:yy+6,fill:mu,'font-size':11,'dominant-baseline':'central'},svg,(v<0?'−':'')+Math.abs(v).toFixed(1));});
+  const words=t.promote.slice(0,4).join('、');
+  if(narrow)E('text',{x:labW,y:y+44,fill:fg,'font-size':12},svg,'→ '+words);
+  else E('text',{x:mid+30,y:y+14,fill:fg,'font-size':14,'dominant-baseline':'central'},svg,'→ '+words);});
+ E('text',{x:narrow?labW:mid+30,y:narrow?444:436,fill:mu,'font-size':12},svg,'条形 = 激活值（浅色为负）；→ 后是这个神经元加进去的方向最接近的词');
+}
+seg('seg4p',MN.map(p=>'「'+p.word+'」'),0,i=>{p4=i;draw4();});
+document.getElementById('l4').oninput=e=>{l4=+e.target.value;document.getElementById('l4v').textContent=l4;draw4();};
+
+function all(){draw1();draw2();draw3();draw4();}
+all();
+let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(all,120);});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',all);
+new MutationObserver(all).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>

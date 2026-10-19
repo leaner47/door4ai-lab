@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <title>__TITLE__</title>
+<link rel="stylesheet" href="/vendor/katex/katex.min.css">
 <style>
 :root{
   --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
@@ -31,7 +32,10 @@ p code,li code{font-size:.88em;background:var(--accent-soft);padding:1px 5px;bor
 ul,ol{padding-left:1.2em}
 .aside{border-left:3px solid var(--accent);padding:4px 0 4px 16px;margin:16px 0;font-size:15.5px}
 .aside b{display:block;margin-bottom:2px}
-.formula{font-size:20px;text-align:center;margin:18px 0;letter-spacing:.02em}
+.eq{margin:18px 0;overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.eq .katex-display{margin:0}
+.katex{font-size:1.08em}
+.eq .katex-display>.katex{font-size:1.22em}
 .lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
 .ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
 .ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
@@ -91,7 +95,13 @@ td.num{text-align:right}
 </section>
 
 </div>
+<script src="/vendor/katex/katex.min.js"></script>
+<script src="/vendor/katex/auto-render.min.js"></script>
 <script>
+/* 公式：行内 \( ... \)，独立 \[ ... \]；JS 里拼的公式用 katex.renderToString */
+try{renderMathInElement(document.body,{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});}catch(e){}
+/* SVG 里的数学记号：mt(svg, x, y, [['q','i'],['·',''],['k','i'],['j','sub']], {属性}) */
+function mt(p,x,y,parts,o={}){const NS='http://www.w3.org/2000/svg';const t=document.createElementNS(NS,'text');for(const k in Object.assign({x,y,'font-size':15},o))t.setAttribute(k,Object.assign({x,y,'font-size':15},o)[k]);parts.forEach(([s,k])=>{const sp=document.createElementNS(NS,'tspan');sp.textContent=s;if(k==='i')sp.setAttribute('font-style','italic');if(k==='sub'){sp.setAttribute('font-size','.72em');sp.setAttribute('dy','4');}t.appendChild(sp);});p.appendChild(t);return t;}
 const $ = (s) => document.querySelector(s);
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 function draw1() {
