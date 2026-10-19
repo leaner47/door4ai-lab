@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>多头注意力实验室</title>
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
+  --ck:#b7791f; --cv:#2a8a7a;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f;
+  --ck:#f2b84b; --cv:#5fc9a8; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f;
+  --ck:#f2b84b; --cv:#5fc9a8; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+p code,li code{font-size:.88em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+.formula{font-size:20px;text-align:center;margin:18px 0;letter-spacing:.02em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl b{font-variant-numeric:tabular-nums;min-width:2.4em}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+.seg button:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer}
+.toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px}
+.toggle input{accent-color:var(--accent)}
+input[type=range]{accent-color:var(--accent);max-width:200px}
+input[type=number]{width:5.2em;font:inherit;font-size:14px;padding:3px 6px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg)}
+input[type=text]{box-sizing:border-box;width:100%;font:inherit;font-size:15px;padding:6px 10px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg)}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.cap{font-size:12px;color:var(--muted);margin:4px 0 0;text-align:center}
+.key{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;margin:0 0 8px}
+.key i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn{border-color:var(--warn)} .ro.warn b{color:var(--warn)}
+.ro.acc{border-color:var(--accent)} .ro.acc b{color:var(--accent)}
+.ro.ok{border-color:var(--ok)} .ro.ok b{color:var(--ok)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.num,th.num{text-align:right}
+.tw{overflow-x:auto}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">多头注意力 · 拼接与 W_O · MQA · GQA · KV cache</div>
+  <h1>多头注意力实验室</h1>
+  <p class="lede">把一个向量切成几十个头，各算各的注意力；再让这些头共享 K、V，换来更小的 KV cache。下面的数都在页面里真实计算，模型参数取自公开的 config。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>切头：同一个向量，分给 h 个头</h2>
+  <p>每个 token 进注意力层时是一个 d<sub>model</sub> 维的向量。多头注意力并不是另外加了 h 套大矩阵，而是把 W<sub>Q</sub>、W<sub>K</sub>、W<sub>V</sub> 按列切成 h 块，每块投影出一个 d<sub>h</sub> = d<sub>model</sub> / h 维的小向量，交给一个头。拖动 h，看切法怎么变、参数量变不变。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>d<sub>model</sub></label><div class="seg" id="d0"></div></div>
+      <div class="ctrl"><label for="h0">头数 h</label><input id="h0" type="range" min="0" max="5" value="3"><b id="h0v"></b></div>
+    </div>
+    <svg id="fig0" viewBox="0 0 800 250" role="img" aria-label="d_model 维向量与 W_Q 被切成 h 块"></svg>
+    <div class="readout">
+      <div class="ro acc"><b id="r0a">–</b><span>每个头的维度 d<sub>h</sub></span></div>
+      <div class="ro"><b id="r0b">–</b><span>每个头的 W<sub>Q</sub> 切片参数（d × d<sub>h</sub>）</span></div>
+      <div class="ro ok"><b id="r0c">–</b><span>W<sub>Q</sub>、W<sub>K</sub>、W<sub>V</sub>、W<sub>O</sub> 合计（4d²）</span></div>
+      <div class="ro"><b id="r0d">–</b><span>每个 token 要算的注意力分数行数</span></div>
+    </div>
+    <p class="note">h 从 1 拖到 64，四个矩阵的参数合计一个都没变，算 QKᵀ 的乘法总数也没变（h 个头 × d<sub>h</sub> 维 = d 维）。变的只是：一次大的「相关性」计算，被拆成 h 次小的、互相独立的计算，每个头得到一张自己的注意力分布。</p>
+  </div>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>多头：各看各的</h2>
+  <p>同一句话，每个头算出一张自己的注意力热力图：第 <i>i</i> 行是第 <i>i</i> 个 token 把注意力分给前面哪些 token。前四个是<b>构造示例</b>：按规则给分数（只有对上的位置得 β 分，其余 0 分），再过 softmax，模仿研究者在训练好的模型里见到的几类头；后两个是<b>随机初始化</b>的头：token 向量、W<sub>Q</sub>、W<sub>K</sub> 都用固定种子随机生成，按 softmax(QKᵀ/√d<sub>h</sub>) 真算。句子可以改，token 之间用空格隔开。</p>
+  <div class="lab">
+    <div class="ctrls" style="display:block">
+      <input id="t1" type="text" value="小猫 坐在 垫子 上 ， 小猫 看着 窗外 的 小鸟 。" aria-label="句子，token 之间用空格隔开">
+    </div>
+    <div class="ctrls">
+      <div class="ctrl"><label for="b1">构造头的锐度 β</label><input id="b1" type="range" min="0" max="8" step="0.5" value="4"><b id="b1v"></b></div>
+      <label class="toggle"><input type="checkbox" id="c1" checked> 因果遮罩（只能看前面）</label>
+      <button class="btn" id="s1btn">换随机种子</button>
+    </div>
+    <svg id="fig1t" viewBox="0 0 800 150" role="img" aria-label="六个头的注意力热力图缩略图，点击切换"></svg>
+    <svg id="fig1" viewBox="0 0 800 420" role="img" aria-label="选中头的注意力热力图"></svg>
+    <p class="cap">行：提问的 token（Q）；列：被看的 token（K）。颜色越深权重越大，每行加起来等于 1。点上面的缩略图切换头</p>
+    <div class="readout">
+      <div class="ro acc"><b id="r1a">–</b><span>当前头</span></div>
+      <div class="ro"><b id="r1b">–</b><span>平均有效关注 token 数 1/Σw²</span></div>
+      <div class="ro warn"><b id="r1c">–</b><span>被看得最多的 token（占全部权重）</span></div>
+    </div>
+    <p class="note">六个头读的是同一句话，得到的却是六种完全不同的「相关性」：一个只看前一个 token，一个停在句首，一个把第二个「小猫」连回第一个「小猫」。单头注意力每行只能有一种分布，多头才能同时拿到这几种信息。随机头的分布糊成一片：分工不是设计出来的，是训练出来的。β 拖到 0，构造头也会变成平均分布。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>拼接，再乘 W<sub>O</sub></h2>
+  <p>每个头输出 d<sub>h</sub> 维，h 个头首尾拼接回 d<sub>model</sub> 维，再乘输出矩阵 W<sub>O</sub>。下面是一层注意力里每一步的形状（n 个 token），条的长短按元素个数的对数画。选「玩具」时，页面用 4 个 token、8 维、固定种子随机权重真算一遍。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>模型</label><div class="seg" id="m2"></div></div>
+      <div class="ctrl"><label>玩具的头数 h</label><div class="seg" id="h2"></div></div>
+      <div class="ctrl"><label>token 数 n</label><div class="seg" id="n2"></div></div>
+    </div>
+    <svg id="fig2" viewBox="0 0 800 380" role="img" aria-label="多头注意力每一步的张量形状"></svg>
+    <div class="readout">
+      <div class="ro ok"><b id="r2a">–</b><span>「拼接再乘 W<sub>O</sub>」与「各头乘自己那块 W<sub>O</sub> 再相加」的最大差</span></div>
+      <div class="ro warn"><b id="r2b">–</b><span>玩具：h 个头与 h = 1 的输出最大差（参数完全相同）</span></div>
+      <div class="ro acc"><b id="r2c">–</b><span>分数矩阵元素数 h × n²</span></div>
+    </div>
+    <p class="note">第一个读数几乎为 0（只剩浮点舍入）：拼接后乘 W<sub>O</sub>，等于每个头乘 W<sub>O</sub> 里属于自己的那几行，再把结果加起来。所以 W<sub>O</sub> 的作用是把各头的发现混合、写回同一个向量。第二个读数说明：参数一模一样，只是切成几个头，算出的东西就不同了。Llama 的 K、V 那一行比 Q 窄，这就是后面要讲的 GQA。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>MHA、GQA、MQA：几个 Q 头共用一组 K、V</h2>
+  <p>生成时，每个头的 K、V 都要缓存下来（KV cache）。如果让几个 Q 头共用同一组 K、V，要存的就少了。拖动 KV 头数 g：g = h 是标准多头（MHA），g = 1 是所有头共用一组（MQA），中间是分组（GQA）。同一种颜色的 Q 头共享同一组 K、V。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>Q 头数 h</label><div class="seg" id="h3"></div></div>
+      <div class="ctrl"><label for="g3">KV 头数 g</label><input id="g3" type="range" min="0" max="3" value="1"><b id="g3v"></b></div>
+    </div>
+    <svg id="fig3" viewBox="0 0 800 260" role="img" aria-label="Q 头与 KV 头的分组连线"></svg>
+    <div class="readout">
+      <div class="ro acc"><b id="r3a">–</b><span>方案</span></div>
+      <div class="ro"><b id="r3b">–</b><span>每组 K、V 服务的 Q 头数</span></div>
+      <div class="ro ok"><b id="r3c">–</b><span>KV cache 是 MHA 的</span></div>
+      <div class="ro"><b id="r3d">–</b><span>采用这种配置的公开模型</span></div>
+    </div>
+    <p class="note">Q 头一个都没少，每个头仍然有自己的「问题」；被合并的只是「被查询的标签和内容」。GQA 论文（Ainslie et al. 2023）把训练好的 MHA 模型改成 GQA 时，就是把同组内的 K、V 头取平均，再用约 5% 的预训练算力继续训练。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>KV cache 计算器</h2>
+  <p>每个 token 在每一层要存 K 和 V 各 g × d<sub>h</sub> 个数，所以</p>
+  <p class="formula">每 token 字节数 = 2 × 层数 × KV 头数 × d<sub>h</sub> × 每个数的字节数</p>
+  <p>和 KV Cache 那一讲用的是同一个公式。选一个模型，或者改成自己的参数，比较三种方案。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>模型</label><div class="seg" id="m4"></div></div>
+    </div>
+    <div class="ctrls">
+      <div class="ctrl"><label for="L4">层数</label><input id="L4" type="number" min="1" max="200"></div>
+      <div class="ctrl"><label for="H4">Q 头数 h</label><input id="H4" type="number" min="1" max="256"></div>
+      <div class="ctrl"><label for="G4">KV 头数 g</label><input id="G4" type="number" min="1" max="256"></div>
+      <div class="ctrl"><label for="D4">d<sub>h</sub></label><input id="D4" type="number" min="8" max="512"></div>
+    </div>
+    <div class="ctrls">
+      <div class="ctrl"><label for="c4">上下文</label><input id="c4" type="range" min="10" max="17" value="13"><b id="c4v"></b></div>
+      <div class="ctrl"><label for="bt4">并发请求</label><input id="bt4" type="range" min="1" max="64" value="1"><b id="bt4v"></b></div>
+      <div class="ctrl"><label>精度</label><div class="seg" id="p4"></div></div>
+    </div>
+    <svg id="fig4" viewBox="0 0 800 210" role="img" aria-label="三种方案的 KV cache 总量对比"></svg>
+    <div class="readout">
+      <div class="ro warn"><b id="r4a">–</b><span>MHA：每 token</span></div>
+      <div class="ro acc"><b id="r4b">–</b><span>GQA：每 token</span></div>
+      <div class="ro ok"><b id="r4c">–</b><span>MQA：每 token</span></div>
+      <div class="ro acc"><b id="r4d">–</b><span>GQA：KV cache 总量</span></div>
+    </div>
+    <div class="tw"><table id="tb4"></table></div>
+    <p class="note">Llama-3-70B 在 8K 上下文、bf16 下，按 GQA（8 个 KV 头）一条请求要 2.68 GB；如果它是 64 个 KV 头的 MHA，就是 21.5 GB，32 条并发就远超一张 80 GB 的卡。表里三个模型的 Q / KV 头数取自各自公开的 config.json；1 KB = 1000 B。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>带宽视角：每生成一个 token，都要把 KV cache 读一遍</h2>
+  <p>逐个生成 token（decode）时，每一步都要把全部权重读一遍，再把每条请求的整段 KV cache 读一遍。这一步主要卡在显存带宽上，读的时间大致是</p>
+  <p class="formula">每步时间 ≈（权重字节数 + 并发数 × 上下文长度 × 每 token KV 字节数）÷ 显存带宽</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>模型</label><div class="seg" id="m5"></div></div>
+      <div class="ctrl"><label>显卡</label><div class="seg" id="g5"></div></div>
+    </div>
+    <div class="ctrls">
+      <div class="ctrl"><label for="bt5">并发请求</label><input id="bt5" type="range" min="1" max="64" value="8"><b id="bt5v"></b></div>
+      <div class="ctrl"><label for="c5">看这个上下文</label><input id="c5" type="range" min="10" max="17" value="15"><b id="c5v"></b></div>
+    </div>
+    <div class="key"><span><i style="background:var(--warn)"></i>MHA</span><span><i style="background:var(--accent)"></i>GQA（模型实际）</span><span><i style="background:var(--ok)"></i>MQA</span><span><i style="background:var(--muted)"></i>只读权重</span></div>
+    <svg id="fig5" viewBox="0 0 800 300" role="img" aria-label="每生成一步所需读显存时间随上下文长度变化"></svg>
+    <p class="cap">横轴：上下文长度（对数坐标）；纵轴：每生成一步、只算读显存的时间</p>
+    <div class="readout">
+      <div class="ro"><b id="r5a">–</b><span>读一遍权重</span></div>
+      <div class="ro acc"><b id="r5b">–</b><span>GQA：读一遍 KV cache</span></div>
+      <div class="ro acc"><b id="r5c">–</b><span>GQA：每条请求 token/s 上限</span></div>
+      <div class="ro warn"><b id="r5d">–</b><span>同条件 MHA：每条请求 token/s 上限</span></div>
+    </div>
+    <p class="note">上下文短时，时间几乎全花在读权重上，三条线挤在一起；上下文一长、并发一多，读 KV cache 的时间就超过读权重，MHA 的线先陡起来。这是只看带宽的理论下限：忽略计算、多卡通信，也不管放不放得下（放不下要多卡，看实验 04）。权重按 bf16、参数量按 config 算出；MHA、MQA 两条线是把同一个模型的 KV 头数改成 h 或 1 的假想版本。带宽：H100 SXM 3.35 TB/s、H100 PCIe 2.0 TB/s、RTX 4090 1.008 TB/s（NVIDIA 公开规格）。</p>
+  </div>
+</section>
+
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const isDark = () => css('--bg') === '#000';
+const hc = (i, n) => `hsl(${Math.round(215 + i * 360 / n) % 360} 62% ${isDark() ? 62 : 46}%)`;
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function gauss(r) { let u = 0; while (u === 0) u = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r()); }
+function seg(id, items, init, cb) {
+  const el = $(id); el.innerHTML = '';
+  items.forEach((it, i) => { const b = document.createElement('button'); b.innerHTML = it.l; b.dataset.i = i; b.setAttribute('aria-pressed', i === init); b.onclick = () => { if (b.disabled) return; [...el.children].forEach((c) => c.setAttribute('aria-pressed', c === b)); cb(i); }; el.appendChild(b); });
+}
+function vb(id, w, h, nw, nh) { const el = $(id), n = el.clientWidth > 0 && el.clientWidth < 600, W = n ? nw : w, H = n ? nh : h; el.setAttribute('viewBox', `0 0 ${W} ${H}`); return [W, H, n]; }
+const sig = (x) => x >= 100 ? x.toFixed(0) : x >= 10 ? x.toFixed(1) : x.toFixed(2);
+const fmtB = (b) => b >= 1e12 ? sig(b / 1e12) + ' TB' : b >= 1e9 ? sig(b / 1e9) + ' GB' : b >= 1e6 ? sig(b / 1e6) + ' MB' : b >= 1e3 ? sig(b / 1e3) + ' KB' : Math.round(b) + ' B';
+const fmtN = (x) => x >= 1e9 ? sig(x / 1e9) + ' B' : x >= 1e6 ? sig(x / 1e6) + ' M' : x >= 1e4 ? sig(x / 1e3) + ' K' : String(Math.round(x));
+const fmtCtx = (n) => n >= 1024 ? (n / 1024) + 'K' : String(n);
+const fmtMs = (ms) => ms >= 100 ? ms.toFixed(0) + ' ms' : ms >= 10 ? ms.toFixed(1) + ' ms' : ms.toFixed(2) + ' ms';
+const SUP = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
+const sci = (v) => { if (v === 0) return '0'; const [m, e] = v.toExponential(1).split('e'); return `${m}×10${String(+e).split('').map((c) => SUP[c] ?? c).join('')}`; };
+
+// 公开架构参数（Hugging Face 上各模型的 config.json）
+const MODELS = {
+  'Llama-2-70B': { L: 80, d: 8192, h: 64, g: 8, dh: 128, ff: 28672, vocab: 32000, ctx: 4096 },
+  'Llama-3-8B': { L: 32, d: 4096, h: 32, g: 8, dh: 128, ff: 14336, vocab: 128256, ctx: 8192 },
+  'Llama-3-70B': { L: 80, d: 8192, h: 64, g: 8, dh: 128, ff: 28672, vocab: 128256, ctx: 8192 },
+};
+const kvPerTok = (L, g, dh, bytes) => 2 * L * g * dh * bytes;
+// 参数量：词表嵌入与输出层（不共享）+ 每层注意力（Q、O：d×h·dh；K、V：d×g·dh）+ SwiGLU MLP（3·d·ff），忽略 norm
+const params = (m, g) => 2 * m.vocab * m.d + m.L * (2 * m.d * m.h * m.dh + 2 * m.d * g * m.dh + 3 * m.d * m.ff);
+
+/* ---------- 00 切头 ---------- */
+const D0 = [512, 768, 4096, 8192], HC = [1, 2, 4, 8, 12, 16, 32, 48, 64, 96];
+let d0 = 2, hList = [];
+function setH0() { const d = D0[d0]; hList = HC.filter((h) => d % h === 0 && d / h >= 8); const el = $('#h0'); const cur = hList[+el.value] || 8; el.max = hList.length - 1; let k = hList.indexOf(cur); if (k < 0) k = hList.indexOf(8); el.value = k; }
+seg('#d0', D0.map((d) => ({ l: String(d) })), d0, (i) => { d0 = i; setH0(); draw0(); });
+setH0(); $('#h0').value = hList.indexOf(32);
+function draw0() {
+  const d = D0[d0], h = hList[+$('#h0').value], dh = d / h; $('#h0v').textContent = h;
+  const [W, H, nar] = vb('#fig0', 800, 250, 420, 270), fg = css('--fg'), mu = css('--muted'), li = css('--line'), fs = nar ? 15 : 13;
+  const x0 = 10, w = W - 20, sw = w / h; let s = '';
+  s += `<text x="${x0}" y="18" font-size="${fs}" fill="${mu}">一个 token 的向量 x（${d} 维）</text>`;
+  for (let i = 0; i < h; i++) s += `<rect x="${x0 + i * sw}" y="28" width="${Math.max(1, sw - (h > 48 ? 0.5 : 1.5))}" height="30" rx="${h > 32 ? 0 : 3}" fill="${hc(i, h)}"/>`;
+  if (h <= 16 && sw > 34) for (let i = 0; i < h; i++) s += `<text x="${x0 + (i + 0.5) * sw}" y="48" font-size="${fs - 1}" fill="#fff" text-anchor="middle">${h === 1 ? '单头' : '头 ' + (i + 1)}</text>`;
+  const y2 = 92, mh = H - y2 - 46;
+  s += `<text x="${x0}" y="${y2 - 8}" font-size="${fs}" fill="${mu}">W_Q（${d} × ${d}）按列切成 ${h} 块，每块 ${d} × ${dh}</text>`;
+  for (let i = 0; i < h; i++) s += `<rect x="${x0 + i * sw}" y="${y2}" width="${Math.max(1, sw - (h > 48 ? 0.5 : 1.5))}" height="${mh}" fill="${hc(i, h)}" fill-opacity="0.28" stroke="${hc(i, h)}" stroke-width="${h > 32 ? 0.6 : 1.2}"/>`;
+  s += `<text x="${x0}" y="${H - 14}" font-size="${fs}" fill="${fg}">头 i 的 q<tspan baseline-shift="sub" font-size="${fs - 3}">i</tspan> = x · （W_Q 的第 i 块），只有 ${dh} 维</text>`;
+  $('#fig0').innerHTML = s;
+  $('#r0a').textContent = dh; $('#r0b').textContent = fmtN(d * dh); $('#r0c').textContent = fmtN(4 * d * d); $('#r0d').textContent = h + ' 行';
+}
+$('#h0').addEventListener('input', draw0);
+
+/* ---------- 01 各看各的 ---------- */
+const PUN = /^[，。、！？；：,.!?;:]$/;
+let seed1 = 1, sel1 = 0;
+const HEADS1 = [
+  { n: '看前一个 token', k: 'rule', f: (i, j) => (i === 0 ? j === 0 : j === i - 1) },
+  { n: '看句首', k: 'rule', f: (i, j) => j === 0 },
+  { n: '看相同 token', k: 'rule', f: (i, j, t, causal) => { const m = t.findIndex((x, q) => q !== i && x === t[i] && (!causal || q < i)); return m >= 0 ? j === m : j === 0; } },
+  { n: '看最近的标点', k: 'rule', f: (i, j, t, causal) => { let m = -1; for (let q = i - 1; q >= 0; q--) if (PUN.test(t[q])) { m = q; break; } if (m < 0 && !causal) for (let q = i + 1; q < t.length; q++) if (PUN.test(t[q])) { m = q; break; } return m >= 0 ? j === m : j === 0; } },
+  { n: '随机初始化 A', k: 'rand', s: 11 },
+  { n: '随机初始化 B', k: 'rand', s: 29 },
+];
+function hashStr(s) { let h = 2166136261; for (const c of s) { h ^= c.codePointAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+function attnMaps(toks, beta, causal, seed) {
+  const n = toks.length, D = 32, dh = 8;
+  const emb = toks.map((t, i) => { const r = rng(hashStr(t) ^ seed * 7919), p = rng(1000 + i + seed * 31); return Array.from({ length: D }, () => gauss(r) + 0.5 * gauss(p)); });
+  return HEADS1.map((hd) => {
+    const S = [];
+    if (hd.k === 'rand') {
+      const r = rng(hd.s * 100003 + seed), WQ = Array.from({ length: D * dh }, () => gauss(r) / Math.sqrt(D)), WK = Array.from({ length: D * dh }, () => gauss(r) / Math.sqrt(D));
+      const proj = (x, Wm) => Array.from({ length: dh }, (_, c) => { let s = 0; for (let a = 0; a < D; a++) s += x[a] * Wm[a * dh + c]; return s; });
+      const Q = emb.map((x) => proj(x, WQ)), K = emb.map((x) => proj(x, WK));
+      for (let i = 0; i < n; i++) S.push(K.map((k, j) => Q[i].reduce((a, q, c) => a + q * k[c], 0) / Math.sqrt(dh)));
+    } else for (let i = 0; i < n; i++) S.push(toks.map((_, j) => (hd.f(i, j, toks, causal) ? beta : 0)));
+    return S.map((row, i) => { const v = row.map((s, j) => (causal && j > i ? -Infinity : s)); const m = Math.max(...v); const e = v.map((s) => (s === -Infinity ? 0 : Math.exp(s - m))); const z = e.reduce((a, b) => a + b, 0); return e.map((x) => x / z); });
+  });
+}
+function toks1() { const t = $('#t1').value.trim().split(/\s+/).filter(Boolean).slice(0, 14); return t.length ? t : ['（空）']; }
+function heat(A, x, y, size, col, mu) { const n = A.length, c = size / n; let s = `<rect x="${x}" y="${y}" width="${size}" height="${size}" fill="none" stroke="${mu}" stroke-opacity="0.35"/>`; A.forEach((row, i) => row.forEach((w, j) => { if (w > 0.004) s += `<rect x="${(x + j * c).toFixed(2)}" y="${(y + i * c).toFixed(2)}" width="${c.toFixed(2)}" height="${c.toFixed(2)}" fill="${col}" fill-opacity="${Math.min(1, w * 1.1).toFixed(3)}"/>`; })); return s; }
+function draw1() {
+  const toks = toks1(), n = toks.length, beta = +$('#b1').value, causal = $('#c1').checked; $('#b1v').textContent = beta;
+  const maps = attnMaps(toks, beta, causal, seed1), A = maps[sel1];
+  const acc = css('--accent'), warn = css('--warn'), mu = css('--muted'), fg = css('--fg'), li = css('--line');
+  // 缩略图
+  const [Wt, Ht, nar] = vb('#fig1t', 800, 150, 420, 300); let s = '';
+  const per = nar ? 3 : 6, cw = Wt / per, sz = Math.min(cw - 26, nar ? 100 : 104);
+  maps.forEach((M, k) => { const cx = (k % per) * cw + cw / 2, y = Math.floor(k / per) * (sz + 46) + 6; const col = HEADS1[k].k === 'rand' ? warn : acc;
+    s += `<g data-k="${k}" style="cursor:pointer"><rect x="${cx - sz / 2 - 5}" y="${y - 4}" width="${sz + 10}" height="${sz + 38}" rx="6" fill="${k === sel1 ? css('--accent-soft') : 'transparent'}"/>${heat(M, cx - sz / 2, y, sz, col, mu)}<text x="${cx}" y="${y + sz + 22}" font-size="${nar ? 15 : 13}" fill="${k === sel1 ? fg : mu}" text-anchor="middle">${HEADS1[k].n}</text></g>`; });
+  $('#fig1t').innerHTML = s;
+  // 大图
+  const lab = nar ? 52 : 74, W = nar ? 420 : 800, cell = Math.min((W - lab - 10) / n, nar ? 30 : 40), Hh = lab + cell * n + 8;
+  $('#fig1').setAttribute('viewBox', `0 0 ${W} ${Hh}`);
+  const x0 = lab + Math.max(0, (W - lab - 10 - cell * n) / 2) * (nar ? 0 : 1), y0 = lab - 8, fs = nar ? 13 : 14, col = HEADS1[sel1].k === 'rand' ? warn : acc;
+  const short = (t) => [...t].slice(0, 3).join('');
+  s = '';
+  toks.forEach((t, j) => { s += `<text x="${x0 + (j + 0.5) * cell}" y="${y0 - 8}" font-size="${fs}" fill="${mu}" text-anchor="start" transform="rotate(-50 ${x0 + (j + 0.5) * cell} ${y0 - 8})">${short(t)}</text>`; });
+  toks.forEach((t, i) => { s += `<text x="${x0 - 8}" y="${y0 + (i + 0.5) * cell + 5}" font-size="${fs}" fill="${fg}" text-anchor="end">${short(t)}</text>`; });
+  A.forEach((row, i) => row.forEach((w, j) => { const masked = causal && j > i; s += `<rect x="${x0 + j * cell + 1}" y="${y0 + i * cell + 1}" width="${cell - 2}" height="${cell - 2}" rx="2" fill="${masked ? li : col}" fill-opacity="${masked ? 0.25 : Math.max(0.04, Math.min(1, w * 1.05)).toFixed(3)}"><title>${toks[i]} → ${toks[j]}：${masked ? '遮罩' : (w * 100).toFixed(1) + '%'}</title></rect>`; if (!masked && w >= 0.3 && cell >= 26) s += `<text x="${x0 + (j + 0.5) * cell}" y="${y0 + (i + 0.5) * cell + 4}" font-size="${nar ? 10 : 11}" fill="#fff" text-anchor="middle" pointer-events="none">${Math.round(w * 100)}</text>`; }));
+  $('#fig1').innerHTML = s;
+  const eff = A.reduce((a, row) => a + 1 / row.reduce((b, w) => b + w * w, 0), 0) / n;
+  const colSum = toks.map((_, j) => A.reduce((a, row) => a + row[j], 0)); const top = colSum.indexOf(Math.max(...colSum));
+  $('#r1a').textContent = HEADS1[sel1].n; $('#r1b').textContent = eff.toFixed(2);
+  $('#r1c').textContent = `${toks[top]}（第 ${top + 1} 个，${Math.round(colSum[top] / n * 100)}%）`;
+}
+$('#fig1t').addEventListener('click', (e) => { const g = e.target.closest('g[data-k]'); if (!g) return; sel1 = +g.dataset.k; draw1(); });
+['#t1', '#b1'].forEach((id) => $(id).addEventListener('input', draw1)); $('#c1').addEventListener('change', draw1);
+$('#s1btn').addEventListener('click', () => { seed1++; draw1(); });
+
+/* ---------- 02 拼接与 W_O ---------- */
+const M2 = [{ l: '玩具（d = 8）' }, { l: 'Llama-3-8B' }, { l: 'Llama-3-70B' }], H2 = [1, 2, 4, 8], N2 = [4, 128, 1024, 8192];
+let m2 = 0, h2 = 2, n2 = 0;
+const TOY = (() => { const r = rng(5), n = 4, d = 8, mk = (a, b, sd) => Array.from({ length: a }, () => Array.from({ length: b }, () => gauss(r) * sd)); return { n, d, X: mk(n, d, 1), WQ: mk(d, d, 0.35), WK: mk(d, d, 0.35), WV: mk(d, d, 0.35), WO: mk(d, d, 0.35) }; })();
+const matmul = (A, B) => A.map((row) => B[0].map((_, c) => row.reduce((s, a, k) => s + a * B[k][c], 0)));
+function toyMHA(h) {
+  const { n, d, X, WQ, WK, WV, WO } = TOY, dh = d / h, Q = matmul(X, WQ), K = matmul(X, WK), V = matmul(X, WV);
+  const heads = [];
+  for (let k = 0; k < h; k++) {
+    const cols = (M) => M.map((r) => r.slice(k * dh, (k + 1) * dh)), q = cols(Q), kk = cols(K), v = cols(V);
+    const out = q.map((qi, i) => { const s = kk.map((kj, j) => (j > i ? -Infinity : qi.reduce((a, x, c) => a + x * kj[c], 0) / Math.sqrt(dh))); const m = Math.max(...s); const e = s.map((x) => (x === -Infinity ? 0 : Math.exp(x - m))); const z = e.reduce((a, b) => a + b, 0); return Array.from({ length: dh }, (_, c) => e.reduce((a, w, j) => a + w / z * v[j][c], 0)); });
+    heads.push(out);
+  }
+  const concat = Array.from({ length: n }, (_, i) => heads.flatMap((hd) => hd[i]));
+  const Y1 = matmul(concat, WO);
+  const Y2 = Array.from({ length: n }, () => new Array(d).fill(0));
+  heads.forEach((hd, k) => { const part = matmul(hd, WO.slice(k * dh, (k + 1) * dh)); part.forEach((row, i) => row.forEach((x, c) => Y2[i][c] += x)); });
+  return { Y1, Y2 };
+}
+const maxDiff = (A, B) => Math.max(...A.flatMap((r, i) => r.map((x, c) => Math.abs(x - B[i][c]))));
+seg('#m2', M2, m2, (i) => { m2 = i; if (i > 0 && n2 === 0) { n2 = 2; [...$('#n2').children].forEach((c, k) => c.setAttribute('aria-pressed', k === n2)); } draw2(); });
+seg('#h2', H2.map((h) => ({ l: String(h) })), h2, (i) => { h2 = i; draw2(); });
+seg('#n2', N2.map((n) => ({ l: String(n) })), n2, (i) => { n2 = i; draw2(); });
+function draw2() {
+  const toyH = H2[h2];
+  let cfg; if (m2 === 0) cfg = { d: 8, h: toyH, g: toyH, dh: 8 / toyH }; else { const m = MODELS[m2 === 1 ? 'Llama-3-8B' : 'Llama-3-70B']; cfg = { d: m.d, h: m.h, g: m.g, dh: m.dh }; }
+  [...$('#h2').children].forEach((b) => b.disabled = m2 !== 0);
+  const n = N2[n2], { d, h, g, dh } = cfg;
+  const rows = [
+    ['输入 X', `${n} × ${d}`, n * d, 'fg'],
+    ['Q = X · W_Q', `${n} × ${h * dh}`, n * h * dh, 'accent'],
+    ['K、V = X · W_K、X · W_V', `各 ${n} × ${g * dh}`, 2 * n * g * dh, 'ck'],
+    ['切成头', `Q：${h} × ${n} × ${dh}；K、V：各 ${g} × ${n} × ${dh}`, n * h * dh + 2 * n * g * dh, 'accent'],
+    ['分数 softmax(QKᵀ / √d_h)', `${h} × ${n} × ${n}`, h * n * n, 'warn'],
+    ['加权求和 V', `${h} × ${n} × ${dh}`, h * n * dh, 'accent'],
+    ['拼接', `${n} × ${h * dh}`, n * h * dh, 'accent'],
+    ['乘 W_O，加回残差', `${n} × ${d}`, n * d, 'fg'],
+  ];
+  const [W, H, nar] = vb('#fig2', 800, 380, 420, 560), mu = css('--muted'), fg = css('--fg'), fs = nar ? 15 : 14;
+  const lmax = Math.log10(Math.max(...rows.map((r) => r[2])) + 1); let s = '';
+  const rh = (H - 10) / rows.length;
+  rows.forEach(([name, shape, cnt, c], k) => {
+    const y = 8 + k * rh, col = css('--' + c);
+    if (nar) {
+      s += `<text x="4" y="${y + 16}" font-size="${fs}" fill="${fg}">${name}</text><text x="${W - 4}" y="${y + 16}" font-size="${fs - 1}" fill="${mu}" text-anchor="end">${fmtN(cnt)} 个数</text>`;
+      s += `<text x="4" y="${y + 36}" font-size="${fs - 1}" fill="${mu}">${shape}</text>`;
+      s += `<rect x="4" y="${y + 44}" width="${Math.max(3, (W - 8) * Math.log10(cnt + 1) / lmax)}" height="8" rx="3" fill="${col}"/>`;
+    } else {
+      s += `<text x="4" y="${y + 18}" font-size="${fs}" fill="${fg}">${name}</text><text x="210" y="${y + 18}" font-size="${fs}" fill="${mu}">${shape}</text>`;
+      s += `<rect x="520" y="${y + 7}" width="${Math.max(3, 200 * Math.log10(cnt + 1) / lmax)}" height="14" rx="3" fill="${col}"/><text x="${W - 4}" y="${y + 18}" font-size="${fs - 1}" fill="${mu}" text-anchor="end">${fmtN(cnt)}</text>`;
+    }
+  });
+  $('#fig2').innerHTML = s;
+  const t = toyMHA(toyH), t1 = toyMHA(1);
+  $('#r2a').textContent = sci(maxDiff(t.Y1, t.Y2) || 0) ;
+  $('#r2b').textContent = toyH === 1 ? '0（就是 h = 1）' : maxDiff(t.Y1, t1.Y1).toFixed(3);
+  $('#r2c').textContent = fmtN(h * n * n);
+}
+
+/* ---------- 03 分组 ---------- */
+const H3 = [8, 32, 64];
+let h3 = 0;
+const GH = [215, 275, 335, 5, 100, 245, 300, 135];
+const gc = (i, g) => g <= 8 ? `hsl(${GH[i]} 62% ${isDark() ? 62 : 46}%)` : hc(i, g);
+const divs = (h) => Array.from({ length: h }, (_, i) => i + 1).filter((g) => h % g === 0);
+function setG3(keep) { const L = divs(H3[h3]), el = $('#g3'); el.max = L.length - 1; let k = L.indexOf(keep); if (k < 0) k = L.indexOf(Math.min(8, H3[h3] / 4)); el.value = k; }
+seg('#h3', H3.map((h) => ({ l: String(h) })), h3, (i) => { const cur = divs(H3[h3])[+$('#g3').value]; h3 = i; setG3(cur); draw3(); });
+setG3(2);
+function draw3() {
+  const h = H3[h3], L = divs(h), g = L[+$('#g3').value], per = h / g; $('#g3v').textContent = g;
+  const [W, H, nar] = vb('#fig3', 800, 260, 420, 260), mu = css('--muted'), fs = nar ? 15 : 14, ck = css('--ck'), cv = css('--cv');
+  const x0 = nar ? 44 : 70, w = W - x0 - 8, qw = w / h, kw = w / g; let s = '';
+  s += `<text x="4" y="46" font-size="${fs}" fill="${mu}">Q 头</text><text x="4" y="${H - 52}" font-size="${fs}" fill="${mu}">K、V</text>`;
+  for (let i = 0; i < h; i++) { const gi = Math.floor(i / per), qx = x0 + (i + 0.5) * qw, kx = x0 + (gi + 0.5) * kw; s += `<path d="M${qx} 60 C ${qx} 130, ${kx} 110, ${kx} ${H - 86}" fill="none" stroke="${gc(gi, g)}" stroke-width="${h > 32 ? 0.8 : 1.4}" stroke-opacity="0.75"/>`; }
+  for (let i = 0; i < h; i++) { const gi = Math.floor(i / per); s += `<rect x="${x0 + i * qw + (qw > 6 ? 1 : 0.2)}" y="28" width="${Math.max(1, qw - (qw > 6 ? 2 : 0.4))}" height="32" rx="${qw > 10 ? 3 : 0}" fill="${gc(gi, g)}"/>`; }
+  for (let k = 0; k < g; k++) { const bx = x0 + k * kw + (kw > 6 ? 1 : 0.2), bw = Math.max(1, kw - (kw > 6 ? 2 : 0.4)); s += `<rect x="${bx}" y="${H - 86}" width="${bw}" height="26" rx="${kw > 10 ? 3 : 0}" fill="${ck}"/><rect x="${bx}" y="${H - 58}" width="${bw}" height="26" rx="${kw > 10 ? 3 : 0}" fill="${cv}"/><rect x="${bx}" y="${H - 28}" width="${bw}" height="5" rx="2" fill="${gc(k, g)}"/>`; }
+  if (kw > 28) for (let k = 0; k < g; k++) s += `<text x="${x0 + (k + 0.5) * kw}" y="${H - 68}" font-size="${fs - 2}" fill="#111" text-anchor="middle">K</text><text x="${x0 + (k + 0.5) * kw}" y="${H - 40}" font-size="${fs - 2}" fill="#111" text-anchor="middle">V</text>`;
+  s += `<text x="${x0}" y="18" font-size="${fs}" fill="${mu}">${h} 个 Q 头</text><text x="${x0}" y="${H - 6}" font-size="${fs}" fill="${mu}">${g} 组 K、V（只有这些要进 KV cache）</text>`;
+  $('#fig3').innerHTML = s;
+  $('#r3a').textContent = g === h ? 'MHA' : g === 1 ? 'MQA' : `GQA（${g} 组）`;
+  $('#r3b').textContent = per; $('#r3c').textContent = g === h ? '100%' : `1/${per}`;
+  const ex = { '64-8': 'Llama-2-70B、Llama-3-70B', '32-8': 'Llama-3-8B', '32-32': 'Llama-2-7B（MHA）' }[`${h}-${g}`];
+  $('#r3d').textContent = ex || (g === 1 ? 'PaLM（MQA）' : '—');
+}
+$('#g3').addEventListener('input', draw3);
+
+/* ---------- 04 KV cache 计算器 ---------- */
+const P4 = [{ l: 'bf16', b: 2 }, { l: 'fp8', b: 1 }, { l: 'int4', b: 0.5 }];
+const M4 = ['Llama-2-70B', 'Llama-3-8B', 'Llama-3-70B', '自定义'];
+let m4 = 2, p4 = 0;
+function load4() { if (m4 === 3) return; const m = MODELS[M4[m4]]; $('#L4').value = m.L; $('#H4').value = m.h; $('#G4').value = m.g; $('#D4').value = m.dh; $('#c4').value = Math.log2(m.ctx); }
+seg('#m4', M4.map((l) => ({ l })), m4, (i) => { m4 = i; load4(); draw4(); });
+seg('#p4', P4, p4, (i) => { p4 = i; draw4(); });
+load4();
+['#L4', '#H4', '#G4', '#D4'].forEach((id) => $(id).addEventListener('input', () => { if (m4 !== 3) { m4 = 3; [...$('#m4').children].forEach((c, k) => c.setAttribute('aria-pressed', k === 3)); } draw4(); }));
+['#c4', '#bt4'].forEach((id) => $(id).addEventListener('input', draw4));
+function draw4() {
+  const iv = (id, lo) => Math.max(lo, Math.round(+$(id).value || lo));
+  const L = iv('#L4', 1), h = iv('#H4', 1), dh = iv('#D4', 1); let g = Math.min(h, iv('#G4', 1));
+  const ctx = 2 ** +$('#c4').value, B = +$('#bt4').value, by = P4[p4].b;
+  $('#c4v').textContent = fmtCtx(ctx); $('#bt4v').textContent = B;
+  const sch = [['MHA', h, 'warn'], [`GQA（${g} 组）`, g, 'accent'], ['MQA', 1, 'ok']].map(([n, kv, c]) => ({ n, kv, c, per: kvPerTok(L, kv, dh, by), tot: kvPerTok(L, kv, dh, by) * ctx * B }));
+  const [W, H, nar] = vb('#fig4', 800, 210, 420, 250), mu = css('--muted'), fg = css('--fg'), fs = nar ? 15 : 14;
+  const cap = 80e9, mx = Math.max(cap * 1.1, ...sch.map((x) => x.tot)), x0 = nar ? 8 : 130, bw = W - x0 - 10, X = (v) => x0 + v / mx * bw;
+  let s = '';
+  sch.forEach((x, k) => { const y = nar ? 14 + k * 72 : 20 + k * 56;
+    if (nar) s += `<text x="${x0}" y="${y}" font-size="${fs}" fill="${fg}">${x.n}：${fmtB(x.tot)}</text>`;
+    else s += `<text x="${x0 - 10}" y="${y + 22}" font-size="${fs}" fill="${fg}" text-anchor="end">${x.n}</text>`;
+    const by0 = nar ? y + 10 : y + 6; s += `<rect x="${x0}" y="${by0}" width="${Math.max(2, X(x.tot) - x0)}" height="26" rx="3" fill="${css('--' + x.c)}"/>`;
+    if (!nar) s += `<text x="${Math.min(X(x.tot) + 8, W - 90)}" y="${by0 + 18}" font-size="${fs}" fill="${X(x.tot) + 8 > W - 90 ? '#fff' : fg}">${fmtB(x.tot)}</text>`; });
+  const cx = X(cap); s += `<line x1="${cx}" y1="6" x2="${cx}" y2="${H - 24}" stroke="${mu}" stroke-dasharray="5 4"/><text x="${cx}" y="${H - 6}" font-size="${fs - 1}" fill="${mu}" text-anchor="middle">一张 H100：80 GB</text>`;
+  $('#fig4').innerHTML = s;
+  $('#r4a').textContent = fmtB(sch[0].per); $('#r4b').textContent = fmtB(sch[1].per); $('#r4c').textContent = fmtB(sch[2].per); $('#r4d').textContent = fmtB(sch[1].tot);
+  $('#tb4').innerHTML = '<tr><th>模型（bf16，1 条请求）</th><th class="num">层</th><th class="num">Q 头</th><th class="num">KV 头</th><th class="num">d_h</th><th class="num">每 token：GQA</th><th class="num">若是 MHA</th><th class="num">若是 MQA</th><th class="num">GQA × 原生上下文</th></tr>' +
+    Object.entries(MODELS).map(([n, m]) => `<tr><td>${n}</td><td class="num">${m.L}</td><td class="num">${m.h}</td><td class="num">${m.g}</td><td class="num">${m.dh}</td><td class="num">${fmtB(kvPerTok(m.L, m.g, m.dh, 2))}</td><td class="num">${fmtB(kvPerTok(m.L, m.h, m.dh, 2))}</td><td class="num">${fmtB(kvPerTok(m.L, 1, m.dh, 2))}</td><td class="num">${fmtB(kvPerTok(m.L, m.g, m.dh, 2) * m.ctx)}（${fmtCtx(m.ctx)}）</td></tr>`).join('');
+}
+
+/* ---------- 05 带宽 ---------- */
+const M5 = ['Llama-3-8B', 'Llama-3-70B'], G5 = [{ l: 'H100 SXM', bw: 3.35e12 }, { l: 'H100 PCIe', bw: 2.0e12 }, { l: 'RTX 4090', bw: 1.008e12 }];
+let m5 = 0, g5 = 0;
+seg('#m5', M5.map((l) => ({ l })), m5, (i) => { m5 = i; draw5(); });
+seg('#g5', G5, g5, (i) => { g5 = i; draw5(); });
+['#bt5', '#c5'].forEach((id) => $(id).addEventListener('input', draw5));
+function step5(m, kv, ctx, B, bw) { const w = params(m, kv) * 2, k = B * ctx * kvPerTok(m.L, kv, m.dh, 2); return { w: w / bw * 1e3, k: k / bw * 1e3, t: (w + k) / bw * 1e3 }; }
+function draw5() {
+  const m = MODELS[M5[m5]], bw = G5[g5].bw, B = +$('#bt5').value, c = +$('#c5').value, ctx = 2 ** c;
+  $('#bt5v').textContent = B; $('#c5v').textContent = fmtCtx(ctx);
+  const sch = [[m.h, 'warn'], [m.g, 'accent'], [1, 'ok']];
+  const [W, H, nar] = vb('#fig5', 800, 300, 420, 300), mu = css('--muted'), li = css('--line'), fs = nar ? 15 : 13;
+  const pl = nar ? 52 : 60, pr = 12, pt = 12, pb = 30, ymax = step5(m, m.h, 2 ** 17, B, bw).t * 1.05;
+  const X = (lc) => pl + (lc - 10) / 7 * (W - pl - pr), Y = (v) => pt + (1 - v / ymax) * (H - pt - pb);
+  let s = '';
+  const tick = (() => { const raw = ymax / 4, p = 10 ** Math.floor(Math.log10(raw)), f = raw / p; return (f < 1.5 ? 1 : f < 3.5 ? 2 : f < 7.5 ? 5 : 10) * p; })();
+  for (let v = 0; v <= ymax; v += tick) s += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/><text x="${pl - 6}" y="${Y(v) + 4}" font-size="${fs}" fill="${mu}" text-anchor="end">${v >= 1 ? +v.toFixed(0) : +v.toPrecision(2)} ms</text>`;
+  for (let lc = 10; lc <= 17; lc += nar ? 2 : 1) s += `<text x="${X(lc)}" y="${H - 8}" font-size="${fs}" fill="${mu}" text-anchor="middle">${fmtCtx(2 ** lc)}</text>`;
+  const wline = step5(m, m.g, 1024, B, bw).w;
+  s += `<line x1="${pl}" y1="${Y(wline)}" x2="${W - pr}" y2="${Y(wline)}" stroke="${mu}" stroke-dasharray="5 4" stroke-width="1.5"/>`;
+  sch.forEach(([kv, col]) => { let d = ''; for (let i = 0; i <= 70; i++) { const lc = 10 + i / 10; d += (i ? 'L' : 'M') + X(lc).toFixed(1) + ',' + Y(step5(m, kv, 2 ** lc, B, bw).t).toFixed(1); } s += `<path d="${d}" fill="none" stroke="${css('--' + col)}" stroke-width="2.5"/>`; });
+  s += `<line x1="${X(c)}" y1="${pt}" x2="${X(c)}" y2="${H - pb}" stroke="${css('--fg')}" stroke-opacity="0.5"/>`;
+  sch.forEach(([kv, col]) => s += `<circle cx="${X(c)}" cy="${Y(step5(m, kv, ctx, B, bw).t)}" r="4.5" fill="${css('--' + col)}"/>`);
+  $('#fig5').innerHTML = s;
+  const gq = step5(m, m.g, ctx, B, bw), mh = step5(m, m.h, ctx, B, bw);
+  $('#r5a').textContent = fmtMs(gq.w); $('#r5b').textContent = fmtMs(gq.k);
+  $('#r5c').textContent = (1000 / gq.t).toFixed(1) + ' token/s'; $('#r5d').textContent = (1000 / mh.t).toFixed(1) + ' token/s';
+}
+
+/* ---------- 启动与重绘 ---------- */
+const all = () => { draw0(); draw1(); draw2(); draw3(); draw4(); draw5(); };
+all();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(all, 150); });
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>

@@ -162,7 +162,7 @@ td.num{text-align:right}
     </div>
     <svg id="svg5" viewBox="0 0 800 150" role="img" aria-label="注意力与 MLP 参数占比"></svg>
     <div class="tw"><table id="tb5"></table></div>
-    <p class="note">算法：注意力 = d·(h·d<sub>h</sub>) × 2（Q、O）+ d·(h<sub>kv</sub>·d<sub>h</sub>) × 2（K、V）；MLP = 2·d·d<sub>ff</sub>（GPT-3）或 3·d·d<sub>ff</sub>（Llama 的 SwiGLU 有三个矩阵）；忽略偏置和 LayerNorm。GPT-3 算出来约 1750 亿，和官方数字对得上。<b>无论哪个模型，MLP 都占了大头。</b>Llama 的 K、V 头比 Q 头少（GQA），这正是上一讲 KV cache 能变小的原因之一。</p>
+    <p class="note">算法：注意力 = d·(h·d<sub>h</sub>) × 2（Q、O）+ d·(h<sub>kv</sub>·d<sub>h</sub>) × 2（K、V）；MLP = 2·d·d<sub>ff</sub>（GPT-3）或 3·d·d<sub>ff</sub>（Llama 的 SwiGLU 有三个矩阵）；忽略偏置和 LayerNorm。GPT-3 算出来约 1750 亿，和官方数字对得上。<b>无论哪个模型，MLP 都占了大头。</b>Llama 的 K、V 头比 Q 头少（GQA），这正是后面 KV Cache 那讲里 cache 能变小的原因之一。</p>
   </div>
 </section>
 

@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>偏好对齐实验室</title>
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+h3{font-size:17px;margin:22px 0 4px;font-weight:700}
+p{margin:12px 0}
+.formula{font-size:20px;text-align:center;margin:18px 0;letter-spacing:.02em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl b{font-variant-numeric:tabular-nums;min-width:2.6em}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+input[type=range]{accent-color:var(--accent);max-width:200px}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.two{grid-template-columns:1fr}}
+.cap{font-size:12px;color:var(--muted);margin:4px 0 0;text-align:center}
+.key{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;margin:0 0 8px}
+.key i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+.key i.box{height:10px;width:12px}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn{border-color:var(--warn)} .ro.warn b{color:var(--warn)}
+.ro.acc{border-color:var(--accent)} .ro.acc b{color:var(--accent)}
+.ro.ok{border-color:var(--ok)} .ro.ok b{color:var(--ok)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.num,th.num{text-align:right}
+.tw{overflow-x:auto}
+.chips{display:flex;flex-wrap:wrap;gap:6px 8px;font-size:13px;margin:4px 0 12px;font-variant-numeric:tabular-nums}
+.chips span{background:var(--accent-soft);border-radius:4px;padding:2px 8px}
+.stages{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media (max-width:820px){.stages{grid-template-columns:1fr}}
+.stage{background:var(--bg);border-radius:6px;padding:14px 16px}
+.stage .k{font-size:12px;color:var(--muted);letter-spacing:.08em}
+.stage h4{margin:2px 0 8px;font-size:18px}
+.stage .big{font-size:26px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1.3}
+.stage .unit{font-size:13px;color:var(--muted)}
+.stage .ex{font-size:14px;background:var(--paper);border-radius:4px;padding:8px 10px;margin:10px 0 0;line-height:1.7}
+.stage .ex .w{color:var(--ok)} .stage .ex .l{color:var(--warn)} .stage .ex .m{color:var(--muted)}
+.stage p{font-size:15px;margin:8px 0 0}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">偏好数据 · Bradley–Terry · 奖励模型 · 奖励黑客 · KL 惩罚 · DPO</div>
+  <h1>偏好对齐实验室</h1>
+  <p class="lede">从「两个回答，人选一个」出发，拟合分数、训练奖励模型、看它被钻空子、用 KL 拉住策略，再用 DPO 一步到位。下面的拟合与优化都在浏览器里真实计算；偏好数据和打分函数是构造的示例。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>Bradley–Terry：分数差变成胜率</h2>
+  <p>给每个回答一个分数 <i>r</i>。两个回答放在一起，人选 A 的概率只取决于分数差：</p>
+  <p class="formula">P(A 胜 B) = σ(<i>r</i><sub>A</sub> − <i>r</i><sub>B</sub>) = 1 / (1 + e<sup>−(<i>r</i><sub>A</sub> − <i>r</i><sub>B</sub>)</sup>)</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="d0">分数差 r<sub>A</sub> − r<sub>B</sub></label><input id="d0" type="range" min="-5" max="5" step="0.1" value="1"><b id="d0v"></b></div>
+    </div>
+    <svg id="fig0" viewBox="0 0 800 240" role="img" aria-label="sigmoid 曲线：分数差与偏好概率"></svg>
+    <div class="readout">
+      <div class="ro acc"><b id="r0a">–</b><span>P(A 胜 B)</span></div>
+      <div class="ro"><b id="r0b">–</b><span>换算成 Elo 分差（× 400 / ln 10）</span></div>
+    </div>
+    <p class="note">分差 0 时五五开；分差 1 时 73 : 27；分差 3 时 95 : 5。Arena 的 Elo 用的是同一条曲线，只是底换成 10、单位放大到 400 / ln 10 ≈ 173.7 倍。</p>
+  </div>
+  <p>反过来，手里只有一堆「谁赢了谁」，也能把每个回答的分数拟合出来：让观测到的胜负在这些分数下出现的概率最大（最大似然），用梯度上升一步步调。下面是同一个问题的 5 个回答，每两个之间比了 20 次（构造示例）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="btns"><button class="btn pri" id="run0">拟合分数</button><button class="btn" id="reset0">重置</button></div>
+    </div>
+    <div class="two">
+      <div><svg id="fig0a" viewBox="0 0 400 230" role="img" aria-label="拟合出的 5 个分数"></svg><p class="cap">每个回答的分数（只有差值有意义，均值固定为 0）</p></div>
+      <div><svg id="fig0b" viewBox="0 0 400 230" role="img" aria-label="对数似然随步数"></svg><p class="cap">对数似然随梯度上升步数</p></div>
+    </div>
+    <div class="tw"><table id="tab0"></table></div>
+    <div class="readout">
+      <div class="ro"><b id="r0n">0</b><span>步数</span></div>
+      <div class="ro acc"><b id="r0l">–</b><span>对数似然</span></div>
+    </div>
+    <p class="note">分数一开始全是 0，每对都预测 50%；几十步后收敛。拟合值和观测胜率不会处处相等：数据里 A 对 D 只赢 55%，拟合出来是 61%：五个分数要同时照顾十组对局，不可能每一组都对上。</p>
+  </div>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>奖励模型：从成对偏好里学一个打分函数</h2>
+  <p>真实的奖励模型是一个大模型，读入问题和回答，输出一个数。这里把它缩成最小的样子：每个回答用三个特征描述（有用度 <i>h</i>、长度 <i>L</i>（百字）、礼貌度 <i>p</i>），奖励模型 <i>r</i> = <i>w</i><sub>h</sub><i>h</i> + <i>w</i><sub>L</sub><i>L</i> + <i>w</i><sub>p</sub><i>p</i>。训练目标就是 00 里的 Bradley–Terry 似然：</p>
+  <p class="formula">损失 = −平均 log σ(<i>r</i>(胜者) − <i>r</i>(败者))</p>
+  <p>偏好数据由一个模拟的「标注员」产生：他心里的分数是 3<i>h</i> + <i>p</i> + <i>λ</i>·<i>L</i>，按 Bradley–Terry 概率选，所以也会选错。<i>λ</i> 是他对长回答的一点偏爱。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="lam1">标注员对长度的偏爱 λ</label><input id="lam1" type="range" min="0" max="0.6" step="0.05" value="0.3"><b id="lam1v"></b></div>
+      <div class="ctrl"><label>偏好对数量</label><div class="seg" id="n1"><button data-v="100" aria-pressed="false">100</button><button data-v="500" aria-pressed="false">500</button><button data-v="2000" aria-pressed="true">2000</button></div></div>
+      <div class="btns"><button class="btn" id="seed1">重新抽样</button></div>
+    </div>
+    <div class="key"><span><i class="box" style="background:var(--accent)"></i>奖励模型学到的权重</span><span><i class="box" style="border:1.5px solid var(--muted)"></i>标注员心里的权重</span></div>
+    <div class="two">
+      <div><svg id="fig1a" viewBox="0 0 400 220" role="img" aria-label="三个特征的权重"></svg><p class="cap">权重</p></div>
+      <div><svg id="fig1b" viewBox="0 0 400 220" role="img" aria-label="留出集准确率随训练步数"></svg><p class="cap">在 2000 对没见过的偏好上猜对的比例（虚线：直接用标注员心里的分数去猜）</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro acc"><b id="r1L">–</b><span>学到的长度权重 w<sub>L</sub></span></div>
+      <div class="ro"><b id="r1h">–</b><span>有用度权重 w<sub>h</sub></span></div>
+      <div class="ro"><b id="r1p">–</b><span>礼貌度权重 w<sub>p</sub></span></div>
+      <div class="ro ok"><b id="r1a">–</b><span>留出集准确率 / 用真实分数猜</span></div>
+    </div>
+    <p class="note">λ 拖到 0，学到的长度权重也接近 0；标注员每百字只多给 0.3 分，奖励模型就老老实实学到约 0.3。奖励模型学的是标注员的全部口味，包括不该有的那部分。准确率只有七成多不是没训好：标注员自己就不一致，拿他心里的真实分数去猜，也只能猜对这么多。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>奖励黑客：分数一路涨，回答越来越差</h2>
+  <p>现在拿上面那种奖励模型去训练策略。策略能调两个旋钮：认真程度 <i>q</i>（有用度 <i>h</i> = 1 − e<sup>−<i>q</i></sup>，越往后越难提高）和长度 <i>L</i>。奖励模型给分 3<i>h</i> + <i>w</i><sub>L</sub><i>L</i>；但真实质量（构造的示例函数）在 300 字左右最好，再长就是注水：3<i>h</i> − 0.15(<i>L</i> − 3)<sup>2</sup>。策略只看得见奖励模型，沿它的梯度一步步爬（学习率 0.05）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="w2">奖励模型的长度权重 w<sub>L</sub></label><input id="w2" type="range" min="0" max="0.6" step="0.05" value="0.3"><b id="w2v"></b></div>
+      <div class="ctrl"><label for="t2">优化步数</label><input id="t2" type="range" min="0" max="400" step="1" value="400"><b id="t2v"></b></div>
+    </div>
+    <div class="key"><span><i style="background:var(--accent)"></i>奖励模型给分</span><span><i style="background:var(--ok)"></i>真实质量</span></div>
+    <svg id="fig2" viewBox="0 0 800 280" role="img" aria-label="奖励分与真实质量随优化步数"></svg>
+    <svg id="fig2b" viewBox="0 0 800 70" role="img" aria-label="当前回答的长度"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r2L">–</b><span>当前回答长度</span></div>
+      <div class="ro acc"><b id="r2R">–</b><span>奖励模型给分</span></div>
+      <div class="ro ok"><b id="r2G">–</b><span>真实质量</span></div>
+      <div class="ro warn"><b id="r2P">–</b><span>真实质量最高点（第几步，多少分）</span></div>
+    </div>
+    <p class="note">前几十步，认真程度和长度都在涨，两条线一起往上；过了最高点，有用度已经涨不动，长度却还在白拿分，奖励一路上升，真实质量掉头往下。把 w<sub>L</sub> 拖到 0，长度就不动了，两条线不再分叉。这就是评测那一讲的 Goodhart：奖励模型一旦成为优化目标，就不再是好的度量。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>KL 惩罚：一根绳子拉住策略</h2>
+  <p>把策略简化成 5 种回答风格上的一个概率分布 <i>π</i>。参考模型（SFT 之后的模型）<i>π</i><sub>ref</sub> 原本的分布是 30% / 30% / 15% / 5% / 20%。奖励模型偏爱「超长堆砌」，给它 1.6 分，但它的真实质量只有 0.2（示例数字）。RLHF 的目标是：</p>
+  <p class="formula">最大化　E<sub><i>π</i></sub>[<i>r</i>] − <i>β</i> · KL(<i>π</i> ‖ <i>π</i><sub>ref</sub>)</p>
+  <p>下面每次拖动 <i>β</i>，页面都从 <i>π</i> = <i>π</i><sub>ref</sub> 出发，对 softmax 的 5 个 logit 做 1000 步（自然）梯度上升，再和解析解 <i>π</i>* ∝ <i>π</i><sub>ref</sub> · e<sup><i>r</i>/<i>β</i></sup> 对一下。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="b3">KL 系数 β</label><input id="b3" type="range" min="0" max="100" step="1" value="62"><b id="b3v"></b></div>
+    </div>
+    <div class="key"><span><i class="box" style="background:var(--muted);opacity:.45"></i>参考模型 π<sub>ref</sub></span><span><i class="box" style="background:var(--accent)"></i>优化后的 π</span><span><i style="background:var(--ok)"></i>真实质量</span><span><i style="background:var(--accent)"></i>期望奖励</span></div>
+    <div class="two">
+      <div><svg id="fig3a" viewBox="0 0 400 270" role="img" aria-label="5 种风格的概率"></svg><p class="cap">每种风格的概率；下面两行数字是奖励模型给分 / 真实质量</p></div>
+      <div><svg id="fig3b" viewBox="0 0 400 270" role="img" aria-label="期望奖励与真实质量随 β"></svg><p class="cap">横轴 β（对数坐标）；圆点是当前 β</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro acc"><b id="r3r">–</b><span>期望奖励 E[r]</span></div>
+      <div class="ro ok"><b id="r3g">–</b><span>期望真实质量</span></div>
+      <div class="ro warn"><b id="r3k">–</b><span>KL(π ‖ π<sub>ref</sub>)（nat）</span></div>
+      <div class="ro"><b id="r3d">–</b><span>梯度上升与解析解的最大差</span></div>
+    </div>
+    <p class="note">β 很小，绳子松了，策略几乎全押在「超长堆砌」上，奖励最高、真实质量最低；β 很大，策略被拴在参考模型上，什么也没学。真实质量在中间某个 β 最好。β 不是越大越安全，也不是越小越强，是一个要调的旋钮。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>DPO：不训练奖励模型，直接用偏好对</h2>
+  <p>还是这 5 种风格、这个参考模型。下面是一组成对偏好（构造示例，每对 20 次）：</p>
+  <div class="chips" id="chips4"></div>
+  <p>RLHF 走两步：先用 00 的方法拟合出每种风格的奖励 <i>r̂</i>，再像 03 那样在 KL 约束下优化。DPO 一步：直接对策略最小化</p>
+  <p class="formula">−log σ( <i>β</i> log <i>π</i>(<i>y</i><sub>w</sub>)/<i>π</i><sub>ref</sub>(<i>y</i><sub>w</sub>) − <i>β</i> log <i>π</i>(<i>y</i><sub>l</sub>)/<i>π</i><sub>ref</sub>(<i>y</i><sub>l</sub>) )</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="b4">β</label><input id="b4" type="range" min="0" max="100" step="1" value="60"><b id="b4v"></b></div>
+      <div class="btns"><button class="btn pri" id="run4">训练 DPO</button><button class="btn" id="reset4">重置</button></div>
+    </div>
+    <div class="key"><span><i class="box" style="background:var(--muted);opacity:.45"></i>参考模型</span><span><i class="box" style="background:var(--ok)"></i>RLHF（奖励模型 + KL 优化）</span><span><i class="box" style="background:var(--accent)"></i>DPO</span></div>
+    <div class="two">
+      <div><svg id="fig4a" viewBox="0 0 400 260" role="img" aria-label="三种分布对比"></svg><p class="cap">每种风格的概率</p></div>
+      <div><svg id="fig4b" viewBox="0 0 400 260" role="img" aria-label="DPO 损失随步数"></svg><p class="cap">DPO 损失随步数（虚线：理论最小值）</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r4n">0</b><span>DPO 步数</span></div>
+      <div class="ro acc"><b id="r4l">–</b><span>DPO 损失</span></div>
+      <div class="ro ok"><b id="r4d">–</b><span>DPO 与 RLHF 两个分布的最大差</span></div>
+      <div class="ro"><b id="r4r">–</b><span>「详细分步」比「简短直接」：隐式奖励差 / 奖励模型分差</span></div>
+    </div>
+    <p class="note">DPO 训完，和 RLHF 两步走的结果重合到浮点误差。原因是 DPO 把 <i>β</i> log <i>π</i>/<i>π</i><sub>ref</sub> 当成奖励来用（隐式奖励），它的损失正好就是这个奖励的 Bradley–Terry 损失。换 β 再训一次：分布变了，但两者依然重合，最终的损失值也不变。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>三段式：每一段的数据长什么样、有多少</h2>
+  <p>同一个模型要经过三段训练。数据量取自两篇公开论文；选一个看。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><div class="seg" id="m5"><button data-v="0" aria-pressed="true">InstructGPT（2022）</button><button data-v="1" aria-pressed="false">Llama 2-Chat（2023）</button></div></div>
+    </div>
+    <div class="stages" id="st5"></div>
+    <p class="note">出处：InstructGPT 见 Ouyang et al. 2022（基座 GPT-3 的 300 B token 见 Brown et al. 2020）；Llama 2-Chat 见 Touvron et al. 2023。单位不同（token、条、prompt、次比较），只能看量级：预训练比后面两段多出好几个数量级。</p>
+  </div>
+</section>
+
+</div>
+<script>
+// 计算核心（与 node 核对用的是同一份代码）
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function gauss(r) { let u = 0; while (u === 0) u = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r()); }
+const sig = (z) => 1 / (1 + Math.exp(-z));
+const logsig = (z) => z >= 0 ? -Math.log1p(Math.exp(-z)) : z - Math.log1p(Math.exp(z));
+
+/* 00 Bradley–Terry：W[i][j] = i 胜 j 的次数（构造示例） */
+const BT_NAMES = ['A', 'B', 'C', 'D', 'E'];
+const BT_W = (() => {
+  const W = [...Array(5)].map(() => Array(5).fill(0));
+  const set = (i, j, a, b) => { W[i][j] = a; W[j][i] = b; };
+  set(0, 1, 14, 6); set(0, 2, 17, 3); set(0, 3, 11, 9); set(0, 4, 19, 1);
+  set(1, 2, 13, 7); set(1, 3, 8, 12); set(1, 4, 16, 4);
+  set(2, 3, 6, 14); set(2, 4, 12, 8); set(3, 4, 17, 3);
+  return W;
+})();
+function btLL(W, r) { let s = 0; for (let i = 0; i < W.length; i++) for (let j = 0; j < W.length; j++) if (W[i][j]) s += W[i][j] * logsig(r[i] - r[j]); return s; }
+function btGrad(W, r) {
+  const n = W.length, g = Array(n).fill(0);
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) if (W[i][j]) { const d = W[i][j] * (1 - sig(r[i] - r[j])); g[i] += d; g[j] -= d; }
+  return g;
+}
+// 梯度上升，每步把均值拉回 0（分数只有差值有意义）
+function btStep(W, r, lr) { const g = btGrad(W, r), tot = W.flat().reduce((a, b) => a + b, 0); const nr = r.map((v, i) => v + lr * g[i] / tot * W.length); const m = nr.reduce((a, b) => a + b, 0) / nr.length; return nr.map((v) => v - m); }
+
+/* 01 线性奖励模型 */
+// 每个回答 3 个特征：有用度 h∈[0,1]、长度 L（百字）、礼貌度 p∈[0,1]；长度与有用度略相关
+function makeAnswers(n, seed) {
+  const r = rng(seed), out = [];
+  for (let k = 0; k < n; k++) { const h = r(), p = r(); const L = Math.max(0.5, Math.min(8, 1.5 + 2.5 * h + 1.6 * gauss(r))); out.push([h, L, p]); }
+  return out;
+}
+// 「人」的偏好：u = 3h + 1p + λL，按 BT 概率选
+function makePairs(nPairs, lam, seed) {
+  const r = rng(seed), A = makeAnswers(2 * nPairs, seed * 7 + 1), pairs = [];
+  for (let k = 0; k < nPairs; k++) {
+    const a = A[2 * k], b = A[2 * k + 1];
+    const u = (x) => 3 * x[0] + 1 * x[2] + lam * x[1];
+    const aWins = r() < sig(u(a) - u(b));
+    pairs.push(aWins ? [a, b] : [b, a]);   // [胜者, 败者]
+  }
+  return pairs;
+}
+function rmGrad(pairs, w) {
+  const g = [0, 0, 0];
+  for (const [a, b] of pairs) { const d = [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; const c = 1 - sig(w[0] * d[0] + w[1] * d[1] + w[2] * d[2]); g[0] += c * d[0]; g[1] += c * d[1]; g[2] += c * d[2]; }
+  return g.map((v) => v / pairs.length);
+}
+// Adam 梯度上升（对数似然），st = {w, m, v, t}
+function rmInit() { return { w: [0, 0, 0], m: [0, 0, 0], v: [0, 0, 0], t: 0 }; }
+function rmStep(pairs, st, lr = 0.05) {
+  const g = rmGrad(pairs, st.w); st.t++;
+  for (let i = 0; i < 3; i++) { st.m[i] = 0.9 * st.m[i] + 0.1 * g[i]; st.v[i] = 0.999 * st.v[i] + 0.001 * g[i] * g[i]; st.w[i] += lr * (st.m[i] / (1 - 0.9 ** st.t)) / (Math.sqrt(st.v[i] / (1 - 0.999 ** st.t)) + 1e-8); }
+  return st;
+}
+function rmTrain(pairs, steps) { const st = rmInit(); for (let t = 0; t < steps; t++) rmStep(pairs, st); return st.w; }
+function rmAcc(pairs, w) { let c = 0; for (const [a, b] of pairs) { const z = w[0] * (a[0] - b[0]) + w[1] * (a[1] - b[1]) + w[2] * (a[2] - b[2]); if (z > 0) c++; } return c / pairs.length; }
+
+/* 02 奖励黑客：策略两个旋钮 q（质量投入）、L（长度，百字） */
+const hOf = (q) => 1 - Math.exp(-q);
+const gold = (q, L) => 3 * hOf(q) - 0.15 * (L - 3) ** 2;
+const proxy = (q, L, wL) => 3 * hOf(q) + wL * L;
+function hackRun(wL, steps, lr = 0.05) {
+  let q = 0.2, L = 2; const tr = [];
+  for (let t = 0; t <= steps; t++) {
+    tr.push({ t, q, L, R: proxy(q, L, wL), G: gold(q, L) });
+    q += lr * 3 * Math.exp(-q); L += lr * wL; L = Math.min(L, 40);
+  }
+  return tr;
+}
+
+/* 03 KL 正则：5 种回答风格 */
+const STY = ['简短直接', '详细分步', '礼貌客套', '超长堆砌', '拒绝回答'];
+const REF = [0.30, 0.30, 0.15, 0.05, 0.20];
+const RM = [0.6, 1.0, 0.7, 1.6, 0.0];     // 奖励模型给分（偏爱长）
+const GOLD = [0.6, 1.0, 0.7, 0.2, 0.0];   // 真实质量（示例）
+const softmax = (th) => { const m = Math.max(...th), e = th.map((v) => Math.exp(v - m)), s = e.reduce((a, b) => a + b, 0); return e.map((v) => v / s); };
+const KL = (p, q) => p.reduce((s, v, i) => s + (v > 0 ? v * Math.log(v / q[i]) : 0), 0);
+function klOpt(r, ref, beta, steps = 1000, lr = 0.05) {
+  // 自然梯度上升：目标对 π 的梯度是 r − β(log π/π_ref + 1)，在 softmax 的 logit 上按 Fisher 度量预条件后，每步 θ += lr·(r/β − log π/π_ref)
+  let th = ref.map(Math.log);
+  for (let t = 0; t < steps; t++) {
+    const p = softmax(th);
+    th = th.map((v, i) => v + lr * (r[i] / beta - Math.log(p[i] / ref[i])));
+  }
+  return softmax(th);
+}
+const klClosed = (r, ref, beta) => { const w = ref.map((v, i) => Math.log(v) + r[i] / beta); return softmax(w); };
+
+/* 04 DPO：同一组偏好对（构造示例，W4[i][j] = i 胜 j 次数） */
+const W4 = (() => {
+  const W = [...Array(5)].map(() => Array(5).fill(0));
+  const set = (i, j, a, b) => { W[i][j] = a; W[j][i] = b; };
+  set(0, 1, 7, 13); set(0, 2, 9, 11); set(0, 3, 8, 12); set(0, 4, 18, 2);
+  set(1, 2, 13, 7); set(1, 3, 9, 11); set(1, 4, 19, 1);
+  set(2, 3, 9, 11); set(2, 4, 17, 3); set(3, 4, 19, 1);
+  return W;
+})();
+function dpoLoss(W, th, ref, beta) {
+  const p = softmax(th), u = p.map((v, i) => beta * Math.log(v / ref[i])); let s = 0, n = 0;
+  for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) if (W[i][j]) { s -= W[i][j] * logsig(u[i] - u[j]); n += W[i][j]; }
+  return s / n;
+}
+function dpoStep(W, th, ref, beta, lr) {
+  const p = softmax(th), u = p.map((v, i) => beta * Math.log(v / ref[i])); const gu = Array(5).fill(0); let n = 0;
+  for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) if (W[i][j]) { const c = W[i][j] * (1 - sig(u[i] - u[j])); gu[i] -= c; gu[j] += c; n += W[i][j]; }
+  // u_i = β(θ_i − logZ − log ref_i) ⇒ ∂L/∂θ_k = β(gu_k − p_k Σ gu)
+  const S = gu.reduce((a, b) => a + b, 0);
+  return th.map((v, k) => v - lr * beta * (gu[k] - p[k] * S) / n);
+}
+function dpoTrain(W, ref, beta, steps, lr) { let th = ref.map(Math.log); for (let t = 0; t < steps; t++) th = dpoStep(W, th, ref, beta, lr); return th; }
+
+if (typeof module !== 'undefined') module.exports = { rng, sig, BT_W, btLL, btStep, makePairs, rmTrain, rmAcc, hackRun, REF, RM, GOLD, klOpt, klClosed, KL, softmax, W4, dpoLoss, dpoTrain, STY };
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function seg(id, cb) {
+  const el = $(id);
+  el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; el.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); cb(b.dataset.v); });
+  return () => el.querySelector('[aria-pressed=true]').dataset.v;
+}
+function vb(id, w, h, nw, nh) { const el = $(id), n = el.clientWidth > 0 && el.clientWidth < 600, W = n ? nw : w, H = n ? nh : h; el.setAttribute('viewBox', `0 0 ${W} ${H}`); return [W, H, n]; }
+function polyline(pts, col, w = 2, extra = '') { if (!pts.length) return ''; return `<path d="${pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('')}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linejoin="round" ${extra}/>`; }
+const txt = (x, y, s, fs, col, anchor = 'middle', extra = '') => `<text x="${x}" y="${y}" font-size="${fs}" fill="${col}" text-anchor="${anchor}" ${extra}>${s}</text>`;
+const pct = (v) => (v * 100).toFixed(1) + '%';
+const f2 = (v) => (v < 0 ? '−' : '') + Math.abs(v).toFixed(2);
+const sci = (v) => { if (!isFinite(v)) return '–'; if (v === 0) return '0'; if (v >= 0.001) return v.toFixed(3); const [m, e] = v.toExponential(1).split('e'); const S = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' }; return `${m}×10${String(+e).split('').map((c) => S[c] ?? c).join('')}`; };
+const betaOf = (v, lo, hi) => lo * Math.pow(hi / lo, v / 100);
+
+/* ---------- 00 Bradley–Terry ---------- */
+function draw0() {
+  const d = +$('#d0').value; $('#d0v').textContent = f2(d);
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent');
+  const [W, H, n] = vb('#fig0', 800, 240, 420, 260), fs = n ? 15 : 13, pl = 44, pr = 16, pt = 14, pb = 32;
+  const X = (x) => pl + (x + 6) / 12 * (W - pl - pr), Y = (y) => pt + (1 - y) * (H - pt - pb);
+  let s = '';
+  [0, 0.5, 1].forEach((v) => s += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/>` + txt(pl - 8, Y(v) + 4, v, fs, mu, 'end'));
+  [-6, -3, 0, 3, 6].forEach((v) => s += txt(X(v), H - 10, (v < 0 ? '−' : '') + Math.abs(v), fs, mu));
+  const pts = []; for (let i = 0; i <= 240; i++) { const x = -6 + i / 20; pts.push([X(x), Y(sig(x))]); }
+  s += polyline(pts, mu, 2);
+  const p = sig(d);
+  s += `<line x1="${X(d)}" y1="${Y(0)}" x2="${X(d)}" y2="${Y(p)}" stroke="${ac}" stroke-dasharray="4 3"/><line x1="${pl}" y1="${Y(p)}" x2="${X(d)}" y2="${Y(p)}" stroke="${ac}" stroke-dasharray="4 3"/>`;
+  s += `<circle cx="${X(d)}" cy="${Y(p)}" r="6" fill="${ac}"/>`;
+  $('#fig0').innerHTML = s;
+  $('#r0a').textContent = pct(p); $('#r0b').textContent = (d < 0 ? '−' : '') + Math.abs(400 * d / Math.LN10).toFixed(0);
+}
+$('#d0').addEventListener('input', draw0);
+
+const s0 = { r: [0, 0, 0, 0, 0], hist: [], timer: 0 };
+const BT_TOT = BT_W.flat().reduce((a, b) => a + b, 0) / 2;
+function reset0() { clearInterval(s0.timer); s0.timer = 0; s0.r = [0, 0, 0, 0, 0]; s0.hist = [btLL(BT_W, s0.r)]; $('#run0').textContent = '拟合分数'; draw0b(); }
+function run0() {
+  if (s0.timer) return;
+  if (s0.hist.length > 60) reset0();
+  $('#run0').textContent = '拟合中…';
+  s0.timer = setInterval(() => {
+    s0.r = btStep(BT_W, s0.r, 0.5); s0.hist.push(btLL(BT_W, s0.r)); draw0b();
+    if (s0.hist.length > 60) { clearInterval(s0.timer); s0.timer = 0; $('#run0').textContent = '再拟合一次'; }
+  }, 50);
+}
+function draw0b() {
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent'), fg = css('--fg');
+  // 分数
+  let W = 400, H = 230, pl = 36, pr = 16, pt = 14, pb = 30;
+  const X = (v) => pl + (v + 2) / 4 * (W - pl - pr), rowH = (H - pt - pb) / 5;
+  let s = '';
+  [-2, -1, 0, 1, 2].forEach((v) => s += `<line x1="${X(v)}" y1="${pt}" x2="${X(v)}" y2="${H - pb}" stroke="${li}"/>` + txt(X(v), H - 10, (v < 0 ? '−' : '') + Math.abs(v), 13, mu));
+  s0.r.forEach((v, i) => {
+    const y = pt + (i + 0.5) * rowH;
+    s += txt(pl - 10, y + 5, BT_NAMES[i], 15, fg, 'end');
+    s += `<rect x="${Math.min(X(0), X(v))}" y="${y - 7}" width="${Math.abs(X(v) - X(0))}" height="14" rx="3" fill="${ac}" fill-opacity=".85"/>`;
+    s += txt(v >= 0 ? X(v) + 6 : X(v) - 6, y + 5, f2(v), 13, fg, v >= 0 ? 'start' : 'end');
+  });
+  $('#fig0a').innerHTML = s;
+  // 似然曲线
+  pl = 52; pr = 12;
+  const lo = -140, hi = -105, Xs = (t) => pl + t / 60 * (W - pl - pr), Ys = (v) => pt + (hi - v) / (hi - lo) * (H - pt - pb);
+  s = '';
+  [-140, -125, -110].forEach((v) => s += `<line x1="${pl}" y1="${Ys(v)}" x2="${W - pr}" y2="${Ys(v)}" stroke="${li}"/>` + txt(pl - 6, Ys(v) + 4, '−' + Math.abs(v), 13, mu, 'end'));
+  [0, 30, 60].forEach((t) => s += txt(Xs(t), H - 10, t, 13, mu));
+  s += polyline(s0.hist.map((v, t) => [Xs(t), Ys(v)]), ac, 2.4);
+  $('#fig0b').innerHTML = s;
+  $('#r0n').textContent = s0.hist.length - 1; $('#r0l').textContent = f2(s0.hist[s0.hist.length - 1]);
+  let t = '<tr><th>对局</th><th class="num">观测：前者胜率</th><th class="num">拟合：σ(r<sub>前</sub> − r<sub>后</sub>)</th><th class="num">差</th></tr>';
+  for (let i = 0; i < 5; i++) for (let j = i + 1; j < 5; j++) {
+    const o = BT_W[i][j] / (BT_W[i][j] + BT_W[j][i]), f = sig(s0.r[i] - s0.r[j]);
+    t += `<tr><td>${BT_NAMES[i]} 对 ${BT_NAMES[j]}（${BT_W[i][j]} : ${BT_W[j][i]}）</td><td class="num">${pct(o)}</td><td class="num">${pct(f)}</td><td class="num">${((f - o) * 100 >= 0 ? '+' : '−') + Math.abs((f - o) * 100).toFixed(1)}</td></tr>`;
+  }
+  $('#tab0').innerHTML = t;
+}
+$('#run0').addEventListener('click', run0); $('#reset0').addEventListener('click', reset0);
+
+/* ---------- 01 奖励模型 ---------- */
+const s1 = { seed: 3, st: null, acc: [], pairs: null, test: null, raf: 0, ceil: 0, lam: 0.3 };
+const getN1 = seg('#n1', () => train1());
+const STEPS1 = 300;
+function train1() {
+  cancelAnimationFrame(s1.raf);
+  const lam = +$('#lam1').value; $('#lam1v').textContent = lam.toFixed(2); s1.lam = lam;
+  s1.pairs = makePairs(+getN1(), lam, s1.seed); s1.test = makePairs(2000, lam, 99 + s1.seed);
+  s1.ceil = rmAcc(s1.test, [3, lam, 1]);
+  s1.st = rmInit(); s1.acc = [rmAcc(s1.test, s1.st.w)];
+  const tick = () => {
+    for (let k = 0; k < 6 && s1.st.t < STEPS1; k++) { rmStep(s1.pairs, s1.st); if (s1.st.t % 3 === 0) s1.acc.push(rmAcc(s1.test, s1.st.w)); }
+    draw1(); if (s1.st.t < STEPS1) s1.raf = requestAnimationFrame(tick);
+  };
+  s1.raf = requestAnimationFrame(tick); draw1();
+}
+function draw1() {
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent'), fg = css('--fg'), ok = css('--ok');
+  const W = 400, H = 220, pl = 92, pr = 16, pt = 12, pb = 30, lo = -1, hi = 4.5;
+  const X = (v) => pl + (v - lo) / (hi - lo) * (W - pl - pr), rowH = (H - pt - pb) / 3;
+  const names = ['有用度 h', '长度 L', '礼貌度 p'], truth = [3, s1.lam, 1], idx = [0, 1, 2];
+  let s = '';
+  [-1, 0, 1, 2, 3, 4].forEach((v) => s += `<line x1="${X(v)}" y1="${pt}" x2="${X(v)}" y2="${H - pb}" stroke="${li}"/>` + txt(X(v), H - 10, (v < 0 ? '−' : '') + Math.abs(v), 13, mu));
+  idx.forEach((k, i) => {
+    const y = pt + (i + 0.5) * rowH, w = s1.st ? s1.st.w[k] : 0;
+    s += txt(pl - 10, y + 5, names[i], 14, fg, 'end');
+    s += `<rect x="${Math.min(X(0), X(truth[k]))}" y="${y - 13}" width="${Math.max(1, Math.abs(X(truth[k]) - X(0)))}" height="26" rx="3" fill="none" stroke="${mu}" stroke-width="1.5"/>`;
+    s += `<rect x="${Math.min(X(0), X(w))}" y="${y - 7}" width="${Math.abs(X(w) - X(0))}" height="14" rx="2" fill="${ac}"/>`;
+  });
+  $('#fig1a').innerHTML = s;
+  const pl2 = 44, alo = 0.5, ahi = 0.85, Xs = (t) => pl2 + t / STEPS1 * (W - pl2 - pr), Ys = (v) => pt + (ahi - v) / (ahi - alo) * (H - pt - pb);
+  s = '';
+  [0.5, 0.6, 0.7, 0.8].forEach((v) => s += `<line x1="${pl2}" y1="${Ys(v)}" x2="${W - pr}" y2="${Ys(v)}" stroke="${li}"/>` + txt(pl2 - 6, Ys(v) + 4, v.toFixed(1), 13, mu, 'end'));
+  [0, 150, 300].forEach((t) => s += txt(Xs(t), H - 10, t, 13, mu));
+  s += `<line x1="${pl2}" y1="${Ys(s1.ceil)}" x2="${W - pr}" y2="${Ys(s1.ceil)}" stroke="${ok}" stroke-dasharray="5 4"/>`;
+  s += polyline(s1.acc.map((v, i) => [Xs(i * 3), Ys(Math.max(alo, v))]), ac, 2.4);
+  $('#fig1b').innerHTML = s;
+  if (s1.st) { $('#r1L').textContent = f2(s1.st.w[1]); $('#r1h').textContent = f2(s1.st.w[0]); $('#r1p').textContent = f2(s1.st.w[2]); $('#r1a').textContent = `${pct(s1.acc[s1.acc.length - 1])} / ${pct(s1.ceil)}`; }
+}
+$('#lam1').addEventListener('input', train1); $('#seed1').addEventListener('click', () => { s1.seed++; train1(); });
+
+/* ---------- 02 奖励黑客 ---------- */
+function draw2() {
+  const wL = +$('#w2').value, t = +$('#t2').value; $('#w2v').textContent = wL.toFixed(2); $('#t2v').textContent = t;
+  const tr = hackRun(wL, 400), cur = tr[t];
+  let peak = tr[0]; tr.forEach((p) => { if (p.G > peak.G + 1e-12) peak = p; });
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent'), ok = css('--ok'), wa = css('--warn'), fg = css('--fg');
+  const [W, H, n] = vb('#fig2', 800, 280, 420, 300), fs = n ? 15 : 13, pl = 40, pr = 16, pt = 14, pb = 32, lo = -5, hi = 7;
+  const X = (k) => pl + k / 400 * (W - pl - pr), Y = (v) => pt + (hi - Math.max(lo, Math.min(hi, v))) / (hi - lo) * (H - pt - pb);
+  let s = '';
+  [-4, -2, 0, 2, 4, 6].forEach((v) => s += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/>` + txt(pl - 6, Y(v) + 4, (v < 0 ? '−' : '') + Math.abs(v), fs, mu, 'end'));
+  [0, 100, 200, 300, 400].forEach((k) => s += txt(X(k), H - 10, k, fs, mu));
+  s += polyline(tr.map((p) => [X(p.t), Y(p.R)]), ac, 2.6) + polyline(tr.map((p) => [X(p.t), Y(p.G)]), ok, 2.6);
+  s += `<line x1="${X(t)}" y1="${pt}" x2="${X(t)}" y2="${H - pb}" stroke="${fg}" stroke-opacity=".5" stroke-dasharray="4 3"/>`;
+  s += `<circle cx="${X(t)}" cy="${Y(cur.R)}" r="5" fill="${ac}"/><circle cx="${X(t)}" cy="${Y(cur.G)}" r="5" fill="${ok}"/>`;
+  if (peak.t < 400) s += `<circle cx="${X(peak.t)}" cy="${Y(peak.G)}" r="7" fill="none" stroke="${wa}" stroke-width="2"/>`;
+  $('#fig2').innerHTML = s;
+  // 长度条
+  const [W2, H2] = vb('#fig2b', 800, 70, 420, 80), maxL = 10, Xl = (L) => pl + L / maxL * (W2 - pl - pr);
+  s = `<rect x="${pl}" y="14" width="${Xl(cur.L) - pl}" height="22" rx="4" fill="${cur.L > 3.5 ? wa : ac}" fill-opacity=".8"/>`;
+  s += `<line x1="${Xl(3)}" y1="6" x2="${Xl(3)}" y2="44" stroke="${ok}" stroke-width="2" stroke-dasharray="4 3"/>` + txt(Xl(3), H2 - 8, '真实最佳 300 字', fs, ok);
+  s += txt(W2 - pr, H2 - 8, '1000 字', fs, mu, 'end');
+  $('#fig2b').innerHTML = s;
+  $('#r2L').textContent = Math.round(cur.L * 100) + ' 字'; $('#r2R').textContent = f2(cur.R); $('#r2G').textContent = f2(cur.G);
+  $('#r2P').textContent = peak.t >= 400 ? '一直在升' : `第 ${peak.t} 步，${f2(peak.G)}`;
+}
+$('#w2').addEventListener('input', draw2); $('#t2').addEventListener('input', draw2);
+
+/* ---------- 03 KL 惩罚 ---------- */
+function bars(svg, groups, series, opts = {}) {
+  // groups: 名称；series: [{vals, col, op}]；底部可附两行小字
+  const mu = css('--muted'), li = css('--line'), fg = css('--fg');
+  const W = 400, H = +svg.getAttribute('viewBox').split(' ')[3], pl = 34, pr = 6, pt = 12, pb = opts.sub ? 66 : 34, ymax = opts.ymax || 1;
+  const gw = (W - pl - pr) / groups.length, bw = Math.min(26, gw * 0.8 / series.length), Y = (v) => pt + (1 - Math.min(v, ymax) / ymax) * (H - pt - pb);
+  let s = '';
+  [0, 0.5, 1].map((f) => f * ymax).forEach((v) => s += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/>` + txt(pl - 5, Y(v) + 4, v.toFixed(1), 12, mu, 'end'));
+  groups.forEach((g, i) => {
+    const cx = pl + (i + 0.5) * gw, x0 = cx - bw * series.length / 2;
+    series.forEach((se, k) => { const v = se.vals[i]; s += `<rect x="${x0 + k * bw + 1}" y="${Y(v)}" width="${bw - 2}" height="${Y(0) - Y(v)}" rx="2" fill="${se.col}" fill-opacity="${se.op ?? 1}"/>`; });
+    s += txt(cx, H - pb + 18, g, 13, fg);
+    if (opts.sub) { s += txt(cx, H - pb + 38, opts.sub[0][i], 12, css('--accent')) + txt(cx, H - pb + 56, opts.sub[1][i], 12, css('--ok')); }
+  });
+  svg.innerHTML = s;
+}
+const BETA3 = [0.02, 5];
+const curve3 = (() => { const out = []; for (let i = 0; i <= 100; i++) { const b = betaOf(i, ...BETA3), p = klClosed(RM, REF, b); out.push({ i, r: p.reduce((s, v, k) => s + v * RM[k], 0), g: p.reduce((s, v, k) => s + v * GOLD[k], 0) }); } return out; })();
+function draw3() {
+  const v = +$('#b3').value, b = betaOf(v, ...BETA3); $('#b3v').textContent = b < 0.1 ? b.toFixed(3) : b.toFixed(2);
+  const p = klOpt(RM, REF, b), pc = klClosed(RM, REF, b);
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent'), ok = css('--ok');
+  bars($('#fig3a'), STY, [{ vals: REF, col: mu, op: 0.45 }, { vals: p, col: ac }], { sub: [RM.map((x) => 'r ' + x.toFixed(1)), GOLD.map((x) => '真 ' + x.toFixed(1))] });
+  const W = 400, H = 270, pl = 40, pr = 12, pt = 12, pb = 32, lo = 0, hi = 1.7, X = (i) => pl + i / 100 * (W - pl - pr), Y = (y) => pt + (hi - y) / (hi - lo) * (H - pt - pb);
+  let s = '';
+  [0, 0.5, 1, 1.5].forEach((y) => s += `<line x1="${pl}" y1="${Y(y)}" x2="${W - pr}" y2="${Y(y)}" stroke="${li}"/>` + txt(pl - 6, Y(y) + 4, y.toFixed(1), 12, mu, 'end'));
+  [0.02, 0.1, 0.5, 1, 5].forEach((bb) => s += txt(X(100 * Math.log(bb / 0.02) / Math.log(250)), H - 10, bb, 12, mu));
+  s += polyline(curve3.map((c) => [X(c.i), Y(c.r)]), ac, 2.4) + polyline(curve3.map((c) => [X(c.i), Y(c.g)]), ok, 2.4);
+  const Er = p.reduce((s2, x, k) => s2 + x * RM[k], 0), Eg = p.reduce((s2, x, k) => s2 + x * GOLD[k], 0);
+  s += `<circle cx="${X(v)}" cy="${Y(Er)}" r="5.5" fill="${ac}"/><circle cx="${X(v)}" cy="${Y(Eg)}" r="5.5" fill="${ok}"/>`;
+  $('#fig3b').innerHTML = s;
+  $('#r3r').textContent = Er.toFixed(3); $('#r3g').textContent = Eg.toFixed(3); $('#r3k').textContent = KL(p, REF).toFixed(3);
+  $('#r3d').textContent = sci(Math.max(...p.map((x, k) => Math.abs(x - pc[k]))));
+}
+$('#b3').addEventListener('input', draw3);
+
+/* ---------- 04 DPO ---------- */
+$('#chips4').innerHTML = (() => { let s = ''; for (let i = 0; i < 5; i++) for (let j = i + 1; j < 5; j++) { const [a, b] = W4[i][j] >= W4[j][i] ? [i, j] : [j, i]; s += `<span>${STY[a]} 胜 ${STY[b]}　${W4[a][b]} : ${W4[b][a]}</span>`; } return s; })();
+const RHAT4 = (() => { let r = [0, 0, 0, 0, 0]; for (let t = 0; t < 5000; t++) r = btStep(W4, r, 0.5); return r; })();
+const MINLOSS4 = -btLL(W4, RHAT4) / W4.flat().reduce((a, b) => a + b, 0);
+const BETA4 = [0.05, 2], STEPS4 = 400;
+const s4 = { th: null, hist: [], raf: 0, b: 0.5, rl: null };
+function reset4() {
+  cancelAnimationFrame(s4.raf); s4.raf = 0; $('#run4').textContent = '训练 DPO';
+  const v = +$('#b4').value; s4.b = betaOf(v, ...BETA4); $('#b4v').textContent = s4.b.toFixed(2);
+  s4.th = REF.map(Math.log); s4.hist = [dpoLoss(W4, s4.th, REF, s4.b)];
+  s4.rl = klOpt(RHAT4, REF, s4.b); draw4();
+}
+function run4() {
+  if (s4.raf) return;
+  if (s4.hist.length > STEPS4) reset4();
+  $('#run4').textContent = '训练中…';
+  const lr = 2 / (s4.b * s4.b);
+  const tick = () => {
+    for (let k = 0; k < 4 && s4.hist.length <= STEPS4; k++) { s4.th = dpoStep(W4, s4.th, REF, s4.b, lr); s4.hist.push(dpoLoss(W4, s4.th, REF, s4.b)); }
+    draw4();
+    if (s4.hist.length <= STEPS4) s4.raf = requestAnimationFrame(tick); else { s4.raf = 0; $('#run4').textContent = '再训一次'; }
+  };
+  s4.raf = requestAnimationFrame(tick);
+}
+function draw4() {
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent'), ok = css('--ok');
+  const p = softmax(s4.th);
+  bars($('#fig4a'), STY, [{ vals: REF, col: mu, op: 0.45 }, { vals: s4.rl, col: ok }, { vals: p, col: ac }]);
+  const W = 400, H = 260, pl = 46, pr = 12, pt = 12, pb = 32, lo = 0.5, hi = 0.71, X = (t) => pl + t / STEPS4 * (W - pl - pr), Y = (y) => pt + (hi - Math.max(lo, Math.min(hi, y))) / (hi - lo) * (H - pt - pb);
+  let s = '';
+  [0.5, 0.55, 0.6, 0.65, 0.7].forEach((y) => s += `<line x1="${pl}" y1="${Y(y)}" x2="${W - pr}" y2="${Y(y)}" stroke="${li}"/>` + txt(pl - 6, Y(y) + 4, y.toFixed(2), 12, mu, 'end'));
+  [0, 200, 400].forEach((t) => s += txt(X(t), H - 10, t, 12, mu));
+  s += `<line x1="${pl}" y1="${Y(MINLOSS4)}" x2="${W - pr}" y2="${Y(MINLOSS4)}" stroke="${mu}" stroke-dasharray="5 4"/>`;
+  s += polyline(s4.hist.map((v, t) => [X(t), Y(v)]), ac, 2.4);
+  $('#fig4b').innerHTML = s;
+  $('#r4n').textContent = s4.hist.length - 1; $('#r4l').textContent = s4.hist[s4.hist.length - 1].toFixed(4);
+  $('#r4d').textContent = sci(Math.max(...p.map((x, k) => Math.abs(x - s4.rl[k]))));
+  const imp = s4.b * (Math.log(p[1] / REF[1]) - Math.log(p[0] / REF[0]));
+  $('#r4r').textContent = `${f2(imp)} / ${f2(RHAT4[1] - RHAT4[0])}`;
+}
+$('#run4').addEventListener('click', run4); $('#reset4').addEventListener('click', reset4); $('#b4').addEventListener('input', reset4);
+
+/* ---------- 05 三段式 ---------- */
+const M5 = [
+  { name: 'InstructGPT', st: [
+    { k: '第一段', h: '预训练', big: '300 B', unit: 'token（GPT-3 基座）', goal: '预测下一个 token。学会语言和知识，但只会续写。', ex: '<span class="m">……北京是中国的首都，也是</span>全国的政治、文化中心……' },
+    { k: '第二段', h: '监督微调 SFT', big: '约 1.3 万', unit: '条 prompt + 人写的示范回答', goal: '照着示范回答学，还是交叉熵损失，学会「按指令答」的格式。', ex: '<span class="m">问：</span>用一句话解释光合作用。<br><span class="m">示范：</span>植物用光能把二氧化碳和水变成糖，并放出氧气。' },
+    { k: '第三段', h: '偏好对齐', big: '约 3.3 万 / 3.1 万', unit: '个 prompt（训练奖励模型 / 做 PPO）', goal: '标注员给同一 prompt 的 4–9 个回答排序，训练奖励模型；再用 PPO 最大化奖励，带 KL 惩罚。', ex: '<span class="m">问：</span>用一句话解释光合作用。<br><span class="w">✓ 回答 1：</span>植物用光能把二氧化碳和水变成糖和氧气。<br><span class="l">✗ 回答 2：</span>光合作用是一个非常复杂的过程，涉及……' }
+  ] },
+  { name: 'Llama 2-Chat', st: [
+    { k: '第一段', h: '预训练', big: '2 T', unit: 'token', goal: '预测下一个 token。', ex: '<span class="m">……北京是中国的首都，也是</span>全国的政治、文化中心……' },
+    { k: '第二段', h: '监督微调 SFT', big: '27 540', unit: '条人工标注的示范', goal: '论文的结论是「质量比数量重要」：几万条高质量示范就够，于是停止了继续标注。', ex: '<span class="m">问：</span>写一首关于秋天的短诗。<br><span class="m">示范：</span>（标注员手写的一首诗）' },
+    { k: '第三段', h: '偏好对齐', big: '超过 140 万', unit: '次人工二选一比较（Meta 自己收集）', goal: '分别训练「有用」和「安全」两个奖励模型；再用拒绝采样和 PPO 迭代优化。', ex: '<span class="m">问：</span>写一首关于秋天的短诗。<br><span class="w">✓ 回答 A</span>　<span class="l">✗ 回答 B</span>　<span class="m">+ 好多少：明显好 / 好 / 略好 / 差不多</span>' }
+  ] }
+];
+const get5 = seg('#m5', () => draw5());
+function draw5() {
+  const m = M5[+get5()];
+  $('#st5').innerHTML = m.st.map((s) => `<div class="stage"><div class="k">${s.k}</div><h4>${s.h}</h4><div class="big">${s.big}</div><div class="unit">${s.unit}</div><p>${s.goal}</p><div class="ex">${s.ex}</div></div>`).join('');
+}
+
+/* ---------- 启动与重绘 ---------- */
+reset0(); train1(); reset4();
+const all = () => { draw0(); draw0b(); draw1(); draw2(); draw3(); draw4(); draw5(); };
+all();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { draw0(); draw2(); }, 150); });
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>

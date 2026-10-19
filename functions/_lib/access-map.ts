@@ -65,7 +65,15 @@ export const POSTS: Record<string, PostAccess> = {
     "access": "paid",
     "series": "ai-mastery"
   },
+  "mixture-of-experts": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
   "model-evaluation": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
+  "multihead-gqa": {
     "access": "paid",
     "series": "ai-mastery"
   },
@@ -74,6 +82,10 @@ export const POSTS: Record<string, PostAccess> = {
     "series": "ai-mastery"
   },
   "residual-connection": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
+  "rlhf-alignment": {
     "access": "paid",
     "series": "ai-mastery"
   },
@@ -90,6 +102,10 @@ export const POSTS: Record<string, PostAccess> = {
     "series": "ai-mastery"
   },
   "trace-eval": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
+  "weight-quantization": {
     "access": "paid",
     "series": "ai-mastery"
   }
@@ -109,11 +125,15 @@ export const LABS: Record<string, string> = {
   "labs/layernorm": "layernorm",
   "labs/lora": "lora",
   "labs/mcp": "mcp",
+  "labs/mixture-of-experts": "mixture-of-experts",
   "labs/model-evaluation": "model-evaluation",
+  "labs/multihead-gqa": "multihead-gqa",
   "labs/rag-embedding": "rag-embedding",
   "labs/residual-connection": "residual-connection",
+  "labs/rlhf-alignment": "rlhf-alignment",
   "labs/streaming": "streaming",
   "labs/tokenizer-llm": "tokenizer-llm",
   "labs/tool-calling": "tool-calling",
-  "labs/trace-eval": "trace-eval"
+  "labs/trace-eval": "trace-eval",
+  "labs/weight-quantization": "weight-quantization"
 };

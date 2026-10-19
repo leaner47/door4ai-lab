@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>模型量化实验室</title>
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c; --gold:#a8730f; --gold-soft:#f5e8c8;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --gold:#f2b84b; --gold-soft:#3d3018; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --gold:#f2b84b; --gold-soft:#3d3018; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+p code,li code{font-size:.88em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+.formula{font-size:20px;text-align:center;margin:18px 0;letter-spacing:.02em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0;min-width:0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl b{font-variant-numeric:tabular-nums;min-width:2em}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+.seg button:disabled{opacity:.35;cursor:default}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer}
+.toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px}
+.toggle input{accent-color:var(--warn)}
+input[type=range]{accent-color:var(--accent);max-width:200px}
+input[type=text]{font:inherit;font-size:16px;padding:4px 8px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);width:11em;max-width:100%}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.two{grid-template-columns:1fr}}
+.cap{font-size:12px;color:var(--muted);margin:4px 0 0;text-align:center}
+.key{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;margin:0 0 8px}
+.key i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px;min-width:0}
+.ro b{display:block;font-size:20px;font-weight:600;overflow-wrap:anywhere}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn{border-color:var(--warn)} .ro.warn b{color:var(--warn)}
+.ro.acc{border-color:var(--accent)} .ro.acc b{color:var(--accent)}
+.ro.ok{border-color:var(--ok)} .ro.ok b{color:var(--ok)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.num{text-align:right}
+.tw{overflow-x:auto}
+/* 位模式 */
+.fmt{margin:14px 0 4px}
+.fmt .hd{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;font-size:14px}
+.fmt .hd b{font-size:15px}
+.fmt .hd .v{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.bits{display:flex;flex-wrap:wrap;gap:2px;margin-top:6px}
+.bits i{display:inline-block;width:17px;height:24px;border-radius:3px;font-size:13px;text-align:center;line-height:24px;font-style:normal;font-variant-numeric:tabular-nums}
+.bits i.s{background:var(--warn-soft);color:var(--warn)}
+.bits i.e{background:var(--gold-soft);color:var(--gold)}
+.bits i.m{background:var(--accent-soft);color:var(--accent)}
+.bits i.cut{background:none;color:var(--line);text-decoration:line-through}
+.bits i.gap{width:6px;background:none}
+@media (max-width:480px){.bits i{width:13px;height:20px;line-height:20px;font-size:11px}}
+.lg{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:8px}
+.lg i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:5px}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">FP32 · BF16 · INT8 · INT4 · scale · 分组 · 带宽</div>
+  <h1>模型量化实验室</h1>
+  <p class="lede">把模型的权重从 16 位压到 4 位：先看一个数在内存里怎么存，再看压缩带来的误差有多大、换来的显存和速度有多少。下面的数都在浏览器里真实计算。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>一个数在内存里的样子</h2>
+  <p>浮点数把一串比特分成三段：<b style="color:var(--warn)">符号</b>（正负）、<b style="color:var(--gold)">指数</b>（小数点放在哪，决定范围）、<b style="color:var(--accent)">尾数</b>（有效数字，决定精度）。三种常见格式只是三段的位数不同。输入任意一个数，看它分别存成什么、存进去以后再读出来变成多少。</p>
+  <p class="formula">值 = (−1)<sup>符号</sup> × 2<sup>指数 − 偏移</sup> × 1.尾数</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="num0">输入一个数</label><input id="num0" type="text" value="0.1" inputmode="decimal" autocomplete="off"></div>
+      <div class="seg" id="pre0"><button data-v="0.1" aria-pressed="true">0.1</button><button data-v="3.14159265" aria-pressed="false">π</button><button data-v="-0.0123" aria-pressed="false">−0.0123</button><button data-v="1000.5" aria-pressed="false">1000.5</button><button data-v="70000" aria-pressed="false">70000</button><button data-v="0.00000001" aria-pressed="false">10⁻⁸</button></div>
+    </div>
+    <div id="bits0"></div>
+    <div class="lg"><span><i style="background:var(--warn-soft)"></i>符号</span><span><i style="background:var(--gold-soft)"></i>指数</span><span><i style="background:var(--accent-soft)"></i>尾数</span></div>
+    <div class="tw"><table>
+      <thead><tr><th>格式</th><th>位数</th><th class="num">最大值</th><th class="num">1 附近的间距</th><th class="num">读回的值</th><th class="num">相对误差</th></tr></thead>
+      <tbody id="tb0"></tbody>
+    </table></div>
+    <p class="note">BF16 就是 FP32 截掉后 16 位尾数（再四舍五入）：指数还是 8 位，范围和 FP32 一样大，只是有效数字少了。FP16 指数只有 5 位，试试 70000：它装不下，变成 ∞；10⁻⁸ 太小，变成 0。训练时数值跨度大，所以大模型普遍用 BF16。</p>
+  </div>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>量化一组数：吸附到整数格点上</h2>
+  <p>整数格式（INT8、INT4）没有指数，只能表示等距的整数。量化就是给一组权重配一把尺子：<b>scale</b> 是相邻格点之间的距离，<b>zero-point</b> 是「0」对应第几格。每个权重只存它最近的格点编号，用的时候乘回 scale 还原。</p>
+  <p class="formula"><i>q</i> = round(<i>x</i> / scale) + zero　　<i>x̂</i> = (<i>q</i> − zero) × scale</p>
+  <p><b>对称</b>量化让 0 正好落在格点上、正负两边各一半（zero = 0，只需存 scale）；<b>非对称</b>量化按这组数的最小值到最大值铺格子，多存一个 zero，适合整组数偏向一边的情况。下面是 4096 个随机生成的权重（固定种子），换成「全为正」看两种方式的差别。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="b1">位数</label><input id="b1" type="range" min="2" max="8" value="4"><b id="b1v">4</b></div>
+      <div class="ctrl"><label>方式</label><div class="seg" id="sym1"><button data-v="sym" aria-pressed="true">对称</button><button data-v="asym" aria-pressed="false">非对称</button></div></div>
+      <div class="ctrl"><label>分布</label><div class="seg" id="dist1"><button data-v="normal" aria-pressed="true">正态（像权重）</button><button data-v="pos" aria-pressed="false">全为正</button></div></div>
+      <label class="toggle"><input type="checkbox" id="out1"> 放入 4 个离群值（约 12σ）</label>
+    </div>
+    <svg id="fig1" viewBox="0 0 800 300" role="img" aria-label="权重分布直方图与量化格点"></svg>
+    <p class="cap">上：原始权重的直方图；竖线：量化格点；下：落在每个格点上的权重个数</p>
+    <div class="readout">
+      <div class="ro"><b id="r1a">–</b><span>可用格点 / 实际用到</span></div>
+      <div class="ro"><b id="r1b">–</b><span>scale · zero-point</span></div>
+      <div class="ro warn"><b id="r1c">–</b><span>均方误差 MSE</span></div>
+      <div class="ro warn"><b id="r1d">–</b><span>最大误差（单位：scale）</span></div>
+      <div class="ro acc"><b id="r1e">–</b><span>相对误差 ‖x − x̂‖ / ‖x‖</span></div>
+    </div>
+    <p class="note">最大误差总是半个 scale（四舍五入最多偏半格）。打开离群值：4 个大数把范围撑宽，scale 跟着变大，其余 4092 个数挤进中间几格，误差成倍上升。数据全为正时，对称量化有一半格点（负数那边）永远用不上，非对称把它们都用上了。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>粒度：多少个权重共用一把尺子</h2>
+  <p>一个 scale 管多少个数，叫量化粒度。<b>按张量</b>：整个矩阵一个 scale；<b>按通道</b>：每个输出通道（矩阵的一行）一个；<b>按组</b>：每行再切成长度为 <i>g</i> 的小段，每段一个（GPTQ、AWQ 常用 <i>g</i> = 128）。粒度越细，每把尺子越贴合它管的那几个数，但 scale 本身也要存：每组一个 FP16 scale，平均每个权重多出 16 / <i>g</i> 位。</p>
+  <p>下面是一个 64 × 1024 的随机矩阵（固定种子），每一行的幅度不同（真实模型里各通道的权重幅度也不一样）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="b2">位数</label><input id="b2" type="range" min="2" max="8" value="4"><b id="b2v">4</b></div>
+      <label class="toggle"><input type="checkbox" id="out2"> 放入少量离群权重（0.1%，约 40σ）</label>
+    </div>
+    <svg id="fig2" viewBox="0 0 800 300" role="img" aria-label="不同粒度下的量化误差"></svg>
+    <p class="cap">每条：对称量化后的相对误差 ‖W − Ŵ‖ / ‖W‖；右侧括号里是算上 scale 后每个权重实际占的位数</p>
+    <div class="readout">
+      <div class="ro warn"><b id="r2a">–</b><span>按张量：相对误差</span></div>
+      <div class="ro warn"><b id="r2b">–</b><span>按通道：相对误差</span></div>
+      <div class="ro acc"><b id="r2c">–</b><span>按组 g = 128：相对误差</span></div>
+      <div class="ro"><b id="r2d">–</b><span>g = 128 时每个权重实际位数</span></div>
+    </div>
+    <p class="note">按张量时，幅度最大的那一行决定了所有行的 scale，幅度小的行大多被舍成 0。按通道解决了行与行之间的差别，但挡不住离群值：打开离群权重后，几乎每一行都分到一两个，每行的 scale 都被撑大，按通道的误差涨到接近按张量。按组时一个离群值只拖累同组的 127 个邻居。代价只是每个权重多存 0.125 位。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>真的做一次矩阵乘法</h2>
+  <p>权重量化以后，要看的不是权重本身差多少，而是这一层的<b>输出</b>差多少。下面用一个 128 × 512 的权重矩阵乘 32 个输入向量（模拟 32 个 token），比较量化前后的输出。权重按组量化（<i>g</i> = 128，对称）。</p>
+  <p>大模型的<b>激活</b>（流过网络的中间向量）里有少数几个维度幅值特别大，这是 LLM.int8() 论文（Dettmers 等，2022）的观察。这些维度对应的那几列权重，误差会被放大。AWQ 的做法是：量化前先把这几列权重放大 <i>s</i> 倍（激活相应缩小 <i>s</i> 倍，乘积不变），让它们在格点上的相对误差变小；<i>s</i> 由一批校准数据的激活幅度决定。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="b3">位数</label><input id="b3" type="range" min="2" max="8" value="4"><b id="b3v">4</b></div>
+      <label class="toggle"><input type="checkbox" id="out3" checked> 激活里有 6 个大幅值维度（×20）</label>
+    </div>
+    <div class="key"><span><i style="background:var(--warn)"></i>直接四舍五入（RTN）</span><span><i style="background:var(--ok)"></i>AWQ 式按列缩放</span><span><i style="background:var(--muted)"></i>权重本身的相对误差</span></div>
+    <svg id="fig3" viewBox="0 0 800 300" role="img" aria-label="输出相对误差随位数变化"></svg>
+    <p class="cap">横轴：位数；纵轴：相对误差（对数坐标）。输出误差在另一批没参与校准的输入上测</p>
+    <div class="readout">
+      <div class="ro"><b id="r3a">–</b><span>权重相对误差</span></div>
+      <div class="ro warn"><b id="r3b">–</b><span>输出相对误差（RTN）</span></div>
+      <div class="ro ok"><b id="r3c">–</b><span>输出相对误差（AWQ 式）</span></div>
+      <div class="ro"><b id="r3d">–</b><span>校准选出的 α（s = 激活幅度^α）</span></div>
+    </div>
+    <p class="note">每多 1 位，格点翻倍，误差大约减半：对数坐标上接近一条直线。关掉大幅值维度时，三条线几乎重合，缩放帮不上忙。打开后，输出主要由那 6 列权重决定，把它们放大后再量化，同样 4 位，输出误差降到 RTN 的七成左右，而存储一点没多。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>显存放不放得下，每秒能出几个 token</h2>
+  <p>权重大小 = 参数量 × 每个参数的位数 ÷ 8。参数量按公开的模型结构逐层算出。生成阶段（decode）每出一个 token 都要把全部权重从显存读一遍，计算量却很小，所以速度上限约等于 <b>显存带宽 ÷ 权重大小</b>。权重压到 1/4，要读的字节就少到 1/4，上限提高约 4 倍。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>模型</label><div class="seg" id="m4"><button data-v="0" aria-pressed="true">Llama-3-8B</button><button data-v="1" aria-pressed="false">Llama-3-70B</button><button data-v="2" aria-pressed="false">Llama-3.1-405B</button></div></div>
+      <div class="ctrl"><label>硬件</label><div class="seg" id="g4"><button data-v="0" aria-pressed="true">RTX 4090</button><button data-v="1" aria-pressed="false">RTX 5090</button><button data-v="2" aria-pressed="false">M4 Max 128 GB</button><button data-v="3" aria-pressed="false">H100 SXM</button></div></div>
+      <div class="ctrl"><label>卡数</label><div class="seg" id="n4"><button data-v="1" aria-pressed="true">1</button><button data-v="2" aria-pressed="false">2</button><button data-v="4" aria-pressed="false">4</button><button data-v="8" aria-pressed="false">8</button></div></div>
+    </div>
+    <svg id="fig4" viewBox="0 0 800 270" role="img" aria-label="四种精度下的权重大小与显存容量"></svg>
+    <p class="cap">每条：该精度下的权重大小；竖虚线：显存总容量；右侧：带宽上限对应的 token/s（放不下时不算）</p>
+    <div class="readout">
+      <div class="ro"><b id="r4a">–</b><span>参数量（由结构算出）</span></div>
+      <div class="ro"><b id="r4b">–</b><span>显存总量 · 总带宽</span></div>
+      <div class="ro acc"><b id="r4c">–</b><span>放得下的最高精度</span></div>
+      <div class="ro ok"><b id="r4d">–</b><span>INT4 g128 时 token/s 上限</span></div>
+    </div>
+    <p class="note">这里只算权重，还没算 KV cache 和运行时开销，实际要留余量。多卡按理想的张量并行算（带宽相加），实际有通信损耗。token/s 是单个请求的理论上限，真实速度通常只能到它的一部分。规格：RTX 4090 24 GB / 1008 GB/s，RTX 5090 32 GB / 1792 GB/s，M4 Max 128 GB / 546 GB/s（统一内存，CPU 与 GPU 共用），H100 SXM 80 GB / 3.35 TB/s。Q4_K_M 的 4.89 位取自 llama.cpp 量化工具文档里 Llama-3.1-8B 的实测。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>量化一个训练好的小网络</h2>
+  <p>页面加载时在浏览器里训练了一个小网络（输入 1 维 → 32 → 32 → 输出 1 维，tanh 激活，Adam 训练 3000 步），拟合下面的虚线。训练完以后，把后两层的权重（1056 个）量化到不同位数，看预测曲线怎么变。第一层只有 32 个权重，保留原精度，就像实际做法里常把嵌入层等少数敏感部分留在较高精度。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="b5">位数</label><input id="b5" type="range" min="2" max="8" value="4"><b id="b5v">4</b></div>
+      <div class="ctrl"><label>粒度</label><div class="seg" id="gr5"><button data-v="tensor" aria-pressed="false">按张量</button><button data-v="channel" aria-pressed="true">按通道</button></div></div>
+    </div>
+    <div class="key"><span><i style="background:var(--muted)"></i>目标</span><span><i style="background:var(--accent)"></i>原始网络（FP64）</span><span><i style="background:var(--warn)"></i>量化后</span></div>
+    <div class="two">
+      <div><svg id="fig5a" viewBox="0 0 400 280" role="img" aria-label="原始与量化后的预测曲线"></svg><p class="cap">预测曲线</p></div>
+      <div><svg id="fig5b" viewBox="0 0 400 280" role="img" aria-label="拟合误差随位数变化"></svg><p class="cap">拟合误差 MSE 随位数（对数坐标）</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro acc"><b id="r5a">–</b><span>原始网络 MSE</span></div>
+      <div class="ro warn"><b id="r5b">–</b><span>量化后 MSE</span></div>
+      <div class="ro"><b id="r5c">–</b><span>两者输出的最大差</span></div>
+      <div class="ro"><b id="r5d">–</b><span>权重占用（原始 FP32 → 量化后）</span></div>
+    </div>
+    <p class="note">8 位、6 位与原始曲线几乎重合；4 位能看出细小偏差；3 位以下曲线明显走样。同样位数下按通道比按张量好。这个网络很小、几乎没有冗余，大模型参数多、冗余大，4 位时通常只损失一点困惑度。</p>
+  </div>
+</section>
+
+</div>
+<script>
+/*CORE 纯计算：浏览器与 node 共用*/
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function gauss(r) { let u = 0; while (u === 0) u = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r()); }
+
+// —— 浮点位模式：FP32 用 DataView 真实转换；FP16 / BF16 由 FP32 位模式舍入（就近、平局取偶）——
+const DV = new DataView(new ArrayBuffer(4));
+function f32bits(v) { DV.setFloat32(0, v); return DV.getUint32(0) >>> 0; }
+function bitsToF32(b) { DV.setUint32(0, b >>> 0); return DV.getFloat32(0); }
+function f16bits(v) {
+  const x = f32bits(v), sign = (x >>> 16) & 0x8000, exp = (x >>> 23) & 0xff; let mant = x & 0x7fffff;
+  if (exp === 255) return sign | 0x7c00 | (mant ? 0x200 : 0);
+  const e = exp - 127 + 15;
+  if (e >= 31) return sign | 0x7c00;
+  if (e <= 0) {
+    if (e < -10) return sign;
+    mant |= 0x800000; const sh = 14 - e; let h = mant >>> sh; const rem = mant & ((1 << sh) - 1), half = 1 << (sh - 1);
+    if (rem > half || (rem === half && (h & 1))) h++;
+    return sign | h;
+  }
+  let h = (e << 10) | (mant >>> 13); const rem = mant & 0x1fff;
+  if (rem > 0x1000 || (rem === 0x1000 && (h & 1))) h++;
+  return h >= 0x7c00 ? sign | 0x7c00 : sign | h;
+}
+function f16val(h) { const s = h & 0x8000 ? -1 : 1, e = (h >> 10) & 31, m = h & 1023; if (e === 0) return s * m * 2 ** -24; if (e === 31) return m ? NaN : s * Infinity; return s * (1 + m / 1024) * 2 ** (e - 15); }
+function bf16bits(v) { const x = f32bits(v); if ((x & 0x7fffffff) > 0x7f800000) return (x >>> 16) | 0x40; const lsb = (x >>> 16) & 1; return ((x + 0x7fff + lsb) >>> 16) & 0xffff; }
+function bf16val(b) { return bitsToF32(b << 16); }
+
+// —— 量化一段连续的数（对称 / 非对称），结果写入 dst ——
+function quantSlice(src, start, len, bits, sym, dst) {
+  let mn = Infinity, mx = -Infinity;
+  for (let i = start; i < start + len; i++) { const v = src[i]; if (v < mn) mn = v; if (v > mx) mx = v; }
+  if (sym) {
+    const qmax = 2 ** (bits - 1) - 1, m = Math.max(Math.abs(mn), Math.abs(mx)), scale = m / qmax || 1;
+    for (let i = start; i < start + len; i++) { let q = Math.round(src[i] / scale); q = q > qmax ? qmax : q < -qmax ? -qmax : q; dst[i] = q * scale; }
+    return { scale, zero: 0, qmin: -qmax, qmax };
+  }
+  mn = Math.min(mn, 0); mx = Math.max(mx, 0);
+  const qmax = 2 ** bits - 1, scale = (mx - mn) / qmax || 1, zero = Math.round(-mn / scale);
+  for (let i = start; i < start + len; i++) { let q = Math.round(src[i] / scale) + zero; q = q > qmax ? qmax : q < 0 ? 0 : q; dst[i] = (q - zero) * scale; }
+  return { scale, zero, qmin: 0, qmax };
+}
+// 矩阵 R × C（行主序，一行 = 一个输出通道）。mode: tensor / channel / group
+function quantMat(W, R, C, bits, mode, g, sym = true) {
+  const out = new Float64Array(W.length);
+  if (mode === 'tensor') quantSlice(W, 0, R * C, bits, sym, out);
+  else for (let r = 0; r < R; r++) { const L = mode === 'channel' ? C : g; for (let c = 0; c < C; c += L) quantSlice(W, r * C + c, Math.min(L, C - c), bits, sym, out); }
+  return out;
+}
+function relErr(a, b) { let e = 0, s = 0; for (let i = 0; i < a.length; i++) { e += (a[i] - b[i]) ** 2; s += a[i] ** 2; } return Math.sqrt(e / s); }
+
+// —— 01 的数据 ——
+function data1(dist, outl) {
+  const r = rng(11), a = new Float64Array(4096), sd = 0.02;
+  for (let i = 0; i < a.length; i++) { const g = gauss(r) * sd; a[i] = dist === 'pos' ? Math.abs(g) : g; }
+  if (outl) [97, 1201, 2333, 3780].forEach((k, j) => a[k] = (dist === 'pos' || j % 2 === 0 ? 1 : -1) * sd * (11 + j));
+  return a;
+}
+// —— 02 的矩阵：64 × 1024，每行幅度不同 ——
+function data2(outl) {
+  const R = 64, C = 1024, r = rng(22), W = new Float64Array(R * C);
+  for (let i = 0; i < R; i++) { const rs = 0.02 * Math.exp(0.6 * gauss(r)); for (let j = 0; j < C; j++) W[i * C + j] = gauss(r) * rs; }
+  if (outl) { const r2 = rng(5); for (let k = 0; k < 65; k++) { const i = Math.floor(r2() * R * C); W[i] = (r2() < 0.5 ? -1 : 1) * 0.02 * 40; } }
+  return { W, R, C };
+}
+const GRAN2 = [['按张量', 'tensor', 0], ['按通道', 'channel', 0], ['按组 g=256', 'group', 256], ['按组 g=128', 'group', 128], ['按组 g=64', 'group', 64], ['按组 g=32', 'group', 32]];
+function run2(bits, outl) {
+  const { W, R, C } = data2(outl);
+  return GRAN2.map(([name, mode, g]) => ({ name, err: relErr(W, quantMat(W, R, C, bits, mode, g)), bpw: bits + (mode === 'tensor' ? 16 / (R * C) : mode === 'channel' ? 16 / C : 16 / g) }));
+}
+
+// —— 03 矩阵乘法：W 128 × 512，X 32 × 512（校准 / 测试各一批）——
+function data3(outl) {
+  const R = 128, C = 512, T = 32, r = rng(33), W = new Float64Array(R * C);
+  for (let i = 0; i < R; i++) { const rs = Math.exp(0.4 * gauss(r)) / Math.sqrt(C); for (let j = 0; j < C; j++) W[i * C + j] = gauss(r) * rs; }
+  const big = [17, 90, 211, 305, 388, 470];
+  const mk = (seed) => { const r2 = rng(seed), X = new Float64Array(T * C); for (let t = 0; t < T; t++) for (let j = 0; j < C; j++) X[t * C + j] = gauss(r2) * (outl && big.includes(j) ? 20 : 1); return X; };
+  return { W, R, C, T, Xcal: mk(301), Xtest: mk(302) };
+}
+function matmul(X, T, W, R, C) { const Y = new Float64Array(T * R); for (let t = 0; t < T; t++) for (let i = 0; i < R; i++) { let s = 0; const o = t * C, w = i * C; for (let j = 0; j < C; j++) s += X[o + j] * W[w + j]; Y[t * R + i] = s; } return Y; }
+// AWQ 式：W 的第 j 列乘 s_j 后量化，再除回 s_j（等价于激活除以 s_j）
+function awqQuant(W, R, C, bits, g, s) {
+  const Ws = new Float64Array(W.length); for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) Ws[i * C + j] = W[i * C + j] * s[j];
+  const Q = quantMat(Ws, R, C, bits, 'group', g); for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) Q[i * C + j] /= s[j];
+  return Q;
+}
+function run3(outl) {
+  const { W, R, C, T, Xcal, Xtest } = data3(outl), g = 128;
+  const Ycal = matmul(Xcal, T, W, R, C), Ytest = matmul(Xtest, T, W, R, C);
+  const amag = new Float64Array(C); for (let t = 0; t < T; t++) for (let j = 0; j < C; j++) amag[j] += Math.abs(Xcal[t * C + j]) / T;
+  const res = [];
+  for (let bits = 2; bits <= 8; bits++) {
+    const Q = quantMat(W, R, C, bits, 'group', g);
+    const wErr = relErr(W, Q), rtn = relErr(Ytest, matmul(Xtest, T, Q, R, C));
+    let best = { a: 0, cal: Infinity, Q };
+    for (let k = 0; k <= 5; k++) {
+      const a = k / 5; let s = Array.from(amag, (v) => v ** a); const n = Math.sqrt(Math.max(...s) * Math.min(...s)); s = s.map((v) => v / n);
+      const Qa = awqQuant(W, R, C, bits, g, s), e = relErr(Ycal, matmul(Xcal, T, Qa, R, C));
+      if (e < best.cal) best = { a, cal: e, Q: Qa };
+    }
+    res.push({ bits, wErr, rtn, awq: relErr(Ytest, matmul(Xtest, T, best.Q, R, C)), alpha: best.a });
+  }
+  return res;
+}
+
+// —— 04 参数量：按公开结构逐矩阵计算（Llama-3 系列，词表 128256，嵌入与输出层不共享）——
+const MODELS4 = [
+  { n: 'Llama-3-8B', d: 4096, L: 32, h: 32, kv: 8, ff: 14336, V: 128256 },
+  { n: 'Llama-3-70B', d: 8192, L: 80, h: 64, kv: 8, ff: 28672, V: 128256 },
+  { n: 'Llama-3.1-405B', d: 16384, L: 126, h: 128, kv: 8, ff: 53248, V: 128256 },
+];
+function params(m) { const dh = m.d / m.h, attn = 2 * m.d * m.d + 2 * m.d * m.kv * dh, mlp = 3 * m.d * m.ff, norm = 2 * m.d; return m.L * (attn + mlp + norm) + 2 * m.V * m.d + m.d; }
+const GPUS4 = [{ n: 'RTX 4090', mem: 24, bw: 1008 }, { n: 'RTX 5090', mem: 32, bw: 1792 }, { n: 'M4 Max', mem: 128, bw: 546, single: true }, { n: 'H100 SXM', mem: 80, bw: 3350 }];
+const PREC4 = [{ n: 'BF16', b: 16 }, { n: 'INT8', b: 8 }, { n: 'Q4_K_M', b: 4.89 }, { n: 'INT4 g128', b: 4.125 }];
+function run4(mi, gi, cards) {
+  const P = params(MODELS4[mi]), G = GPUS4[gi], n = G.single ? 1 : cards, mem = G.mem * n, bw = G.bw * n;
+  return { P, mem, bw, rows: PREC4.map((p) => { const gb = P * p.b / 8 / 1e9; return { ...p, gb, fit: gb <= mem, tps: bw / gb }; }) };
+}
+
+// —— 05 小网络：1 → 32 → 32 → 1，tanh，Adam ——
+const X5 = Array.from({ length: 64 }, (_, i) => -1 + 2 * i / 63), F5 = (x) => Math.sin(4 * x) + 0.4 * Math.cos(9 * x) * x;
+const Y5 = X5.map(F5);
+function makeMLP(seed) {
+  const r = rng(seed), sz = [1, 32, 32, 1], Ws = [], bs = [];
+  for (let l = 0; l < 3; l++) { const a = sz[l], b = sz[l + 1], W = new Float64Array(a * b); for (let i = 0; i < W.length; i++) W[i] = gauss(r) * Math.sqrt(1 / a) * (l === 0 ? 3 : 1); Ws.push(W); bs.push(Float64Array.from({ length: b }, () => l === 0 ? (gauss(r)) : 0)); }
+  return { sz, Ws, bs };
+}
+function mlpForward(net, x, Ws = net.Ws, keep) {
+  const { sz, bs } = net; let h = [x]; const acts = [h];
+  for (let l = 0; l < 3; l++) { const a = sz[l], b = sz[l + 1], o = new Array(b), W = Ws[l]; for (let i = 0; i < b; i++) { let s = bs[l][i]; for (let j = 0; j < a; j++) s += W[i * a + j] * h[j]; o[i] = l < 2 ? Math.tanh(s) : s; } h = o; if (keep) acts.push(h); }
+  return keep ? acts : h[0];
+}
+function makeTrainer(lr = 0.01) {
+  const net = makeMLP(55), P = [...net.Ws, ...net.bs], M = P.map((p) => new Float64Array(p.length)), Vv = P.map((p) => new Float64Array(p.length));
+  let t = 0;
+  const step = () => { t++;
+    const G = P.map((p) => new Float64Array(p.length));
+    for (let k = 0; k < X5.length; k++) {
+      const acts = mlpForward(net, X5[k], net.Ws, true); let d = [2 * (acts[3][0] - Y5[k]) / X5.length];
+      for (let l = 2; l >= 0; l--) {
+        const a = net.sz[l], b = net.sz[l + 1], hin = acts[l], W = net.Ws[l], gW = G[l], gb = G[3 + l], nd = new Array(a).fill(0);
+        for (let i = 0; i < b; i++) { gb[i] += d[i]; for (let j = 0; j < a; j++) { gW[i * a + j] += d[i] * hin[j]; nd[j] += W[i * a + j] * d[i]; } }
+        if (l > 0) for (let j = 0; j < a; j++) nd[j] *= 1 - hin[j] * hin[j];
+        d = nd;
+      }
+    }
+    const c1 = 1 - 0.9 ** t, c2 = 1 - 0.999 ** t;
+    P.forEach((p, k) => { for (let i = 0; i < p.length; i++) { const g = G[k][i]; M[k][i] = 0.9 * M[k][i] + 0.1 * g; Vv[k][i] = 0.999 * Vv[k][i] + 0.001 * g * g; p[i] -= lr * (M[k][i] / c1) / (Math.sqrt(Vv[k][i] / c2) + 1e-8); } });
+  };
+  return { net, step, get t() { return t; } };
+}
+function trainMLP(steps = 3000) { const tr = makeTrainer(); while (tr.t < steps) tr.step(); return tr.net; }
+// 第一层（1 → 32，只有 32 个权重）保留原精度，量化另外两层
+function quantNet(net, bits, mode) { return net.Ws.map((W, l) => l === 0 ? W : quantMat(W, net.sz[l + 1], net.sz[l], bits, mode, 0)); }
+function mse5(net, Ws) { let s = 0; for (let k = 0; k < X5.length; k++) s += (mlpForward(net, X5[k], Ws) - Y5[k]) ** 2; return s / X5.length; }
+/*ENDCORE*/
+
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const SUP = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
+const sup = (n) => String(n).split('').map((c) => SUP[c] ?? c).join('');
+const sci = (v, d = 2) => { if (!isFinite(v)) return v > 0 ? '∞' : '–'; if (v === 0) return '0'; const a = Math.abs(v); if (a >= 0.01 && a < 10000) return +v.toPrecision(d + 1) + ''; const [m, e] = v.toExponential(d - 1).split('e'); return `${m}×10${sup(+e)}`; };
+const pct = (v) => v >= 0.1 ? (v * 100).toFixed(1) + '%' : (v * 100).toFixed(2) + '%';
+function seg(id, cb) {
+  const el = $(id);
+  el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b || b.disabled) return; el.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); cb(b.dataset.v); });
+  return () => el.querySelector('[aria-pressed=true]').dataset.v;
+}
+function vb(id, w, h, nw, nh) { const el = $(id), n = el.clientWidth > 0 && el.clientWidth < 600, W = n ? nw : w, H = n ? nh : h; el.setAttribute('viewBox', `0 0 ${W} ${H}`); return [W, H, n]; }
+function polyline(pts, col, w = 2, extra = '') { if (!pts.length) return ''; return `<path d="${pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('')}" fill="none" stroke="${col}" stroke-width="${w}" ${extra}/>`; }
+function logAxis(lo, hi, X0, X1, Y, mu, li, fs = 12) { let s = ''; for (let e = Math.ceil(lo); e <= Math.floor(hi); e++) s += `<line x1="${X0}" y1="${Y(e)}" x2="${X1}" y2="${Y(e)}" stroke="${li}"/><text x="${X0 - 6}" y="${Y(e) + 4}" font-size="${fs}" fill="${mu}" text-anchor="end">10${sup(e)}</text>`; return s; }
+
+/* ---------- 00 浮点位 ---------- */
+const FMT0 = [
+  { n: 'FP32', e: 8, m: 23, bias: 127, bits: (v) => f32bits(v), val: (v) => Math.fround(v), max: 3.4028234663852886e38, eps: 2 ** -23 },
+  { n: 'BF16', e: 8, m: 7, bias: 127, bits: (v) => bf16bits(v), val: (v) => bf16val(bf16bits(v)), max: bf16val(0x7f7f), eps: 2 ** -7 },
+  { n: 'FP16', e: 5, m: 10, bias: 15, bits: (v) => f16bits(v), val: (v) => f16val(f16bits(v)), max: 65504, eps: 2 ** -10 },
+];
+function fmtNum(v) { if (!isFinite(v)) return isNaN(v) ? 'NaN' : (v > 0 ? '∞' : '−∞'); if (v === 0) return '0'; const a = Math.abs(v); if (a >= 1e-4 && a < 1e7) return String(+v.toPrecision(11)); return sci(v, 6); }
+function draw0() {
+  const raw = $('#num0').value.trim().replace(/[−–]/g, '-').replace(/×10\^?/g, 'e'); const v = Number(raw);
+  if (raw === '' || isNaN(v)) { $('#bits0').innerHTML = `<p class="note">请输入一个数，例如 0.1、-2.5、1e-8</p>`; $('#tb0').innerHTML = ''; return; }
+  let html = '', rows = '';
+  FMT0.forEach((f, k) => {
+    const nb = 1 + f.e + f.m, b = f.bits(v), rv = f.val(v), str = b.toString(2).padStart(nb, '0');
+    let cells = '';
+    for (let i = 0; i < nb; i++) { const c = i === 0 ? 's' : i <= f.e ? 'e' : 'm'; cells += `<i class="${c}">${str[i]}</i>`; if (i === 0 || i === f.e) cells += '<i class="gap"></i>'; }
+    if (f.n === 'BF16') for (let i = 0; i < 16; i++) cells += `<i class="cut">${f32bits(v).toString(2).padStart(32, '0')[16 + i]}</i>`;
+    const ex = parseInt(str.slice(1, 1 + f.e), 2), sign = str[0] === '1' ? '−' : '+';
+    const expTxt = ex === 0 ? '非规格化 / 0' : ex === 2 ** f.e - 1 ? '全 1：∞ 或 NaN' : `指数 ${ex} − ${f.bias} = ${ex - f.bias}`;
+    html += `<div class="fmt"><div class="hd"><b>${f.n}</b><span class="v">${sign} · ${expTxt}</span><span class="v">读回 = ${fmtNum(rv)}</span></div><div class="bits">${cells}</div></div>`;
+    const re = v === 0 ? (rv === 0 ? 0 : Infinity) : Math.abs(rv - v) / Math.abs(v);
+    rows += `<tr><td>${f.n}</td><td style="white-space:nowrap">${nb}（1+${f.e}+${f.m}）</td><td class="num">${sci(f.max, 3)}</td><td class="num">${sci(f.eps, 3)}</td><td class="num">${fmtNum(rv)}</td><td class="num" style="color:${re > 0.01 ? css('--warn') : 'inherit'}">${!isFinite(re) ? '∞' : re === 0 ? '0' : sci(re, 2)}</td></tr>`;
+  });
+  rows += `<tr><td>INT8</td><td>8（整数 −128…127）</td><td class="num">127</td><td class="num">1</td><td class="num">–</td><td class="num">–</td></tr>`;
+  rows += `<tr><td>INT4</td><td>4（整数 −8…7）</td><td class="num">7</td><td class="num">1</td><td class="num">–</td><td class="num">–</td></tr>`;
+  $('#bits0').innerHTML = html; $('#tb0').innerHTML = rows;
+}
+$('#num0').addEventListener('input', () => { $('#pre0').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', 'false')); draw0(); });
+seg('#pre0', (v) => { $('#num0').value = v; draw0(); });
+
+/* ---------- 01 量化一组数 ---------- */
+const get1s = seg('#sym1', () => draw1()), get1d = seg('#dist1', () => draw1());
+function draw1() {
+  const bits = +$('#b1').value; $('#b1v').textContent = bits;
+  const sym = get1s() === 'sym', x = data1(get1d(), $('#out1').checked), xq = new Float64Array(x.length);
+  const Q = quantSlice(x, 0, x.length, bits, sym, xq);
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent'), wa = css('--warn');
+  const [W, H, nar] = vb('#fig1', 800, 300, 420, 320), pl = 14, pr = 14, fs = nar ? 15 : 13;
+  let lo = Infinity, hi = -Infinity; for (const v of x) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+  const gLo = (Q.qmin - Q.zero) * Q.scale, gHi = (Q.qmax - Q.zero) * Q.scale; lo = Math.min(lo, gLo); hi = Math.max(hi, gHi);
+  const span = hi - lo, X = (v) => pl + (v - lo) / span * (W - pl - pr);
+  const yMid = H * 0.55, top = 16, bot = H - 28;
+  // 原始直方图
+  const nb = nar ? 70 : 120, hist = new Array(nb).fill(0); for (const v of x) hist[Math.min(nb - 1, Math.floor((v - lo) / span * nb))]++;
+  const hm = Math.max(...hist); let s = '';
+  // 格点
+  const levels = Q.qmax - Q.qmin + 1, counts = new Map(); for (const v of xq) { const k = Math.round(v / Q.scale); counts.set(k, (counts.get(k) || 0) + 1); }
+  if (levels <= 64) for (let q = Q.qmin; q <= Q.qmax; q++) { const gx = X((q - Q.zero) * Q.scale); s += `<line x1="${gx}" y1="${top}" x2="${gx}" y2="${bot}" stroke="${li}" stroke-width="1"/>`; }
+  const bw = (W - pl - pr) / nb;
+  hist.forEach((c, i) => { const h = c / hm * (yMid - top - 8); s += `<rect x="${pl + i * bw}" y="${yMid - 8 - h}" width="${Math.max(0.5, bw - 0.6)}" height="${h}" fill="${mu}" fill-opacity="0.55"/>`; });
+  s += `<line x1="${pl}" y1="${yMid}" x2="${W - pr}" y2="${yMid}" stroke="${mu}"/>`;
+  const cm = Math.max(...counts.values());
+  counts.forEach((c, k) => { const gx = X(k * Q.scale), h = Math.sqrt(c / cm) * (bot - yMid - 10); s += `<line x1="${gx}" y1="${yMid}" x2="${gx}" y2="${yMid + h}" stroke="${ac}" stroke-width="${levels <= 16 ? 3 : 1.5}"/><circle cx="${gx}" cy="${yMid + h}" r="${levels <= 16 ? 3.5 : 2}" fill="${ac}"/>`; });
+  // 离群值标记
+  if ($('#out1').checked) [97, 1201, 2333, 3780].forEach((k) => s += `<circle cx="${X(x[k])}" cy="${yMid - 12}" r="5" fill="${wa}"/>`);
+  // 0 与端点
+  s += `<text x="${X(0)}" y="${H - 8}" font-size="${fs}" fill="${mu}" text-anchor="middle">0</text>`;
+  s += `<text x="${pl}" y="${H - 8}" font-size="${fs}" fill="${mu}">${(lo).toFixed(3)}</text><text x="${W - pr}" y="${H - 8}" font-size="${fs}" fill="${mu}" text-anchor="end">${(hi).toFixed(3)}</text>`;
+  $('#fig1').innerHTML = s;
+  let mse = 0, mx = 0; for (let i = 0; i < x.length; i++) { const e = x[i] - xq[i]; mse += e * e; mx = Math.max(mx, Math.abs(e)); } mse /= x.length;
+  $('#r1a').textContent = `${levels} / ${counts.size}`;
+  $('#r1b').textContent = `${Q.scale.toPrecision(3)} · ${Q.zero}`;
+  $('#r1c').textContent = sci(mse, 3);
+  $('#r1d').textContent = (mx / Q.scale).toFixed(3);
+  $('#r1e').textContent = pct(relErr(x, xq));
+}
+$('#b1').addEventListener('input', draw1); $('#out1').addEventListener('change', draw1);
+
+/* ---------- 02 粒度 ---------- */
+function draw2() {
+  const bits = +$('#b2').value; $('#b2v').textContent = bits;
+  const res = run2(bits, $('#out2').checked);
+  const mu = css('--muted'), li = css('--line'), cols = [css('--warn'), css('--gold'), css('--accent'), css('--accent'), css('--accent'), css('--accent')];
+  const [W, H, nar] = vb('#fig2', 800, 300, 420, 360), fs = nar ? 15 : 14, pl = nar ? 98 : 130, pr = nar ? 120 : 180, pt = 10, rh = (H - pt - 10) / res.length;
+  const mx = Math.max(...res.map((r) => r.err));
+  let s = '';
+  res.forEach((r, i) => {
+    const y = pt + i * rh, w = Math.max(2, r.err / mx * (W - pl - pr));
+    s += `<text x="${pl - 10}" y="${y + rh / 2 + 5}" font-size="${fs}" fill="${css('--fg')}" text-anchor="end">${r.name}</text>`;
+    s += `<rect x="${pl}" y="${y + rh * 0.18}" width="${w}" height="${rh * 0.64}" rx="3" fill="${cols[i]}" fill-opacity="${i === 3 ? 1 : 0.75}"/>`;
+    s += `<text x="${pl + w + 8}" y="${y + rh / 2 + 5}" font-size="${fs}" fill="${css('--fg')}">${pct(r.err)} <tspan fill="${mu}">(${r.bpw < bits + 0.001 ? bits : r.bpw.toFixed(3)} 位)</tspan></text>`;
+  });
+  $('#fig2').innerHTML = s;
+  $('#r2a').textContent = pct(res[0].err); $('#r2b').textContent = pct(res[1].err);
+  $('#r2c').textContent = pct(res[3].err); $('#r2d').textContent = res[3].bpw.toFixed(3);
+}
+$('#b2').addEventListener('input', draw2); $('#out2').addEventListener('change', draw2);
+
+/* ---------- 03 矩阵乘法 ---------- */
+const cache3 = {};
+function draw3() {
+  const bits = +$('#b3').value; $('#b3v').textContent = bits;
+  const key = $('#out3').checked ? 1 : 0, res = cache3[key];
+  if (!res) { $('#fig3').innerHTML = `<text x="50%" y="50%" font-size="16" fill="${css('--muted')}" text-anchor="middle">计算中…</text>`; setTimeout(() => { cache3[key] = cache3[key] || run3(!!key); draw3(); }, 30); return; }
+  const mu = css('--muted'), li = css('--line'), wa = css('--warn'), ok = css('--ok');
+  const [W, H, nar] = vb('#fig3', 800, 300, 420, 320), fs = nar ? 15 : 13, pl = 52, pr = 16, pt = 14, pb = 32;
+  const all = res.flatMap((r) => [r.wErr, r.rtn, r.awq]).map(Math.log10), lo = Math.floor(Math.min(...all)), hi = Math.ceil(Math.max(...all));
+  const X = (b) => pl + (b - 2) / 6 * (W - pl - pr), Y = (e) => pt + (hi - e) / (hi - lo) * (H - pt - pb);
+  let s = logAxis(lo, hi, pl, W - pr, Y, mu, li, fs);
+  for (let b = 2; b <= 8; b++) s += `<text x="${X(b)}" y="${H - 10}" font-size="${fs}" fill="${mu}" text-anchor="middle">${b}</text>`;
+  s += `<line x1="${X(bits)}" y1="${pt}" x2="${X(bits)}" y2="${H - pb}" stroke="${mu}" stroke-dasharray="4 4"/>`;
+  [['wErr', mu, '6 4'], ['rtn', wa, ''], ['awq', ok, '']].forEach(([k, c, da]) => {
+    s += polyline(res.map((r) => [X(r.bits), Y(Math.log10(r[k]))]), c, 2.5, da ? `stroke-dasharray="${da}"` : '');
+    res.forEach((r) => s += `<circle cx="${X(r.bits)}" cy="${Y(Math.log10(r[k]))}" r="${r.bits === bits ? 5 : 3}" fill="${c}"/>`);
+  });
+  $('#fig3').innerHTML = s;
+  const r = res[bits - 2];
+  $('#r3a').textContent = pct(r.wErr); $('#r3b').textContent = pct(r.rtn); $('#r3c').textContent = pct(r.awq); $('#r3d').textContent = r.alpha.toFixed(1);
+}
+$('#b3').addEventListener('input', draw3); $('#out3').addEventListener('change', draw3);
+
+/* ---------- 04 显存与速度 ---------- */
+const get4m = seg('#m4', () => draw4()), get4g = seg('#g4', () => draw4()), get4n = seg('#n4', () => draw4());
+function draw4() {
+  const gi = +get4g(); $('#n4').querySelectorAll('button').forEach((b) => b.disabled = !!GPUS4[gi].single && b.dataset.v !== '1');
+  if (GPUS4[gi].single) $('#n4').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.v === '1'));
+  const R = run4(+get4m(), gi, +get4n());
+  const mu = css('--muted'), fg = css('--fg'), wa = css('--warn'), ac = css('--accent'), ok = css('--ok');
+  const [W, H, nar] = vb('#fig4', 800, 270, 420, 330), fs = nar ? 15 : 14, pl = nar ? 82 : 110, pr = nar ? 12 : 16, pt = 26, rh = (H - pt - 6) / 4;
+  const maxGB = Math.max(R.rows[0].gb, R.mem) * 1.04, X = (gb) => pl + gb / maxGB * (W - pl - pr);
+  let s = `<line x1="${X(R.mem)}" y1="${pt - 18}" x2="${X(R.mem)}" y2="${H}" stroke="${mu}" stroke-dasharray="5 4" stroke-width="1.5"/>`;
+  s += `<text x="${X(R.mem) + (X(R.mem) > W * 0.7 ? -6 : 6)}" y="${pt - 8}" font-size="${fs - 1}" fill="${mu}" text-anchor="${X(R.mem) > W * 0.7 ? 'end' : 'start'}">显存 ${R.mem} GB</text>`;
+  R.rows.forEach((r, i) => {
+    const y = pt + i * rh, w = X(r.gb) - pl, c = r.fit ? (i >= 2 ? ok : ac) : wa;
+    s += `<text x="${pl - 10}" y="${y + rh / 2 + 5}" font-size="${fs}" fill="${fg}" text-anchor="end">${r.n}</text>`;
+    s += `<rect x="${pl}" y="${y + rh * 0.2}" width="${w}" height="${rh * 0.6}" rx="3" fill="${c}" fill-opacity="0.8"/>`;
+    const txt = `${r.gb.toFixed(1)} GB · ${r.fit ? '≤ ' + Math.floor(r.tps) + ' token/s' : '放不下'}`;
+    const inside = pl + w + 8 + txt.length * fs * 0.5 > W && w > txt.length * fs * 0.5 + 12; s += `<text x="${inside ? pl + 8 : pl + w + 8}" y="${y + rh / 2 + 5}" font-size="${fs}" fill="${inside ? '#fff' : fg}">${txt}</text>`;
+  });
+  $('#fig4').innerHTML = s;
+  const best = R.rows.find((r) => r.fit);
+  $('#r4a').textContent = (R.P / 1e9).toFixed(2) + ' B';
+  $('#r4b').textContent = `${R.mem} GB · ${R.bw >= 2000 ? (R.bw / 1000).toFixed(2) + ' TB/s' : R.bw + ' GB/s'}`;
+  $('#r4c').textContent = best ? best.n : '都放不下';
+  $('#r4d').textContent = R.rows[3].fit ? Math.floor(R.rows[3].tps) + ' token/s' : '放不下';
+}
+
+/* ---------- 05 小网络 ---------- */
+let net5 = null, curve5 = null;
+const get5 = seg('#gr5', () => draw5());
+function draw5() {
+  const bits = +$('#b5').value; $('#b5v').textContent = bits;
+  const mu = css('--muted'), li = css('--line'), ac = css('--accent'), wa = css('--warn'), fg = css('--fg');
+  if (!net5) { $('#fig5a').innerHTML = `<text x="200" y="140" font-size="16" fill="${mu}" text-anchor="middle">训练中…</text>`; return; }
+  const mode = get5(), Wq = quantNet(net5, bits, mode);
+  const Wd = 400, Hd = 280, pl = 36, pr = 10, pt = 10, pb = 26;
+  const Xf = (x) => pl + (x + 1) / 2 * (Wd - pl - pr), Yf = (y) => pt + (1.6 - y) / 3.2 * (Hd - pt - pb);
+  let s = `<line x1="${pl}" y1="${Yf(0)}" x2="${Wd - pr}" y2="${Yf(0)}" stroke="${li}"/>`;
+  [-1, 0, 1].forEach((v) => { s += `<text x="${pl - 6}" y="${Yf(v) + 4}" font-size="12" fill="${mu}" text-anchor="end">${v}</text><text x="${Xf(v)}" y="${Hd - 8}" font-size="12" fill="${mu}" text-anchor="middle">${v}</text>`; });
+  const xs = Array.from({ length: 161 }, (_, i) => -1 + i / 80), cl = (y) => Math.max(-1.6, Math.min(1.6, y));
+  s += polyline(xs.map((x) => [Xf(x), Yf(F5(x))]), mu, 1.6, 'stroke-dasharray="5 4"');
+  s += polyline(xs.map((x) => [Xf(x), Yf(cl(mlpForward(net5, x)))]), ac, 2.4);
+  s += polyline(xs.map((x) => [Xf(x), Yf(cl(mlpForward(net5, x, Wq)))]), wa, 2.2);
+  $('#fig5a').innerHTML = s;
+  // 误差随位数
+  const lo = -6, hi = 1, Xb = (b) => pl + 10 + (b - 2) / 6 * (Wd - pl - pr - 20), Yb = (v) => pt + (hi - Math.max(lo, Math.min(hi, Math.log10(v)))) / (hi - lo) * (Hd - pt - pb);
+  s = logAxis(lo, hi, pl, Wd - pr, (e) => pt + (hi - e) / (hi - lo) * (Hd - pt - pb), mu, li);
+  for (let b = 2; b <= 8; b++) s += `<text x="${Xb(b)}" y="${Hd - 8}" font-size="12" fill="${mu}" text-anchor="middle">${b}</text>`;
+  s += `<line x1="${pl}" y1="${Yb(curve5.base)}" x2="${Wd - pr}" y2="${Yb(curve5.base)}" stroke="${ac}" stroke-dasharray="5 4"/>`;
+  [['tensor', css('--gold'), '按张量'], ['channel', wa, '按通道']].forEach(([k, c, nm]) => {
+    s += polyline(curve5[k].map((v, i) => [Xb(i + 2), Yb(v)]), c, 2.2, k === mode ? '' : 'stroke-opacity="0.45"');
+    curve5[k].forEach((v, i) => s += `<circle cx="${Xb(i + 2)}" cy="${Yb(v)}" r="${i + 2 === bits && k === mode ? 5 : 2.5}" fill="${c}" ${k === mode ? '' : 'fill-opacity="0.45"'}/>`);
+    s += `<text x="${Xb(2) + 4}" y="${Yb(curve5[k][0]) + (k === 'tensor' ? -8 : 18)}" font-size="12" fill="${c}">${nm}</text>`;
+  });
+  $('#fig5b').innerHTML = s;
+  let md = 0; xs.forEach((x) => md = Math.max(md, Math.abs(mlpForward(net5, x) - mlpForward(net5, x, Wq))));
+  const nQ = net5.Ws[1].length + net5.Ws[2].length;
+  $('#r5a').textContent = sci(curve5.base, 2); $('#r5b').textContent = sci(curve5[mode][bits - 2], 2); $('#r5c').textContent = md.toFixed(3);
+  $('#r5d').textContent = `${nQ * 4} B → ${Math.ceil(nQ * bits / 8)} B`;
+}
+$('#b5').addEventListener('input', draw5);
+const tr5 = makeTrainer();
+(function train5() {
+  const t0 = performance.now(); while (tr5.t < 3000 && performance.now() - t0 < 25) tr5.step();
+  if (tr5.t < 3000) { $('#fig5a').innerHTML = `<text x="200" y="140" font-size="16" fill="${css('--muted')}" text-anchor="middle">训练中 ${tr5.t} / 3000</text>`; return setTimeout(train5, 0); }
+  net5 = tr5.net;
+  curve5 = { base: mse5(net5, net5.Ws), tensor: [], channel: [] };
+  for (let b = 2; b <= 8; b++) for (const m of ['tensor', 'channel']) curve5[m].push(mse5(net5, quantNet(net5, b, m)));
+  draw5();
+})();
+
+/* ---------- 启动与重绘 ---------- */
+const all = () => { draw0(); draw1(); draw2(); draw3(); draw4(); draw5(); };
+all();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { draw1(); draw2(); draw3(); draw4(); }, 150); });
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>

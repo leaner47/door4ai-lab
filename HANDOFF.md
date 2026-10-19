@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-19 10:30 America/New_York · 更新者：Claude（会话 session_01HXmwuvnq8Z7skbnkunsKCy）
+最后更新：2026-10-19 16:20 America/New_York · 更新者：Claude（会话 session_01HXmwuvnq8Z7skbnkunsKCy）
 
 ---
 
@@ -167,7 +167,9 @@ door4ai-lab/
 - [x] Agent 篇前三讲（2026-10-19）：《大模型怎么调用工具》(order 100，6 实验 + 2 动画)、《Agent Loop》(105，6 实验 + 2 动画)、《上下文窗口是 Agent 的工作记忆》(110，6 实验 + 2 动画)
 - [x] Agent 篇第 4–7 讲（2026-10-19）：《Embedding 与 RAG》(115)、《MCP》(120)、《流式输出》(125)、《Trace 与 Eval》(130)，各 6 实验 + 2 动画
 - [x] 课程规划 14 讲全部上线（2026-10-19）：最后一批《AI 写代码是怎么回事》(3.8，5 实验 + 1 动画)、《多模型网关与多 Agent 编排》(135，6 实验 + 2 动画)、《Agent 框架全景》(140，纯文字)
-- [ ] 可补题目见第 7 节；本人自学时发现缺口再补
+- [x] 模型篇补充四讲（2026-10-19）：《多头注意力与 GQA》(order 7)、《模型量化》(12)、《MoE 混合专家》(15)、《RLHF 与偏好对齐》(42)，各 6 实验 + 2 动画
+- [ ] 待补查（写手凭记忆、未找到原文出处）：RLHF 讲里 GPT-3 预训练 300 B token、InstructGPT 每题 4–9 个回答排序、Llama 2 双奖励模型与四档评分；量化讲的困惑度表来自单作者预印本（arXiv 2601.14277），如需更强出处可删
+- [ ] 本人自学时发现缺口再补
 - [ ] 关于页只有两句话，待充实
 - [ ] 没有统计/分析（可考虑 Cloudflare Web Analytics，免费，一行脚本）
 - [x] 账号系统第 0 期代码完成并推送（默认关闭，线上行为不变）：邮箱验证码注册/登录、Passkey、单会话、注册来源、门禁、登录/账号/购买占位页；本地端到端 22/22 通过（2026-10-14）
@@ -185,6 +187,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-19 · Claude** — 模型篇补充四讲（第 7 节原「之后可补」四题）：`multihead-gqa`（7：00 切头参数不变 / 01 构造头 + 随机头的注意力热力图 / 02 拼接与 W_O，两种写法数值相等 / 03 MHA→GQA→MQA 分组 / 04 KV cache 计算器（Llama-2-70B、Llama-3-8B/70B config 核实）/ 05 decode 读 KV 的带宽时间；动画 SplitHeads、GroupedKV）、`weight-quantization`（12：00 FP32/FP16/BF16 位模式（DataView 真转换）/ 01 位数与对称性 / 02 按张量、按通道、按组 / 03 矩阵乘误差 RTN vs 简化 AWQ / 04 模型 × 精度 × 显卡的显存与 token/s / 05 小 MLP 量化；动画 FloatBits、QuantGrid）、`mixture-of-experts`（15：00 路由 top-k / 01 负载均衡三种训练方式真训练 / 02 容量因子蒙特卡洛 / 03 总参数 vs 激活参数（Mixtral 8x7B、DeepSeek-V3、DeepSeek-V4-Flash 逐项核对官方数字；V4-Flash 发布月份各来源不一，只写年份）/ 04 稠密 vs MoE 不同 batch 读权重量 / 05 小型 MoE 真训练；动画 RouterTopK、TotalVsActive）、`rlhf-alignment`（42：00 Bradley–Terry 拟合 / 01 奖励模型学到长度偏好 / 02 奖励黑客 / 03 KL 惩罚与解析解对照 / 04 DPO 与 RLHF 结果一致（差 1e-15）/ 05 InstructGPT、Llama 2 三段式；动画 PreferencePair、RLHFLoop）。衔接句最小改动：`attention-qkv.md`（下一讲改为多头）、`gradient-descent.md`（前面几讲加上量化、MoE）、`lora.md`（下一讲改为 RLHF）、`model-evaluation.md`（上一讲改为对齐）；`public/labs/attention-qkv/` 实验 05 note 里「上一讲 KV cache」笔误改为「后面 KV Cache 那讲」。本地 build 36 页通过；全部 28 讲 1440 浅色 / 390 深色无横向滚动、无脚本错误；个人信息检索 0。
 
 - **2026-10-19 · Claude** — 最后一批三讲上线，14 讲规划全部完成：`ai-coding-tools`（基础篇 3.8：00 一次 AI 改代码的示意回放（每步 diff 页内真实计算）/ 01 页内 LCS 行级 diff，可编辑 / 02 三种权限模式 × 12 条命令 / 03 Git 安全网：页内真跑测试，commit 与否的回退结果，blob 哈希与 git 一致 / 04 需求检查清单打分；动画 AgentEditLoop；Codex、Cursor 形态取自第三方资料，表格只写大致形态）、`gateway-orchestration`（135：00 三档模型路由与级联成本 / 01 降级与重试蒙特卡洛 / 02 响应缓存与 prompt cache / 03 orchestrator-worker 甘特图 / 04 上下文隔离 / 05 依赖度与拆分收益（示意）；动画 GatewayRouting、OrchestratorWorkers；引 Anthropic 多 Agent 研究系统一文的 4× / 15× token 数字，并说明同等工作量下多 Agent 反而更省）、`agent-frameworks`（140，纯文字：手写 vs 框架 SVG 图、同一 Agent 三种框架写法、LangChain / LangGraph / LlamaIndex / Claude Agent SDK / OpenAI Agents SDK 两张对照表，API 名以 2026-10-19 的 PyPI 源码核实，查不到的格子写「—」）。修了全站一处手机版问题：宽表格与长行内代码会撑出横向滚动（见第 4 节）。本地 build 32 页通过；全部 24 讲 1440 浅色 / 390 深色无横向滚动、无脚本错误；个人信息检索 0。
 
@@ -347,7 +351,7 @@ door4ai-lab/
    - 基础篇：`ai-coding-tools` 3.8 AI Coding 入门（Claude Code / Codex 怎么用，接 Resource 页）
    - 模型篇：`backpropagation` 30 反向传播 · `layernorm` 35 LayerNorm · `lora` 40 LoRA · `model-evaluation` 45 模型评测
    - Agent 篇：`tool-calling` 100 工具调用 · `agent-loop` 105 Agent Loop 与 ReAct · `context-window` 110 上下文与记忆 · `rag-embedding` 115 Embedding 与 RAG · `mcp` 120 MCP · `streaming` 125 流式输出（SSE）· `trace-eval` 130 Trace 与 Eval · `gateway-orchestration` 135 多模型网关与多 Agent 编排 · `agent-frameworks` 140 框架全景（纯文字）
-   - 之后可补：多头/分组注意力细节、MoE、量化（接 KV Cache 讲）、强化学习与 RLHF。
+   - 补充（2026-10-19 已写）：`multihead-gqa` 7 · `weight-quantization` 12 · `mixture-of-experts` 15 · `rlhf-alignment` 42
 2. 给文章列表加按 tag 过滤。
 3. 加 Cloudflare Web Analytics。
 

@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>MoE 混合专家实验室</title>
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c; --c4:#7a4fc4;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --c4:#b49cf0; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --c4:#b49cf0; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+p code,li code{font-size:.88em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+.formula{font-size:20px;text-align:center;margin:18px 0;letter-spacing:.02em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl b{font-variant-numeric:tabular-nums;min-width:2.6em}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px}
+.toggle input{accent-color:var(--accent)}
+input[type=range]{accent-color:var(--accent);max-width:180px}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:720px){.two{grid-template-columns:minmax(0,1fr)}}
+.cap{font-size:12px;color:var(--muted);margin:4px 0 0;text-align:center}
+.key{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;margin:0 0 8px}
+.key i{display:inline-block;width:14px;height:10px;vertical-align:middle;margin-right:6px;border-radius:2px}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn{border-color:var(--warn)} .ro.warn b{color:var(--warn)}
+.ro.acc{border-color:var(--accent)} .ro.acc b{color:var(--accent)}
+.ro.ok{border-color:var(--ok)} .ro.ok b{color:var(--ok)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.sum{font-size:15px;margin-top:10px;line-height:1.9}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.num,th.num{text-align:right;white-space:nowrap}
+.tw{overflow-x:auto}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">MoE · 路由器 · top-k · 负载均衡 · 总参数与激活参数</div>
+  <h1>MoE 混合专家实验室</h1>
+  <p class="lede">把一个 MLP 换成很多个专家，每个 token 只走其中几个。下面的路由、训练、蒙特卡洛和参数计算都在浏览器里真实进行。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>路由器：每个 token 去哪几个专家</h2>
+  <p>路由器只是一个线性层：token 向量 <i>x</i> 乘 <i>W<sub>g</sub></i>，得到 <i>E</i> 个分数；softmax 变成概率；取最大的 <i>k</i> 个；这 <i>k</i> 个概率重新归一化，就是各专家输出的权重。</p>
+  <p class="formula"><i>y</i> = Σ<sub><i>i</i> ∈ top-<i>k</i></sub> <i>g<sub>i</sub></i> · 专家<sub><i>i</i></sub>(<i>x</i>)</p>
+  <p>下面 10 个 token 的向量是页内构造的示例（同一类 token 的向量相近），路由器权重随机初始化，<i>E</i> = 8。点一个 token 看它的完整计算。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="k0">每个 token 激活 k</label><input id="k0" type="range" min="1" max="4" step="1" value="2"><b id="k0v">2</b></div>
+      <div class="btns"><button class="btn" id="seed0">换一组路由器权重</button></div>
+    </div>
+    <div class="key"><span><i style="background:var(--accent)"></i>top-k 选中（格子里是 softmax 概率，连线粗细是归一化后的权重 g）</span><span><i style="background:var(--line)"></i>没选中：概率算了，专家不算</span></div>
+    <svg id="fig0" viewBox="0 0 800 380" role="img" aria-label="token 到专家的路由热力图与连线"></svg>
+    <div class="tw"><table id="tb0"></table></div>
+    <div class="readout">
+      <div class="ro acc"><b id="r0a">–</b><span>这个 token 选中的专家</span></div>
+      <div class="ro"><b id="r0b">–</b><span>选中专家的 softmax 概率之和</span></div>
+      <div class="ro ok"><b id="r0c">–</b><span>每个 token 实际计算的专家比例</span></div>
+    </div>
+    <p class="note">同一类 token（两个数字、两个代码词）往往被送到相同的专家，这正是专家「分工」的来源。没被选中的专家，这个 token 一次乘法都不做：MLP 部分的计算量只有稠密版本的 k / E。</p>
+  </div>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>负载均衡：别让所有 token 挤一个专家</h2>
+  <p>路由器是和专家一起训练的。某个专家开始时稍微多拿到一些 token，它就学得更好，路由器就更爱选它，于是越来越挤，别的专家闲着没东西学。常用的对策是加一个<b>辅助损失</b>（Switch Transformer 的写法）：</p>
+  <p class="formula"><i>L</i><sub>aux</sub> = <i>α</i> · <i>E</i> · Σ<sub><i>i</i></sub> <i>f<sub>i</sub></i> · <i>P<sub>i</sub></i></p>
+  <p><i>f<sub>i</sub></i> 是这一批里分给专家 <i>i</i> 的 token 比例，<i>P<sub>i</sub></i> 是路由器给专家 <i>i</i> 的平均概率。两者都均匀时这一项最小（等于 <i>α</i>）。DeepSeek-V3 换了个办法：不加损失，给每个专家一个只用于挑选的偏置，负载高就调低、负载低就调高。</p>
+  <p>下面是 512 个示例 token（8 类，每类有自己的线性目标），8 个专家（每个是一个线性层），每个 token 选 <i>k</i> = 2 个。先拖偏置把专家 1 调成「热门」，再选一种训练方式，在浏览器里真实训练 300 步（Adam，全批次）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="b1">专家 1 的偏置</label><input id="b1" type="range" min="0" max="4" step="0.1" value="3"><b id="b1v">3.0</b></div>
+      <div class="ctrl"><label for="n1">路由噪声 σ</label><input id="n1" type="range" min="0" max="2" step="0.1" value="0"><b id="n1v">0.0</b></div>
+    </div>
+    <div class="ctrls">
+      <div class="ctrl"><label>训练方式</label><div class="seg" id="m1"><button data-v="0" aria-pressed="false">只有任务损失</button><button data-v="1" aria-pressed="true">加辅助损失</button><button data-v="2" aria-pressed="false">偏置调节（DeepSeek-V3）</button></div></div>
+      <div class="btns"><button class="btn pri" id="run1">训练 300 步</button><button class="btn" id="reset1">重置</button></div>
+    </div>
+    <div class="two">
+      <div><svg id="fig1a" viewBox="0 0 400 260" role="img" aria-label="各专家负载柱状图"></svg><p class="cap">各专家分到的 token 比例；虚线是均匀时的 1 / 8</p></div>
+      <div><svg id="fig1b" viewBox="0 0 400 260" role="img" aria-label="最大负载与平均负载之比随训练步数"></svg><p class="cap">最大负载 ÷ 平均负载随训练步数（1 = 完全均匀，4 = 全挤到一个专家）</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro warn"><b id="r1a">–</b><span>最大负载 ÷ 平均负载</span></div>
+      <div class="ro"><b id="r1b">–</b><span>闲置专家（负载不到平均的 1/4）</span></div>
+      <div class="ro acc"><b id="r1c">–</b><span>任务损失 MSE</span></div>
+      <div class="ro"><b id="r1d">–</b><span><i>E</i> · Σ <i>f<sub>i</sub> P<sub>i</sub></i>（均匀时为 1）</span></div>
+      <div class="ro"><b id="r1e">0</b><span>已训练步数</span></div>
+    </div>
+    <p class="note">偏置 3 时，一开始几乎每个 token 都把专家 1 选进 top-2。只有任务损失时，偏斜会缓解一些，但一直留着闲置的专家；加上辅助损失（<i>α</i> = 0.05），负载被拉向均匀；DeepSeek-V3 的偏置调节最直接，几十步后各专家负载几乎一样。路由噪声是 2017 年 Noisy Top-K 的做法：给分数加随机扰动，让冷门专家也有机会被选到。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>容量因子：专家满了，多出来的 token 怎么办</h2>
+  <p>训练时为了让每块 GPU 上的计算形状固定，每个专家在一批里最多处理 <i>C</i> 个 token：</p>
+  <p class="formula"><i>C</i> = 容量因子 × <i>T</i> · <i>k</i> / <i>E</i></p>
+  <p><i>T</i> 是这一批的 token 数。<i>T</i> · <i>k</i> / <i>E</i> 是完全均匀时每个专家该分到的数。先到先得，专家满了以后再来的分配被<b>丢弃</b>：这个 token 在这一层少算一个专家，只靠残差连接原样往下传。下面用蒙特卡洛模拟：<i>E</i> = 8、<i>k</i> = 2，专家的热门程度按 Zipf 分布（示例分布，偏斜 0 = 完全均匀）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="cf2">容量因子</label><input id="cf2" type="range" min="0.5" max="3" step="0.05" value="1.25"><b id="cf2v">1.25</b></div>
+      <div class="ctrl"><label for="sk2">路由偏斜</label><input id="sk2" type="range" min="0" max="1.5" step="0.05" value="0.5"><b id="sk2v">0.50</b></div>
+      <div class="ctrl"><label>每批 token 数 T</label><div class="seg" id="t2"><button data-v="256" aria-pressed="false">256</button><button data-v="1024" aria-pressed="true">1024</button><button data-v="4096" aria-pressed="false">4096</button></div></div>
+    </div>
+    <div class="two">
+      <div><svg id="fig2a" viewBox="0 0 400 260" role="img" aria-label="某一批里各专家的需求与容量"></svg><p class="cap">某一批里各专家被分到的 token 数；横线是容量 C，超出部分被丢弃</p></div>
+      <div><svg id="fig2b" viewBox="0 0 400 260" role="img" aria-label="丢弃率随容量因子变化"></svg><p class="cap">丢弃率随容量因子（每点 20 批的平均）</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r2a">–</b><span>每个专家的容量 C</span></div>
+      <div class="ro warn"><b id="r2b">–</b><span>被丢弃的分配（多批平均）</span></div>
+      <div class="ro warn"><b id="r2c">–</b><span>k 个专家全被丢、整层跳过的 token</span></div>
+      <div class="ro"><b id="r2d">–</b><span>预留了但没用上的槽位</span></div>
+    </div>
+    <p class="note">容量因子越大丢得越少，但每个专家都按 C 预留显存和计算，空槽就是白算；路由越偏斜，同样的容量因子丢得越多，所以容量因子和负载均衡是一起调的。DeepSeek-V3 靠负载均衡做到训练和推理都不丢 token；推理时多数实现也不设容量上限。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>总参数 vs 激活参数</h2>
+  <p>一个 MoE 层有 <i>E</i> 个专家，每个 token 只用其中 <i>k</i> 个（再加上共享专家，所有 token 都过）。所以要区分两个数：<b>总参数</b>决定要准备多少显存；<b>激活参数</b>决定每个 token 要算多少。前向一次，每个参数大约是一次乘法加一次加法，每 token 计算量 ≈ 2 × 激活参数。</p>
+  <p>预设用的是公开 config 里的真实数字（来源见表）。改动 d<sub>model</sub> 时，注意力等其余参数按 d<sub>model</sub>² 缩放、embedding 按 d<sub>model</sub> 缩放（估算）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>预设</label><div class="seg" id="p3"><button data-v="mixtral" aria-pressed="false">Mixtral 8x7B</button><button data-v="dsv3" aria-pressed="true">DeepSeek-V3</button><button data-v="dsv4f" aria-pressed="false">DeepSeek-V4-Flash</button></div></div>
+      <div class="ctrl"><label>精度</label><div class="seg" id="q3"><button data-v="2" aria-pressed="false">BF16</button><button data-v="1" aria-pressed="true">FP8</button><button data-v="0.5" aria-pressed="false">4 bit</button></div></div>
+    </div>
+    <div class="ctrls">
+      <div class="ctrl"><label for="L3">MoE 层数</label><input id="L3" type="range" min="1" max="96" step="1"><b id="L3v"></b></div>
+      <div class="ctrl"><label for="d3">d<sub>model</sub></label><input id="d3" type="range" min="1024" max="8192" step="512"><b id="d3v"></b></div>
+      <div class="ctrl"><label for="f3">专家中间维</label><input id="f3" type="range" min="256" max="16384" step="256"><b id="f3v"></b></div>
+      <div class="ctrl"><label for="E3">路由专家 E</label><input id="E3" type="range" min="2" max="512" step="2"><b id="E3v"></b></div>
+      <div class="ctrl"><label for="k3">激活 k</label><input id="k3" type="range" min="1" max="16" step="1"><b id="k3v"></b></div>
+      <div class="ctrl"><label for="S3">共享专家</label><input id="S3" type="range" min="0" max="2" step="1"><b id="S3v"></b></div>
+    </div>
+    <div class="two">
+      <div><svg id="fig3a" viewBox="0 0 400 300" role="img" aria-label="一层里的专家：每个 token 亮起的只有 k 个"></svg><p class="cap">一层里的全部专家，一个 token 只点亮这几块</p></div>
+      <div><svg id="fig3b" viewBox="0 0 400 300" role="img" aria-label="总参数与激活参数的构成"></svg><p class="cap">总参数与激活参数的构成</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r3a">–</b><span>总参数</span></div>
+      <div class="ro acc"><b id="r3b">–</b><span>激活参数</span></div>
+      <div class="ro acc"><b id="r3c">–</b><span>每 token 前向计算 ≈ 2 × 激活</span></div>
+      <div class="ro warn"><b id="r3d">–</b><span>权重显存（只算参数本身）</span></div>
+      <div class="ro"><b id="r3e">–</b><span>激活参数 ÷ 总参数</span></div>
+    </div>
+    <p class="sum" id="sum3"></p>
+    <div class="tw"><table id="tb3"></table></div>
+    <p class="note">算法：路由专家 = 层数 × E × 3 · d<sub>model</sub> · 专家中间维（SwiGLU 三个矩阵）；激活部分只算 k 个路由专家和共享专家；路由器 = d<sub>model</sub> × E，每层都算。Mixtral 和 DeepSeek-V3 的注意力、embedding 等由 config 逐项算出，和官方公布的总参数、激活参数对得上；DeepSeek-V4-Flash 的注意力结构较新，其余参数由官方总参数减去专家部分反推，再用它验算激活参数。权重显存不含 KV cache、激活值和量化的缩放因子。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>同样的激活参数：稠密模型 vs MoE</h2>
+  <p>拿一个稠密模型，参数量正好等于 MoE 的激活参数。两者每个 token 的计算量一样，但显存和 decode 时读的权重不一样。decode 每一步都要把用到的权重从显存读一遍，带宽常常是瓶颈。batch 里只有 1 个 token 时，MoE 每层只读 <i>k</i> 个专家；batch 一大，不同 token 选的专家不同，要读的是它们的<b>并集</b>。</p>
+  <p>每个 token 按均匀路由独立地选 <i>k</i> 个不同专家时，某个专家没被某个 token 选中的概率是 (<i>E</i> − <i>k</i>) / <i>E</i>，所以 <i>B</i> 个 token 一共用到的专家数的期望是：</p>
+  <p class="formula"><i>E</i> · [ 1 − ((<i>E</i> − <i>k</i>) / <i>E</i>)<sup><i>B</i></sup> ]</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>模型</label><div class="seg" id="p4"><button data-v="mixtral" aria-pressed="false">Mixtral 8x7B</button><button data-v="dsv3" aria-pressed="true">DeepSeek-V3</button><button data-v="dsv4f" aria-pressed="false">DeepSeek-V4-Flash</button></div></div>
+      <div class="ctrl"><label>batch</label><div class="seg" id="b4"><button data-v="1" aria-pressed="true">1</button><button data-v="8" aria-pressed="false">8</button><button data-v="64" aria-pressed="false">64</button><button data-v="256" aria-pressed="false">256</button></div></div>
+      <div class="ctrl"><label>精度</label><div class="seg" id="q4"><button data-v="2" aria-pressed="false">BF16</button><button data-v="1" aria-pressed="true">FP8</button><button data-v="0.5" aria-pressed="false">4 bit</button></div></div>
+    </div>
+    <div class="key"><span><i style="background:var(--muted)"></i>稠密（参数 = MoE 激活参数）</span><span><i style="background:var(--accent)"></i>MoE</span></div>
+    <svg id="fig4" viewBox="0 0 800 280" role="img" aria-label="decode 每一步要读的权重随 batch 变化"></svg>
+    <p class="cap">横轴：batch 里同时 decode 的 token 数（对数坐标）；纵轴：每一步要读的权重</p>
+    <div class="tw"><table id="tb4"></table></div>
+    <p class="note">batch = 1 时两者读的一样多，MoE 用激活参数的带宽换来了总参数的容量。batch 到 64，DeepSeek-V3 每层 256 个路由专家平均要用到 222 个，读的权重接近整个模型，而每个专家这一步平均只分到 2 个多 token，读进来的权重几乎没被复用。所以 MoE 推理通常用很大的 batch，并把专家分散到多块 GPU 上（<b>专家并行</b>：每块卡只放一部分专家，token 被发往存着它所选专家的那块卡）。每一步按读一遍全部非专家参数估算，输入 embedding 只查用到的行，没算在内；均匀路由是理想情况，真实路由偏斜时并集会小一些。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>训练一个 4 专家的小 MoE</h2>
+  <p>任务：拟合一条四段的折线。4 个专家，每个只是一个最简单的线性层 <i>y</i> = <i>a x</i> + <i>c</i>；路由器给每个专家打分 <i>w x</i> + <i>v</i>。所有参数从随机数出发，在浏览器里用 Adam 训练 3000 步。没有人告诉专家该管哪一段。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>激活 k</label><div class="seg" id="k5"><button data-v="1" aria-pressed="true">1</button><button data-v="2" aria-pressed="false">2</button></div></div>
+      <label class="toggle"><input type="checkbox" id="aux5" checked>辅助损失</label>
+      <div class="btns"><button class="btn pri" id="run5">开始训练</button><button class="btn" id="seed5">换一组初始值</button></div>
+    </div>
+    <div class="key" id="key5"></div>
+    <div class="two">
+      <div><svg id="fig5a" viewBox="0 0 400 300" role="img" aria-label="目标折线、MoE 输出与各专家接管的区间"></svg><p class="cap">虚线：目标；粗线：MoE 输出；细线：各专家自己的直线；底部色带：每个 x 由谁负责（top-1）</p></div>
+      <div><svg id="fig5b" viewBox="0 0 400 300" role="img" aria-label="训练误差随步数"></svg><p class="cap">训练误差 MSE（对数坐标）</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r5a">0</b><span>已训练步数</span></div>
+      <div class="ro acc"><b id="r5b">–</b><span>训练误差 MSE</span></div>
+      <div class="ro"><b id="r5c">–</b><span>各专家负载</span></div>
+      <div class="ro ok"><b id="r5d">–</b><span>被用到的专家数</span></div>
+    </div>
+    <p class="note">k = 1 加辅助损失，多数初始值下 4 个专家各自接管一段，分界点落在折线的拐点附近，误差降到接近 0；关掉辅助损失再训，常见的结局是两三个专家包揽全部、其余闲置，误差停在 0.02 到 0.1 之间。k = 2 时每个 x 由两个专家加权，分工没那么干净，但更不容易塌缩。</p>
+  </div>
+</section>
+
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function gauss(r) { let u = 0; while (u === 0) u = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r()); }
+function seg(id, cb) {
+  const el = $(id);
+  el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; el.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); cb(b.dataset.v); });
+  return () => el.querySelector('[aria-pressed=true]').dataset.v;
+}
+function vb(id, w, h, nw, nh) { const el = $(id), n = el.clientWidth > 0 && el.clientWidth < 560, W = n ? nw : w, H = n ? nh : h; el.setAttribute('viewBox', `0 0 ${W} ${H}`); return [W, H, n]; }
+function polyline(pts, col, w = 2, extra = '') { if (!pts.length) return ''; return `<path d="${pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('')}" fill="none" stroke="${col}" stroke-width="${w}" ${extra}/>`; }
+const tx = (x, y, s, o = {}) => `<text x="${x}" y="${y}" font-size="${o.fs || 13}" fill="${o.c || css('--muted')}" text-anchor="${o.a || 'start'}"${o.w ? ` font-weight="${o.w}"` : ''}>${s}</text>`;
+let FS = 12; const setFS = (id) => FS = $(id).clientWidth > 0 && $(id).clientWidth < 500 ? 16 : 12;
+const pct = (v, d = 1) => (v * 100).toFixed(d) + '%';
+const SUP = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
+const sup = (n) => String(n).split('').map((c) => SUP[c] ?? c).join('');
+const sci = (v) => { if (!isFinite(v)) return '–'; if (v === 0) return '0'; if (v >= 0.01 && v < 1000) return v < 1 ? v.toFixed(3) : v.toFixed(2); const [m, e] = v.toExponential(1).split('e'); return `${m}×10${sup(+e)}`; };
+// 参数个数：B = 十亿
+const P = (v) => v >= 1e12 ? (v / 1e12).toFixed(2) + 'T' : v >= 1e9 ? (v / 1e9).toFixed(v >= 1e11 ? 0 : 1) + 'B' : (v / 1e6).toFixed(0) + 'M';
+const GB = (bytes) => bytes >= 1e12 ? (bytes / 1e12).toFixed(2) + ' TB' : bytes >= 1e9 || bytes === 0 ? (bytes / 1e9).toFixed(1) + ' GB' : (bytes / 1e6).toFixed(0) + ' MB';
+const topk = (arr, k) => arr.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]).slice(0, k).map((p) => p[1]);
+
+/* ---------- 00 路由器 ---------- */
+const TOK = [['猫', 0], ['狗', 0], ['跑', 1], ['跳', 1], ['3', 2], ['17', 2], ['def', 3], ['return', 3], ['，', 4], ['。', 4]];
+const D0 = 8, E0 = 8;
+const X0 = (() => { const r = rng(11), proto = Array.from({ length: 5 }, () => Array.from({ length: D0 }, () => gauss(r))); return TOK.map(([, c]) => proto[c].map((v) => v + gauss(r) * 0.35)); })();
+let seed0 = 4, W0 = null, sel0 = 4;
+function initW0() { const r = rng(seed0); W0 = Array.from({ length: D0 }, () => Array.from({ length: E0 }, () => gauss(r) * 0.8)); }
+function route0(x, k) {
+  const s = Array.from({ length: E0 }, (_, e) => x.reduce((a, v, i) => a + v * W0[i][e], 0));
+  const mx = Math.max(...s); let Z = 0; const p = s.map((v) => { const q = Math.exp(v - mx); Z += q; return q; }).map((q) => q / Z);
+  const sel = topk(p, k), ps = sel.reduce((a, e) => a + p[e], 0), g = new Array(E0).fill(0); sel.forEach((e) => g[e] = p[e] / ps);
+  return { s, p, sel, g, ps };
+}
+function draw0() {
+  const k = +$('#k0').value; $('#k0v').textContent = k;
+  const R = X0.map((x) => route0(x, k));
+  const ac = css('--accent'), mu = css('--muted'), li = css('--line'), fg = css('--fg'), wa = css('--warn');
+  const [W, H, narrow] = vb('#fig0', 800, 380, 420, 470);
+  const fs = narrow ? 15 : 13, tl = narrow ? 64 : 76, top = narrow ? 34 : 34;
+  const gw = narrow ? W - tl - 8 : 340, cw = gw / E0, rh = (H - top - 10) / TOK.length;
+  let s = '';
+  for (let e = 0; e < E0; e++) s += tx(tl + (e + 0.5) * cw, top - 12, '专家' + (e + 1), { a: 'middle', fs: narrow ? 12 : 12 });
+  TOK.forEach(([t], n) => {
+    const y = top + n * rh, on = n === sel0;
+    s += `<rect x="2" y="${y + 2}" width="${tl - 10}" height="${rh - 4}" rx="4" fill="${on ? css('--accent-soft') : 'transparent'}" data-t="${n}" style="cursor:pointer"/>`;
+    s += `<text x="${tl - 14}" y="${y + rh / 2 + 5}" font-size="${fs + 1}" fill="${on ? ac : fg}" text-anchor="end" data-t="${n}" style="cursor:pointer"${on ? ' font-weight="700"' : ''}>${t}</text>`;
+    for (let e = 0; e < E0; e++) {
+      const p = R[n].p[e], chosen = R[n].g[e] > 0;
+      s += `<rect x="${tl + e * cw + 1}" y="${y + 1}" width="${cw - 2}" height="${rh - 2}" rx="3" fill="${chosen ? ac : mu}" fill-opacity="${chosen ? (0.35 + 0.65 * p).toFixed(3) : (0.06 + 0.5 * p).toFixed(3)}" data-t="${n}" style="cursor:pointer"/>`;
+      if (narrow ? chosen : true) s += tx(tl + (e + 0.5) * cw, y + rh / 2 + 4, p.toFixed(2), { a: 'middle', fs: narrow ? 12 : 11, c: chosen ? '#fff' : mu });
+    }
+  });
+  if (!narrow) {
+    const ex = 700, eh = (H - top - 10) / E0;
+    for (let e = 0; e < E0; e++) {
+      const used = R.some((r) => r.g[e] > 0), cy = top + (e + 0.5) * eh;
+      R.forEach((r, n) => { if (r.g[e] > 0) { const y1 = top + (n + 0.5) * rh, on = n === sel0; s += `<path d="M${tl + gw + 6},${y1} C${tl + gw + 120},${y1} ${ex - 120},${cy} ${ex - 4},${cy}" fill="none" stroke="${on ? ac : mu}" stroke-opacity="${on ? 1 : 0.35}" stroke-width="${(0.6 + 4 * r.g[e]).toFixed(2)}"/>`; } });
+      s += `<rect x="${ex}" y="${cy - eh / 2 + 4}" width="90" height="${eh - 8}" rx="5" fill="${used ? css('--accent-soft') : 'transparent'}" stroke="${R[sel0].g[e] > 0 ? ac : li}" stroke-width="${R[sel0].g[e] > 0 ? 2 : 1}"/>`;
+      s += tx(ex + 45, cy + 5, '专家 ' + (e + 1), { a: 'middle', c: used ? fg : mu });
+    }
+  }
+  $('#fig0').innerHTML = s;
+  $('#fig0').querySelectorAll('[data-t]').forEach((el) => el.addEventListener('click', () => { sel0 = +el.dataset.t; draw0(); }));
+  const r = R[sel0];
+  $('#tb0').innerHTML = `<tr><th>「${TOK[sel0][0]}」</th>${r.s.map((_, e) => `<th class="num">专家${e + 1}</th>`).join('')}</tr>`
+    + `<tr><td>分数 x·W<sub>g</sub></td>${r.s.map((v) => `<td class="num">${v.toFixed(2)}</td>`).join('')}</tr>`
+    + `<tr><td>softmax 概率</td>${r.p.map((v) => `<td class="num">${v.toFixed(3)}</td>`).join('')}</tr>`
+    + `<tr><td>权重 g（top-${k} 归一化）</td>${r.g.map((v) => `<td class="num" style="${v > 0 ? `color:${ac};font-weight:600` : `color:${mu}`}">${v > 0 ? v.toFixed(3) : '0'}</td>`).join('')}</tr>`;
+  $('#r0a').textContent = r.sel.map((e) => '专家 ' + (e + 1)).join('、');
+  $('#r0b').textContent = r.ps.toFixed(3);
+  $('#r0c').textContent = `${k} / ${E0} = ${pct(k / E0, 1)}`;
+}
+$('#k0').addEventListener('input', draw0); $('#seed0').addEventListener('click', () => { seed0++; initW0(); draw0(); });
+initW0();
+
+/* ---------- 01 负载均衡（真实训练） ---------- */
+// 512 个示例 token：8 类，每类一个中心和一个线性目标
+const D1 = (() => { const r = rng(7), N = 512, d = 8, C = 8, cen = [], wt = [];
+  for (let j = 0; j < C; j++) { cen.push(Array.from({ length: d }, () => gauss(r) * 1.2)); wt.push(Array.from({ length: d }, () => gauss(r))); }
+  const X = [], Y = [];
+  for (let n = 0; n < N; n++) { const j = n % C, x = cen[j].map((v) => v + gauss(r) * 0.5); X.push(x); Y.push(x.reduce((s, v, i) => s + v * wt[j][i], 0) / Math.sqrt(d)); }
+  const nz = Array.from({ length: N }, () => Array.from({ length: 8 }, () => gauss(r)));
+  return { X, Y, N, d, nz }; })();
+const E1 = 8, K1 = 2;
+function makeMoE1(seed = 3) { const r = rng(seed), d = D1.d;
+  const m = { W: Array.from({ length: d }, () => Array.from({ length: E1 }, () => gauss(r) * 0.3)), b: new Array(E1).fill(0), beta: new Array(E1).fill(0),
+    A: Array.from({ length: E1 }, () => Array.from({ length: d }, () => gauss(r) * 0.1)), c: new Array(E1).fill(0), t: 0, st: new Map() };
+  m.P = [m.W, m.b, m.A, m.c]; return m; }
+// 噪声 σ 加在分数上（Noisy Top-K）；beta 只影响挑谁，不影响权重（DeepSeek-V3）
+function route1(m, x, nz, sig) {
+  const s = new Array(E1);
+  for (let e = 0; e < E1; e++) { let v = m.b[e]; for (let i = 0; i < D1.d; i++) v += x[i] * m.W[i][e]; s[e] = v + sig * nz[e]; }
+  const sel = topk(s.map((v, e) => v + m.beta[e]), K1), mx = Math.max(...s);
+  let Z = 0; const p = s.map((v) => { const q = Math.exp(v - mx); Z += q; return q; }); for (let e = 0; e < E1; e++) p[e] /= Z;
+  let Zs = 0; const g = sel.map((e) => { const q = Math.exp(s[e] - mx); Zs += q; return q; }); for (let j = 0; j < K1; j++) g[j] /= Zs;
+  return { sel, g, p };
+}
+function step1(m, mode, sig, stepNoise, lr = 0.03, alpha = 0.05, gamma = 0.02) {
+  const d = D1.d, N = D1.N, gW = m.W.map((r) => r.map(() => 0)), gb = new Array(E1).fill(0), gA = m.A.map((r) => r.map(() => 0)), gc = new Array(E1).fill(0);
+  const Rs = []; let loss = 0; const f = new Array(E1).fill(0), Pm = new Array(E1).fill(0);
+  for (let n = 0; n < N; n++) {
+    const x = D1.X[n], R = route1(m, x, stepNoise ? stepNoise[n] : D1.nz[n], sig); Rs.push(R);
+    R.sel.forEach((e) => f[e]++); R.p.forEach((v, e) => Pm[e] += v / N);
+    const out = R.sel.map((e) => { let v = m.c[e]; for (let i = 0; i < d; i++) v += m.A[e][i] * x[i]; return v; });
+    let yh = 0; R.sel.forEach((e, j) => yh += R.g[j] * out[j]);
+    const err = yh - D1.Y[n]; loss += err * err / N; const dy = 2 * err / N;
+    let gbar = 0; R.sel.forEach((e, j) => gbar += R.g[j] * dy * out[j]);
+    R.sel.forEach((e, j) => { for (let i = 0; i < d; i++) gA[e][i] += dy * R.g[j] * x[i]; gc[e] += dy * R.g[j];
+      const ds = R.g[j] * (dy * out[j] - gbar); for (let i = 0; i < d; i++) gW[i][e] += ds * x[i]; gb[e] += ds; });
+  }
+  for (let e = 0; e < E1; e++) f[e] /= N * K1;
+  const aux = E1 * f.reduce((s, v, e) => s + v * Pm[e], 0);
+  if (mode === 1) for (let n = 0; n < N; n++) { const R = Rs[n], x = D1.X[n], dp = f.map((v) => alpha * E1 * v / N); let sp = 0; for (let e = 0; e < E1; e++) sp += R.p[e] * dp[e];
+    for (let e = 0; e < E1; e++) { const ds = R.p[e] * (dp[e] - sp); for (let i = 0; i < d; i++) gW[i][e] += ds * x[i]; gb[e] += ds; } }
+  m.t++; const b1 = 0.9, b2 = 0.999, c1 = 1 - b1 ** m.t, c2 = 1 - b2 ** m.t, G = [gW, gb, gA, gc];
+  const upd = (Pp, Gg, key) => { if (Array.isArray(Pp[0])) { Pp.forEach((row, i) => upd(row, Gg[i], key + '.' + i)); return; }
+    let s = m.st.get(key); if (!s) { s = { m: new Float64Array(Pp.length), v: new Float64Array(Pp.length) }; m.st.set(key, s); }
+    for (let i = 0; i < Pp.length; i++) { s.m[i] = b1 * s.m[i] + (1 - b1) * Gg[i]; s.v[i] = b2 * s.v[i] + (1 - b2) * Gg[i] * Gg[i]; Pp[i] -= lr * (s.m[i] / c1) / (Math.sqrt(s.v[i] / c2) + 1e-8); } };
+  m.P.forEach((p, i) => upd(p, G[i], 'p' + i));
+  if (mode === 2) for (let e = 0; e < E1; e++) m.beta[e] -= gamma * Math.sign(f[e] - 1 / E1);
+  return { loss, aux, f };
+}
+function eval1(m, sig) { // 不更新参数，只算当前负载与损失
+  let loss = 0; const f = new Array(E1).fill(0), Pm = new Array(E1).fill(0);
+  for (let n = 0; n < D1.N; n++) { const x = D1.X[n], R = route1(m, x, D1.nz[n], sig); R.sel.forEach((e) => f[e]++); R.p.forEach((v, e) => Pm[e] += v / D1.N);
+    let yh = 0; R.sel.forEach((e, j) => { let v = m.c[e]; for (let i = 0; i < D1.d; i++) v += m.A[e][i] * x[i]; yh += R.g[j] * v; }); loss += (yh - D1.Y[n]) ** 2 / D1.N; }
+  for (let e = 0; e < E1; e++) f[e] /= D1.N * K1;
+  return { loss, f, aux: E1 * f.reduce((s, v, e) => s + v * Pm[e], 0) };
+}
+const ratio1 = (f) => Math.max(...f) * f.length;
+const s1 = { m: null, hist: [], ev: null, n: 0, raf: 0, mode: 1, nr: rng(99) };
+const getMode1 = seg('#m1', (v) => { s1.mode = +v; reset1(); });
+function reset1() {
+  cancelAnimationFrame(s1.raf); s1.raf = 0; $('#run1').textContent = '训练 300 步';
+  const b = +$('#b1').value, sig = +$('#n1').value; $('#b1v').textContent = b.toFixed(1); $('#n1v').textContent = sig.toFixed(1);
+  s1.m = makeMoE1(); s1.m.b[0] = b; s1.n = 0; s1.ev = eval1(s1.m, sig); s1.hist = [[0, ratio1(s1.ev.f)]]; draw1();
+}
+function run1() {
+  if (s1.raf) { cancelAnimationFrame(s1.raf); s1.raf = 0; $('#run1').textContent = '继续'; return; }
+  if (s1.n >= 300) reset1();
+  $('#run1').textContent = '暂停'; const sig = +$('#n1').value;
+  const tick = () => {
+    const t0 = performance.now();
+    do { const nz = sig > 0 ? D1.X.map(() => Array.from({ length: E1 }, () => gauss(s1.nr))) : null; const r = step1(s1.m, s1.mode, sig, nz); s1.n++; s1.hist.push([s1.n, ratio1(r.f)]); } while (performance.now() - t0 < 14 && s1.n < 300);
+    s1.ev = eval1(s1.m, sig); draw1();
+    if (s1.n < 300) s1.raf = requestAnimationFrame(tick); else { s1.raf = 0; $('#run1').textContent = '再训练一次'; }
+  };
+  s1.raf = requestAnimationFrame(tick);
+}
+function draw1() { setFS('#fig1a');
+  const ac = css('--accent'), wa = css('--warn'), mu = css('--muted'), li = css('--line');
+  const f = s1.ev.f, W = 400, H = 260, pl = FS > 12 ? 50 : 40, pr = 10, pt = 12, pb = 30, mx = 0.5;
+  const Y = (v) => pt + (1 - v / mx) * (H - pt - pb), bw = (W - pl - pr) / E1;
+  let s = '';
+  [0, 0.25, 0.5].forEach((v) => s += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/>` + tx(pl - 6, Y(v) + 4, pct(v, 0), { a: 'end', fs: FS }));
+  f.forEach((v, e) => { const hot = v > 2 / E1, idle = v < 0.25 / E1; s += `<rect x="${pl + e * bw + bw * 0.15}" y="${Y(v)}" width="${bw * 0.7}" height="${Math.max(0, H - pb - Y(v))}" rx="2" fill="${hot ? wa : idle ? mu : ac}"/>` + tx(pl + (e + 0.5) * bw, H - 10, e + 1, { a: 'middle', fs: FS }); });
+  s += `<line x1="${pl}" y1="${Y(1 / E1)}" x2="${W - pr}" y2="${Y(1 / E1)}" stroke="${mu}" stroke-dasharray="5 4"/>`;
+  $('#fig1a').innerHTML = s;
+  const X = (t) => pl + t / 300 * (W - pl - pr), Yr = (v) => pt + (4 - Math.min(4, v)) / 3 * (H - pt - pb);
+  s = '';
+  [1, 2, 3, 4].forEach((v) => s += `<line x1="${pl}" y1="${Yr(v)}" x2="${W - pr}" y2="${Yr(v)}" stroke="${li}"/>` + tx(pl - 6, Yr(v) + 4, v, { a: 'end', fs: FS }));
+  [0, 150, 300].forEach((t) => s += tx(X(t), H - 10, t, { a: 'middle', fs: FS }));
+  s += polyline(s1.hist.map(([t, v]) => [X(t), Yr(v)]), wa, 2.2);
+  $('#fig1b').innerHTML = s;
+  $('#r1a').textContent = ratio1(f).toFixed(2);
+  $('#r1b').textContent = f.filter((v) => v < 0.25 / E1).length + ' / 8';
+  $('#r1c').textContent = s1.ev.loss.toFixed(3);
+  $('#r1d').textContent = s1.ev.aux.toFixed(2);
+  $('#r1e').textContent = s1.n;
+}
+$('#b1').addEventListener('input', reset1); $('#n1').addEventListener('input', reset1);
+$('#run1').addEventListener('click', run1); $('#reset1').addEventListener('click', reset1);
+
+/* ---------- 02 容量因子（蒙特卡洛） ---------- */
+const E2 = 8, K2 = 2;
+function pop(E, s) { const p = Array.from({ length: E }, (_, e) => 1 / Math.pow(e + 1, s)); const Z = p.reduce((a, b) => a + b, 0); return p.map((v) => v / Z); }
+function pickK(p, k, r) { const w = p.slice(), out = []; let tot = 1; for (let j = 0; j < k; j++) { let u = r() * tot, e = 0; for (; e < w.length - 1; e++) { u -= w[e]; if (u <= 0) break; } while (w[e] === 0) e--; out.push(e); tot -= w[e]; w[e] = 0; } return out; }
+function simBatch(T, CF, p, r) {
+  const C = Math.floor(CF * T * K2 / E2), cnt = new Array(E2).fill(0), dem = new Array(E2).fill(0); let dropped = 0, whole = 0;
+  for (let t = 0; t < T; t++) { const sel = pickK(p, K2, r); let d = 0; for (const e of sel) { dem[e]++; if (cnt[e] < C) cnt[e]++; else { dropped++; d++; } } if (d === K2) whole++; }
+  return { C, dem, cnt, drop: dropped / (T * K2), whole: whole / T, empty: 1 - cnt.reduce((a, b) => a + b, 0) / (E2 * C) };
+}
+function mc2(T, CF, s, trials, seed) { const r = rng(seed), p = pop(E2, s); let a = 0, b = 0, c = 0, last; for (let i = 0; i < trials; i++) { last = simBatch(T, CF, p, r); a += last.drop; b += last.whole; c += last.empty; } return { drop: a / trials, whole: b / trials, empty: c / trials, last }; }
+let T2 = 1024; const getT2 = seg('#t2', (v) => { T2 = +v; curve2 = null; draw2(); });
+let curve2 = null, curveKey = '';
+function draw2() { setFS('#fig2a');
+  const CF = +$('#cf2').value, s = +$('#sk2').value; $('#cf2v').textContent = CF.toFixed(2); $('#sk2v').textContent = s.toFixed(2);
+  const key = T2 + '|' + s;
+  if (!curve2 || curveKey !== key) { curve2 = []; curveKey = key; for (let c = 0.5; c <= 3.0001; c += 0.1) curve2.push([c, mc2(T2, c, s, T2 > 2000 ? 8 : 20, 3).drop]); }
+  const R = mc2(T2, CF, s, T2 > 2000 ? 60 : 200, 5);
+  const ac = css('--accent'), wa = css('--warn'), mu = css('--muted'), li = css('--line');
+  const W = 400, H = 260, pl = FS > 12 ? 52 : 46, pr = 10, pt = 14, pb = 30;
+  const dem = R.last.dem, C = R.last.C, top = Math.max(C, ...dem) * 1.1, Y = (v) => pt + (1 - v / top) * (H - pt - pb), bw = (W - pl - pr) / E2;
+  let g = '';
+  [0, Math.round(top / 2), Math.round(top)].forEach((v) => g += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/>` + tx(pl - 6, Y(v) + 4, v, { a: 'end', fs: FS }));
+  dem.forEach((v, e) => { const x = pl + e * bw + bw * 0.15, kept = Math.min(v, C);
+    g += `<rect x="${x}" y="${Y(kept)}" width="${bw * 0.7}" height="${H - pb - Y(kept)}" rx="2" fill="${ac}"/>`;
+    if (v > C) g += `<rect x="${x}" y="${Y(v)}" width="${bw * 0.7}" height="${Y(C) - Y(v)}" rx="2" fill="${wa}"/>`;
+    g += tx(pl + (e + 0.5) * bw, H - 10, e + 1, { a: 'middle', fs: FS }); });
+  g += `<line x1="${pl}" y1="${Y(C)}" x2="${W - pr}" y2="${Y(C)}" stroke="${css('--fg')}" stroke-width="1.5" stroke-dasharray="6 4"/>` + tx(W - pr, Y(C) - 6, 'C = ' + C, { a: 'end', fs: FS, c: css('--fg') });
+  $('#fig2a').innerHTML = g;
+  const Xc = (c) => pl + (c - 0.5) / 2.5 * (W - pl - pr), Yd = (v) => pt + (1 - v / 0.6) * (H - pt - pb);
+  g = '';
+  [0, 0.2, 0.4, 0.6].forEach((v) => g += `<line x1="${pl}" y1="${Yd(v)}" x2="${W - pr}" y2="${Yd(v)}" stroke="${li}"/>` + tx(pl - 6, Yd(v) + 4, pct(v, 0), { a: 'end', fs: FS }));
+  [0.5, 1, 1.5, 2, 2.5, 3].forEach((c) => g += tx(Xc(c), H - 10, c, { a: 'middle', fs: FS }));
+  g += polyline(curve2.map(([c, v]) => [Xc(c), Yd(Math.min(0.6, v))]), wa, 2.2);
+  g += `<circle cx="${Xc(CF)}" cy="${Yd(Math.min(0.6, R.drop))}" r="5" fill="${wa}"/>`;
+  $('#fig2b').innerHTML = g;
+  $('#r2a').textContent = C; $('#r2b').textContent = pct(R.drop, 1); $('#r2c').textContent = pct(R.whole, 2); $('#r2d').textContent = pct(R.empty, 1);
+}
+$('#cf2').addEventListener('input', draw2); $('#sk2').addEventListener('input', draw2);
+
+/* ---------- 03 计算器 ---------- */
+// 预设：公开 config。attn = 每层注意力参数（在预设 d 下），dense = 前几层稠密 MLP 的中间维与层数
+const PRE = {
+  mixtral: { name: 'Mixtral 8x7B', L: 32, Lall: 32, d: 4096, ff: 14336, E: 8, k: 2, S: 0, V: 32000, attn: 41943040, Ld: 0, dff: 0, norm: 65 * 4096, offT: 46.7e9, offA: 12.9e9,
+    src: 'Mistral AI，2023-12-11 发布；config 见 Hugging Face transformers 的 MixtralConfig（对应 Mixtral-8x7B-v0.1）' },
+  dsv3: { name: 'DeepSeek-V3', L: 58, Lall: 61, d: 7168, ff: 2048, E: 256, k: 8, S: 1, V: 129280, attn: 187121664, Ld: 3, dff: 18432, norm: 7168, offT: 671e9, offA: 37e9,
+    src: 'DeepSeek-V3 技术报告（arXiv 2412.19437，2024-12）；config 见官方仓库 inference/configs/config_671B.json（MTP 模块另计）' },
+  dsv4f: { name: 'DeepSeek-V4-Flash', L: 43, Lall: 43, d: 4096, ff: 2048, E: 256, k: 6, S: 1, V: 129280, attn: null, Ld: 0, dff: 0, norm: 0, offT: 284e9, offA: 13e9,
+    src: 'DeepSeek-V4 技术报告（2026）给出 284B / 13B；层数与专家配置取自 Hugging Face transformers 的 DeepseekV4Config（对应 DeepSeek-V4-Flash-Base）' },
+};
+// V4-Flash：其余参数 = 官方总参数 − 路由专家 − 共享专家 − 路由器，再扣掉 embedding 后均摊到每层
+{ const m = PRE.dsv4f, ex = 3 * m.d * m.ff; m.attn = (m.offT - m.L * (m.E + m.S) * ex - m.L * m.d * m.E - 2 * m.V * m.d) / m.Lall; }
+function calc(m, o) {
+  const d = o.d, sc = (d / m.d) ** 2, ex = 3 * d * o.ff, router = d * o.E;
+  const Lall = m.Lall - m.L + o.L; // 稠密层数不变，MoE 层数可调
+  const attn = Lall * m.attn * sc, emb = 2 * m.V * d, dense = m.Ld * 3 * d * m.dff, norm = m.norm * d / m.d;
+  const routed = o.L * o.E * ex, shared = o.L * o.S * ex, rout = o.L * router;
+  const rest = attn + emb + dense + norm;
+  return { ex, attn, emb, dense, rest, routed, shared, rout, total: rest + routed + shared + rout, active: rest + o.L * (o.k + o.S) * ex + rout, actRouted: o.L * o.k * ex };
+}
+const sl3 = { L: 'L3', d: 'd3', ff: 'f3', E: 'E3', k: 'k3', S: 'S3' };
+let pre3 = 'dsv3', q3 = 1;
+function load3(key) { pre3 = key; const m = PRE[key]; Object.entries(sl3).forEach(([k, id]) => $('#' + id).value = m[k]); draw3(); }
+seg('#p3', load3); seg('#q3', (v) => { q3 = +v; draw3(); });
+function opts3() { const o = {}; Object.entries(sl3).forEach(([k, id]) => o[k] = +$('#' + id).value); if (o.k > o.E) { o.k = o.E; $('#k3').value = o.E; } return o; }
+function expertGrid(svgId, E, k, S, W, H) {
+  const ac = css('--accent'), ok = css('--ok'), li = css('--line');
+  const n = E + S, cols = Math.ceil(Math.sqrt(n * W / H)), rows = Math.ceil(n / cols), cell = Math.min((W - 8) / cols, (H - 8) / rows), gap = cell > 10 ? 2 : 1;
+  const ox = (W - cols * cell) / 2, oy = (H - rows * cell) / 2, r = rng(17), lit = new Set();
+  while (lit.size < Math.min(k, E)) lit.add(Math.floor(r() * E));
+  let s = '';
+  for (let i = 0; i < n; i++) { const x = ox + (i % cols) * cell, y = oy + Math.floor(i / cols) * cell, sh = i >= E;
+    s += `<rect x="${x + gap / 2}" y="${y + gap / 2}" width="${cell - gap}" height="${cell - gap}" rx="${Math.min(4, cell / 5)}" fill="${sh ? ok : lit.has(i) ? ac : li}"/>`; }
+  $(svgId).innerHTML = s;
+}
+function draw3() { setFS('#fig3b');
+  const m = PRE[pre3], o = opts3();
+  Object.entries(sl3).forEach(([k, id]) => $('#' + id + 'v').textContent = o[k]);
+  const c = calc(m, o), same = Object.keys(sl3).every((k) => o[k] === m[k]);
+  expertGrid('#fig3a', o.E, o.k, o.S, 400, 300);
+  // 构成条：总参数 vs 激活参数
+  const ac = css('--accent'), ok = css('--ok'), mu = css('--muted'), li = css('--line'), fg = css('--fg');
+  const W = 400, H = 300, x0 = 10, bw = W - 20, sc = (v) => v / c.total * bw;
+  const parts = (act) => [[c.rest + c.rout, mu, '注意力、embedding 等'], [c.shared, ok, '共享专家'], [act ? c.actRouted : c.routed, ac, act ? `${o.k} 个路由专家` : `全部 ${o.E} 个路由专家`]];
+  let s = '';
+  [[false, 40, '总参数 ' + P(c.total)], [true, 150, '激活参数 ' + P(c.active)]].forEach(([act, y, lab]) => {
+    s += tx(x0, y - 10, lab, { fs: FS > 12 ? 20 : 15, c: fg, w: 600 });
+    let x = x0; parts(act).forEach(([v, col]) => { const w = sc(v); if (w > 0) s += `<rect x="${x}" y="${y}" width="${Math.max(w, v > 0 ? 1.5 : 0)}" height="46" fill="${col}"/>`; x += w; });
+    s += `<rect x="${x0}" y="${y}" width="${bw}" height="46" fill="none" stroke="${li}"/>`;
+  });
+  let ly = 232, lh = FS > 12 ? 24 : 22; parts(false).forEach(([v, col, lab], i) => { s += `<rect x="${x0}" y="${ly + i * lh - 10}" width="12" height="12" rx="2" fill="${col}"/>` + tx(x0 + 18, ly + i * lh, lab + '：总 ' + P(i === 2 ? c.routed : v) + (i === 2 ? '，激活 ' + P(c.actRouted) : ''), { fs: FS > 12 ? 17 : 13 }); });
+  $('#fig3b').innerHTML = s;
+  $('#r3a').textContent = P(c.total); $('#r3b').textContent = P(c.active);
+  $('#r3c').textContent = (2 * c.active / 1e9).toFixed(1) + ' GFLOP';
+  $('#r3d').textContent = GB(c.total * q3); $('#r3e').textContent = pct(c.active / c.total, 1);
+  $('#sum3').innerHTML = same ? `<b>${m.name}</b> 官方公布：总参数 ${P(m.offT)}、激活参数 ${P(m.offA)}；按 config 算出：总 ${(c.total / 1e9).toFixed(1)}B、激活 ${(c.active / 1e9).toFixed(1)}B。一个专家 ${(c.ex / 1e6).toFixed(1)}M 参数。`
+    : `已改动参数。同样的 ${o.L} 层，如果做成稠密模型、每层 MLP 等于这里激活的 ${o.k + o.S} 个专家，总参数就是 ${P(c.active)}：MoE 用同样的计算量装下了 ${(c.total / c.active).toFixed(1)} 倍的参数。`;
+  $('#tb3').innerHTML = '<tr><th>预设</th><th class="num">MoE 层</th><th class="num">d<sub>model</sub></th><th class="num">专家中间维</th><th class="num">E</th><th class="num">k</th><th class="num">共享</th><th class="num">官方 总 / 激活</th><th>出处</th></tr>'
+    + Object.values(PRE).map((p) => `<tr><td>${p.name}</td><td class="num">${p.L}${p.Ld ? ` (+${p.Ld} 稠密)` : ''}</td><td class="num">${p.d}</td><td class="num">${p.ff}</td><td class="num">${p.E}</td><td class="num">${p.k}</td><td class="num">${p.S}</td><td class="num">${P(p.offT)} / ${P(p.offA)}</td><td style="font-size:12px;color:var(--muted);min-width:260px">${p.src}</td></tr>`).join('');
+}
+Object.values(sl3).forEach((id) => $('#' + id).addEventListener('input', draw3));
+
+/* ---------- 04 稠密 vs MoE ---------- */
+const unionExp = (E, k, B) => E * (1 - Math.pow((E - k) / E, B));
+let pre4 = 'dsv3', B4 = 1, q4 = 1;
+seg('#p4', (v) => { pre4 = v; draw4(); }); seg('#b4', (v) => { B4 = +v; draw4(); }); seg('#q4', (v) => { q4 = +v; draw4(); });
+function read4(m, c, B) { // 每步要读的参数个数（不含输入 embedding）
+  const base = c.rest - m.V * m.d + c.rout, U = unionExp(m.E, m.k, B);
+  return { moe: base + m.L * (m.S + U) * c.ex, dense: c.active - m.V * m.d, U };
+}
+function draw4() {
+  const m = PRE[pre4], c = calc(m, m), r = read4(m, c, B4);
+  const ac = css('--accent'), mu = css('--muted'), li = css('--line'), fg = css('--fg');
+  const [W, H, narrow] = vb('#fig4', 800, 280, 420, 300), fs = narrow ? 15 : 13, pl = narrow ? 64 : 70, pr = 14, pt = 14, pb = 32;
+  const maxB = 1024, X = (b) => pl + Math.log2(b) / Math.log2(maxB) * (W - pl - pr);
+  const top = c.total * 1.08, Y = (v) => pt + (1 - v / top) * (H - pt - pb);
+  let s = '';
+  [0, c.total / 2, c.total].forEach((v) => s += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/>` + tx(pl - 6, Y(v) + 4, GB(v * q4), { a: 'end', fs: fs - 1 }));
+  [1, 4, 16, 64, 256, 1024].forEach((b) => s += tx(X(b), H - 10, b, { a: 'middle', fs }));
+  const pts = [], ptd = []; for (let i = 0; i <= 100; i++) { const b = Math.pow(2, i / 10); const q = read4(m, c, b); pts.push([X(b), Y(q.moe)]); ptd.push([X(b), Y(q.dense)]); }
+  s += polyline(ptd, mu, 2.5) + polyline(pts, ac, 2.5);
+  s += `<line x1="${X(B4)}" y1="${pt}" x2="${X(B4)}" y2="${H - pb}" stroke="${fg}" stroke-dasharray="3 4"/>`;
+  s += `<circle cx="${X(B4)}" cy="${Y(r.moe)}" r="5" fill="${ac}"/><circle cx="${X(B4)}" cy="${Y(r.dense)}" r="5" fill="${mu}"/>`;
+  $('#fig4').innerHTML = s;
+  const row = (name, a, b, cls = '') => `<tr><td>${name}</td><td class="num">${a}</td><td class="num"${cls}>${b}</td></tr>`;
+  $('#tb4').innerHTML = `<tr><th>batch = ${B4}，${q4 === 2 ? 'BF16' : q4 === 1 ? 'FP8' : '4 bit'}</th><th class="num">稠密 ${P(c.active)}</th><th class="num">${m.name}</th></tr>`
+    + row('权重显存', GB(c.active * q4), GB(c.total * q4), ` style="color:var(--warn);font-weight:600"`)
+    + row('每 token 前向计算', (2 * c.active / 1e9).toFixed(1) + ' GFLOP', (2 * c.active / 1e9).toFixed(1) + ' GFLOP')
+    + row('每层用到的路由专家', '—', `${r.U.toFixed(1)} / ${m.E}`)
+    + row('每个被用到的专家分到的 token', '—', (B4 * m.k / r.U).toFixed(2))
+    + row('decode 每一步读的权重', GB(r.dense * q4), GB(r.moe * q4), ` style="color:var(--accent);font-weight:600"`)
+    + row('分摊到每个 token', GB(r.dense * q4 / B4), GB(r.moe * q4 / B4))
+    + row('MoE ÷ 稠密（每步读权重）', '1', (r.moe / r.dense).toFixed(2) + ' 倍');
+}
+
+/* ---------- 05 小型真实 MoE ---------- */
+const KN = [[-1, 0.6], [-0.5, -0.7], [0, 0.5], [0.5, -0.2], [1, 0.9]];
+function target(x) { for (let i = 0; i < 4; i++) { const [a, ya] = KN[i], [b, yb] = KN[i + 1]; if (x <= b || i === 3) return ya + (yb - ya) * (x - a) / (b - a); } }
+const XS5 = Array.from({ length: 128 }, (_, i) => -1 + 2 * i / 127), YS5 = XS5.map(target), E5 = 4, STEPS5 = 3000;
+function makeMoE5(seed) { const r = rng(seed); return { a: Array.from({ length: E5 }, () => gauss(r) * 0.3), c: Array.from({ length: E5 }, () => gauss(r) * 0.1), w: Array.from({ length: E5 }, () => gauss(r) * 0.5), v: Array.from({ length: E5 }, () => gauss(r) * 0.1), st: {}, t: 0 }; }
+function fwd5(m, x, k) {
+  const s = []; for (let e = 0; e < E5; e++) s.push(m.w[e] * x + m.v[e]);
+  const ord = topk(s, k), mx = s[ord[0]]; let Z = 0; const g = ord.map((e) => { const q = Math.exp(s[e] - mx); Z += q; return q; }); g.forEach((_, j) => g[j] /= Z);
+  let Zf = 0; const p = s.map((v) => { const q = Math.exp(v - mx); Zf += q; return q; }); p.forEach((_, e) => p[e] /= Zf);
+  const out = ord.map((e) => m.a[e] * x + m.c[e]); let y = 0; ord.forEach((e, j) => y += g[j] * out[j]); return { y, ord, g, out, p };
+}
+function step5(m, k, aux, lr = 0.02, alpha = 0.02) {
+  const N = XS5.length, G = { a: new Array(E5).fill(0), c: new Array(E5).fill(0), w: new Array(E5).fill(0), v: new Array(E5).fill(0) }; let loss = 0; const f = new Array(E5).fill(0), Rs = [];
+  for (let n = 0; n < N; n++) { const x = XS5[n], R = fwd5(m, x, k); Rs.push(R); R.ord.forEach((e) => f[e]++); const err = R.y - YS5[n]; loss += err * err / N; const dy = 2 * err / N; let gb = 0; R.ord.forEach((e, j) => gb += R.g[j] * R.out[j]);
+    R.ord.forEach((e, j) => { G.a[e] += dy * R.g[j] * x; G.c[e] += dy * R.g[j]; const ds = R.g[j] * dy * (R.out[j] - gb); G.w[e] += ds * x; G.v[e] += ds; }); }
+  for (let e = 0; e < E5; e++) f[e] /= N * k;
+  if (aux) for (let n = 0; n < N; n++) { const R = Rs[n], x = XS5[n]; let sp = 0; const dp = f.map((v) => alpha * E5 * v / N); for (let e = 0; e < E5; e++) sp += R.p[e] * dp[e]; for (let e = 0; e < E5; e++) { const ds = R.p[e] * (dp[e] - sp); G.w[e] += ds * x; G.v[e] += ds; } }
+  m.t++; const b1 = 0.9, b2 = 0.999, c1 = 1 - b1 ** m.t, c2 = 1 - b2 ** m.t;
+  for (const key of ['a', 'c', 'w', 'v']) { const Pp = m[key], g = G[key], s = m.st[key] || (m.st[key] = { m: new Array(E5).fill(0), v: new Array(E5).fill(0) });
+    for (let e = 0; e < E5; e++) { s.m[e] = b1 * s.m[e] + (1 - b1) * g[e]; s.v[e] = b2 * s.v[e] + (1 - b2) * g[e] * g[e]; Pp[e] -= lr * (s.m[e] / c1) / (Math.sqrt(s.v[e] / c2) + 1e-8); } }
+  return { loss, f };
+}
+const s5 = { seed: 1, k: 1, m: null, n: 0, hist: [], f: [0, 0, 0, 0], raf: 0 };
+seg('#k5', (v) => { s5.k = +v; reset5(); });
+const cols5 = () => [css('--accent'), css('--warn'), css('--ok'), css('--c4')];
+function loss5(m, k) { let l = 0; const f = new Array(E5).fill(0); XS5.forEach((x, n) => { const R = fwd5(m, x, k); l += (R.y - YS5[n]) ** 2 / XS5.length; R.ord.forEach((e) => f[e]++); }); return { l, f: f.map((v) => v / (XS5.length * k)) }; }
+function reset5() { cancelAnimationFrame(s5.raf); s5.raf = 0; s5.m = makeMoE5(s5.seed); s5.n = 0; const r = loss5(s5.m, s5.k); s5.hist = [[0, r.l]]; s5.f = r.f; $('#run5').textContent = '开始训练'; draw5(); }
+function run5() {
+  if (s5.raf) { cancelAnimationFrame(s5.raf); s5.raf = 0; $('#run5').textContent = '继续'; return; }
+  if (s5.n >= STEPS5) reset5();
+  $('#run5').textContent = '暂停'; const aux = $('#aux5').checked;
+  const tick = () => { const t0 = performance.now();
+    do { const r = step5(s5.m, s5.k, aux); s5.n++; if (s5.n % 10 === 0) s5.hist.push([s5.n, r.loss]); s5.f = r.f; } while (performance.now() - t0 < 14 && s5.n < STEPS5);
+    draw5(); if (s5.n < STEPS5) s5.raf = requestAnimationFrame(tick); else { s5.raf = 0; $('#run5').textContent = '再训练一次'; } };
+  s5.raf = requestAnimationFrame(tick);
+}
+function draw5() { setFS('#fig5a');
+  const cs = cols5(), mu = css('--muted'), li = css('--line'), fg = css('--fg');
+  $('#key5').innerHTML = cs.map((c, e) => `<span><i style="background:${c}"></i>专家 ${e + 1}</span>`).join('');
+  const W = 400, H = 300, pl = 34, pr = 10, pt = 10, pb = 44, X = (x) => pl + (x + 1) / 2 * (W - pl - pr), Y = (y) => pt + (1.3 - y) / 2.6 * (H - pt - pb);
+  let s = '';
+  [-1, 0, 1].forEach((v) => s += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/>` + tx(pl - 6, Y(v) + 4, v, { a: 'end', fs: FS }));
+  s += `<clipPath id="cl5"><rect x="${pl}" y="${pt}" width="${W - pl - pr}" height="${H - pt - pb}"/></clipPath><g clip-path="url(#cl5)">`;
+  for (let e = 0; e < E5; e++) s += polyline([[X(-1), Y(-s5.m.a[e] + s5.m.c[e])], [X(1), Y(s5.m.a[e] + s5.m.c[e])]], cs[e], 1.2, 'stroke-opacity="0.6"');
+  s += '</g>';
+  s += polyline(XS5.map((x, n) => [X(x), Y(YS5[n])]), mu, 2, 'stroke-dasharray="5 4"');
+  s += polyline(XS5.map((x) => [X(x), Y(fwd5(s5.m, x, s5.k).y)]), fg, 2.4);
+  const used = new Set();
+  XS5.forEach((x, n) => { if (n === XS5.length - 1) return; const e = fwd5(s5.m, x, s5.k).ord[0]; used.add(e); s += `<rect x="${X(x)}" y="${H - pb + 10}" width="${X(XS5[n + 1]) - X(x) + 0.5}" height="12" fill="${cs[e]}"/>`; });
+  [-1, -0.5, 0, 0.5, 1].forEach((v) => s += tx(X(v), H - 6, v, { a: 'middle', fs: FS }));
+  $('#fig5a').innerHTML = s;
+  const Xl = (t) => pl + t / STEPS5 * (W - pl - pr), lo = -6, hi = 0, Yl = (v) => pt + (hi - Math.max(lo, Math.min(hi, Math.log10(Math.max(v, 1e-12))))) / (hi - lo) * (H - pt - pb);
+  s = '';
+  for (let e = lo; e <= hi; e++) s += `<line x1="${pl}" y1="${Yl(10 ** e)}" x2="${W - pr}" y2="${Yl(10 ** e)}" stroke="${li}"/>` + tx(pl - 6, Yl(10 ** e) + 4, '10' + sup(e), { a: 'end', fs: FS });
+  [0, 1500, 3000].forEach((t) => s += tx(Xl(t), H - pb + 22, t, { a: t === 3000 ? 'end' : 'middle', fs: FS }));
+  s += polyline(s5.hist.map(([t, v]) => [Xl(t), Yl(v)]), css('--accent'), 2.2);
+  $('#fig5b').innerHTML = s;
+  $('#r5a').textContent = s5.n; $('#r5b').textContent = sci(s5.hist[s5.hist.length - 1][1]);
+  $('#r5c').textContent = s5.f.map((v) => Math.round(v * 100)).join(' / ') + ' %';
+  $('#r5d').textContent = s5.f.filter((v) => v > 0.02).length + ' / 4';
+}
+$('#run5').addEventListener('click', run5); $('#seed5').addEventListener('click', () => { s5.seed++; reset5(); });
+$('#aux5').addEventListener('change', reset5);
+
+/* ---------- 启动与重绘 ---------- */
+reset1(); load3('dsv3'); reset5();
+const all = () => { draw0(); draw1(); draw2(); draw3(); draw4(); draw5(); };
+all();
+addEventListener('resize', () => { draw0(); draw4(); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>
