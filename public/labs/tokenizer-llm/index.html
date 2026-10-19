@@ -87,6 +87,7 @@ td.num{text-align:right}
 .out5{font-size:20px;line-height:1.9;min-height:2em;word-break:break-all}
 .out5 .g{color:var(--warn);border-bottom:2px solid var(--warn)}
 .status{font-size:13px;color:var(--muted)}
+.how{margin-top:12px}.how summary{cursor:pointer}.how h4{font-size:14px;font-weight:600;margin:14px 0 4px}.how .note{margin:4px 0}.how .prow{padding-left:0}
 .key{margin-top:40px;border-top:1px solid var(--line);padding-top:20px}
 </style>
 <script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
@@ -128,7 +129,7 @@ td.num{text-align:right}
     <li>统计所有<b>相邻片段对</b>出现的次数，按词频加权。</li>
     <li>把次数最多的那一对合并成一个新 token，记下这条规则，回到第 2 步。</li>
   </ol>
-  <p>左边的语料可以改，格式是每行「词 频次」。点「下一步」看合并怎么发生。</p>
+  <p>左边的语料可以改，格式是每行「词 频次」。默认这四行是给定的输入，不是算出来的：假设有一小份语料，数完词后 low 出现 5 次、lower 2 次、newest 6 次、widest 3 次。真实训练也是先把海量文本切成词、数出每个词的次数，再在这张表上合并，这里跳过了数词这一步。这组数是经典的教学例子，出自 Sennrich 等人 2016 年把 BPE 用于子词切分的论文《Neural Machine Translation of Rare Words with Subword Units》。点「下一步」看合并怎么发生。</p>
   <div class="lab">
     <div class="ctrls">
       <button class="btn pri" id="next1">下一步</button>
@@ -159,6 +160,7 @@ td.num{text-align:right}
       <div class="ro warn"><b id="r1t">—</b><span>语料总 token 数（含频次）</span></div>
     </div>
     <p class="note">第一步合并的是 e + s（newest 6 次 + widest 3 次 = 9），接着 es + t → est。每合并一次，词表多一个 token，语料的总 token 数变少：<b>词表越大，同样的文字用的 token 越少</b>。一直合并下去，每个词最终都变成一个整块，这时 BPE 就退化成"整词词表"，见到新词就没办法了。所以真实训练会在词表达到预定大小时停下。</p>
+    <details class="how"><summary class="status">这些数字是怎么算出来的</summary><div id="how1"></div></details>
   </div>
 </section>
 
@@ -333,7 +335,7 @@ function parse1(){const out=[];$('corp1').value.split('\n').forEach(l=>{const m=
 function reset1(){stop1();W1=parse1().map(o=>({w:o.w,f:o.f,seg:[...o.w]}));M1=[];H1=[];last1=null;draw1();}
 function pairs1(){const m=new Map();for(const w of W1)for(let i=0;i<w.seg.length-1;i++){const k=w.seg[i]+'\u0001'+w.seg[i+1];m.set(k,(m.get(k)||0)+w.f);}return [...m.entries()].sort((a,b)=>b[1]-a[1]);}
 function mergeSeg(seg,a,b){const s=[];for(let i=0;i<seg.length;i++){if(i<seg.length-1&&seg[i]===a&&seg[i+1]===b){s.push(a+b);i++;}else s.push(seg[i]);}return s;}
-function next1(){const p=pairs1();if(!p.length){stop1();return false;}const [k,c]=p[0];const [a,b]=k.split('\u0001');H1.push(W1.map(w=>w.seg));W1.forEach(w=>w.seg=mergeSeg(w.seg,a,b));M1.push({a,b,t:a+b,c});last1=a+b;draw1();return true;}
+function next1(){const p=pairs1();if(!p.length){stop1();return false;}const [k,c]=p[0];const [a,b]=k.split('\u0001');H1.push(W1.map(w=>w.seg));W1.forEach(w=>w.seg=mergeSeg(w.seg,a,b));M1.push({a,b,t:a+b,c,tie:p.slice(1).filter(x=>x[1]===c).map(x=>x[0].split('\u0001').join(' + '))});last1=a+b;draw1();return true;}
 function prev1(){if(!H1.length)return;stop1();const h=H1.pop();W1.forEach((w,i)=>w.seg=h[i]);M1.pop();last1=M1.length?M1[M1.length-1].t:null;draw1();}
 function stop1(){if(timer1){clearInterval(timer1);timer1=null;$('play1').textContent='自动播放';}}
 $('next1').onclick=()=>{stop1();next1();};$('prev1').onclick=prev1;$('reset1').onclick=reset1;
@@ -343,7 +345,8 @@ const chip1=t=>`<span class="tk ${t===last1?'new':(t.length>1?'big':'plain')}">$
 function draw1(){
   $('words1').innerHTML=W1.map(w=>`<div class="wrow"><span class="w">${esc(w.w)} ×${w.f}</span><span>${w.seg.map(chip1).join('')}</span></div>`).join('')||'<div class="status">语料为空</div>';
   const p=pairs1();
-  $('pairs1').innerHTML=p.length?p.slice(0,7).map(([k,c],i)=>{const [a,b]=k.split('\u0001');return `<div class="prow${i===0?' top':''}"><span>${esc(a)} + ${esc(b)}</span><span>${c}</span></div>`;}).join(''):'<div class="status">每个词都已是一个整块，没有可合并的对了</div>';
+  const cut=p.length>7?p.filter(x=>x[1]>=p[6][1]).length:p.length,rest=p.slice(cut);
+  $('pairs1').innerHTML=p.length?p.slice(0,cut).map(([k,c],i)=>{const [a,b]=k.split('\u0001');return `<div class="prow${i===0?' top':''}"><span>${esc(a)} + ${esc(b)}</span><span>${c}</span></div>`;}).join('')+(rest.length?`<div class="status" style="padding:2px 0">另有 ${rest.length} 对，各 ${[...new Set(rest.map(x=>x[1]))].join(' / ')} 次（完整列表见下方「这些数字是怎么算出来的」）</div>`:''):'<div class="status">每个词都已是一个整块，没有可合并的对了</div>';
   $('rules1').innerHTML=M1.length?M1.map((m,i)=>`<div>${i+1}. ${esc(m.a)} + ${esc(m.b)} → <b>${esc(m.t)}</b> <span class="status">(${m.c} 次)</span></div>`).join(''):'<div class="status">还没有规则</div>';
   $('rules1').scrollTop=1e6;
   const base=[...new Set(W1.flatMap(w=>[...w.w]))].sort();
@@ -352,7 +355,23 @@ function draw1(){
   $('r1m').textContent=M1.length;$('r1v').textContent=vocab.length;
   $('r1t').textContent=W1.reduce((a,w)=>a+w.seg.length*w.f,0);
   $('st1').textContent=p.length?`下一步：${p[0][0].split('\u0001').join(' + ')}（${p[0][1]} 次）`:'训练结束';
+  how1(p,base,vocab);
   draw2();
+}
+function how1(p,base,vocab){
+  const by=new Map();
+  for(const w of W1)for(let i=0;i<w.seg.length-1;i++){const k=w.seg[i]+'\u0001'+w.seg[i+1];if(!by.has(k))by.set(k,new Map());const m=by.get(k);m.set(w,(m.get(w)||0)+1);}
+  const term=(w,n)=>n>1?`${esc(w.w)} ${n} × ${w.f}`:`${esc(w.w)} ${w.f}`;
+  const pairRows=p.map(([k,c])=>{const t=[...by.get(k)].map(([w,n])=>term(w,n));return `<div class="prow"><span>${k.split('\u0001').map(esc).join(' + ')}</span><span>${t.join(' + ')}${t.length>1||[...by.get(k).values()][0]>1?' = '+c:''}</span></div>`;}).join('');
+  const cur=W1.reduce((a,w)=>a+w.seg.length*w.f,0),init=W1.reduce((a,w)=>a+[...w.w].length*w.f,0),sumc=M1.reduce((a,m)=>a+m.c,0);
+  const used=new Set(W1.flatMap(w=>w.seg)),gone=base.filter(t=>!used.has(t));
+  const ties=M1.map((m,i)=>m.tie.length?`第 ${i+1} 条 ${esc(m.a)} + ${esc(m.b)}（与 ${m.tie.map(esc).join('、')} 同为 ${m.c} 次）`:'').filter(Boolean);
+  const sum=f=>W1.map(w=>`${esc(w.w)} ${f(w)} × ${w.f}`).join(' + ');
+  $('how1').innerHTML=W1.length?`
+<h4>相邻片段对 · 加权次数</h4><p class="note">在每个词的当前切分里，从左到右看每两个相邻片段。某一对在一个词里出现一次，就加上这个词的频次；所有词加起来就是这一对的次数。排第一的那一对就是下一步要合并的。</p>${pairRows||'<div class="status">没有相邻片段对了</div>'}
+<h4>合并规则后面的次数</h4><p class="note">是合并那一刻、这一对按上面同样的方法算出的次数。${ties.length?`次数打平时，取在语料里先出现的那一对：${ties.join('、')}。`:''}</p>
+<h4>词表大小 ${vocab.length}</h4><p class="note">初始字母 ${base.map(esc).join(' ')}，共 ${base.length} 个${M1.length?`；合并出来的 ${M1.map(m=>esc(m.t)).join(' ')}，共 ${M1.length} 个；合计 ${vocab.length}`:''}。${gone.length?`${gone.map(esc).join('、')} 已经不会单独出现了，但仍留在词表里：BPE 只往词表里加 token，从不删除。`:''}</p>
+<h4>语料总 token 数 ${cur}</h4><p class="note">每个词当前的片段数乘以频次，再相加：${sum(w=>w.seg.length)} = ${cur}。${M1.length?`合并前每个字母各算一个：${sum(w=>[...w.w].length)} = ${init}。少了 ${init-cur}，${init-cur===sumc?`正好等于各条规则的次数之和 ${M1.map(m=>m.c).join(' + ')}${M1.length>1?' = '+sumc:''}：每合并一次，总 token 数就减少这一对的次数`:`各条规则的次数之和是 ${sumc}，两者不等，因为有同一对首尾重叠（如 a a a 里的 a + a 算了两次，但只能合并一次）`}。`:''}</p>`:'';
 }
 
 /* ---------- 02 encode with learned merges ---------- */

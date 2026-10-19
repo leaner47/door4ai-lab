@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-19 18:15 America/New_York · 更新者：Claude（会话 session_01MmDJEcUExCaMurhqYeS9sy）
+最后更新：2026-10-19 18:45 America/New_York · 更新者：Claude（会话 session_01RbNocXbB6CzayVPYBwkwdY）
 
 ---
 
@@ -194,6 +194,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-19 · Claude（session_01RbNocXbB6CzayVPYBwkwdY）** — 本人问 Token 实验 01（字母级 BPE）里的数字怎么来的，要求把说明补进去。`public/labs/tokenizer-llm/index.html`：(1) 实验 01 导语加一句：默认语料 low 5 / lower 2 / newest 6 / widest 3 是给定词频，出自 Sennrich 等 2016 BPE 论文；(2) 片段对列表不再在并列次数中间截断（保留与第 7 名同分的全部），其余的写「另有 N 对，各 X 次」；(3) note 下加可展开的「这些数字是怎么算出来的」（`#how1`，随当前状态实时生成）：每一对的加权次数拆成「newest 6 + widest 3 = 9」、合并时打平的规则（取先出现的一对）、词表 = 初始字母 + 合并出的 token（不再单独出现的字母仍在词表里）、总 token 数 = 各词片段数 × 频次之和，以及与合并前的差 = 各规则次数之和（首尾重叠的对如 aaaa 时说明为何不等）。`src/content/blog/tokenizer-llm.md` 实验列表第 1 项补一句。云端 clone build 39 页通过；Chromium 1440 浅色 / 390 深色无横向滚动、无脚本错误，用默认语料、合并到底、aaaa/banana 三种情况核对过数字。
 
 - **2026-10-19 · Claude（session_01MmDJEcUExCaMurhqYeS9sy）** — 按本人要求写完另一会话提出的 122 讲。新增 `browser-computer-use`（order 122）：文章 `src/content/blog/browser-computer-use.md`；实验页 `public/labs/browser-computer-use/` 的核心是一个用 srcdoc iframe 嵌入的真实 1280 × 800 模拟商城网页（`shopHTML(o)` 可开关：改 id、只剩图标的按钮、截图后才弹出的横幅、四种藏法的注入）。00 页面文字 / 元素清单（按 Playwright MCP 写法自建可访问性快照，`ref=eN`）/ 截图三种看法，文字由 o200k 计数，截图按 Claude 视觉文档 ⌈w/28⌉ × ⌈h/28⌉、标准档长边 1568 & 1568 token、高分辨率档 2576 & 4784 token / 01 在缩小后的截图上点击，三种坐标换算，`elementFromPoint` 查点中什么 / 02 JS、元素编号、截图坐标三种做法真实执行搜索，三种网页变化各让一种失败（执行用的 iframe 是 fixed + opacity 0，放到屏幕外会导致 hit-test 失灵；表单处理函数不能叫 `go`，会被同名按钮遮住）/ 03 8 个动作 × 5 层保护 / 04 注入四种藏法 × 四条通道（真实 DOM 检查）、三种措辞 × 规则检测器。动画 `manim-src/browser-computer-use/scenes.py` → `public/videos/browser-computer-use/ScreenshotClickLoop`。事实 2026-10-19 查证：Claude Vision 与 Computer use 文档（工具集 17 个动作、约 4,500 token 开销、推荐分辨率）、Playwright MCP 快照格式、Claude for Chrome（2025-08-25：123 个用例，23.6% → 11.2%，浏览器特有攻击 35.7% → 0）。衔接：`mcp.md` 末段预告本讲、`streaming.md`「上一讲 MCP」改为第 120 讲。本地 build 39 页通过；Chromium 1440 浅色 / 390 深色无横向滚动、无脚本错误、KaTeX 无报错；个人信息检索 0。
 
