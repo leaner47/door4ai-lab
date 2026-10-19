@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-19 09:55 America/New_York · 更新者：Claude（会话 session_01HXmwuvnq8Z7skbnkunsKCy）
+最后更新：2026-10-19 10:30 America/New_York · 更新者：Claude（会话 session_01HXmwuvnq8Z7skbnkunsKCy）
 
 ---
 
@@ -141,6 +141,7 @@ door4ai-lab/
 - 课程顺序：残差连接（order 25）紧接梯度下降（20）：讲深网络为什么训不动。
 - 课程顺序：梯度下降（order 20）放在 KV Cache 之后：前面几讲讲推理，从这一讲开始讲训练（参数从哪来）；后续训练相关的讲（反向传播、LoRA 等）接在 20 之后。课程目录的「第 N 讲」由 order 排序自动生成。
 - **MCP 讲按 2026-07-28 规范写**（2026-10-19 已核对官方 changelog）：无状态，去掉了 `initialize` 握手与 `Mcp-Session-Id`，新增 `server/discover`，结果必带 `resultType`，Streamable HTTP 请求必带 `Mcp-Method` / `Mcp-Name` 头；实验 01 可切回 2025-11-25 握手式对照。规范再更新时改 `public/labs/mcp/` 与文章。
+- **课程文章里的表格与行内代码**（2026-10-19）：`Base.astro` 里 `.prose table` 在 ≤720px 时变为块级、表内横向滚动；行内 `code` 允许任意处断行（`overflow-wrap:anywhere`），避免长 API 名把手机页面撑宽。
 - **课程三篇结构（2026-10-16 本人决定）**：基础篇（order < 4）→ 模型篇（4 ≤ order < 100）→ **Agent 篇（order ≥ 100）**。Agent 篇的骨架参考了市面上一门 Agent 工程课的目录顺序（工具调用 → Loop → 上下文/记忆 → RAG → MCP → 流式 → Trace/Eval → 网关与编排 → 框架全景），采用的是"先手写、后看框架"的顺序，**不吸收**它的 Node/前端工程内容。本人决定：先立项写出全部讲，缺什么等他自学时发现再补；模型篇先补齐（反向传播 30、LayerNorm 35、LoRA 40、模型评测 45）再写 Agent 篇。
 
 - **账号与计费（2026-10-14 本人确认）**：自建账号，D1 不用 PG；不设密码，Passkey 为主、邮箱验证码注册与兜底、TOTP 可选（未做）；每账号同一时间只允许 1 个会话，新登录踢掉旧会话；只做买断，不做订阅；买全套包含以后新增的讲；收款复用 door4ai.com 的 pay-api（接口文档待本人提供）；记录注册来源（首次/最后触达 UTM、ref 渠道码、来源问卷）。设计文档：https://claude.ai/code/artifact/9679fc7a-0fe4-4323-86f1-65cbb1cc005f
@@ -165,7 +166,8 @@ door4ai-lab/
 - [x] 模型篇补齐 4 讲（2026-10-16）：《反向传播是怎么算梯度的》(order 30，5 实验 + 2 动画)、《LayerNorm 为什么必需》(35，6 实验 + 2 动画)、《LoRA 为什么省参数》(40，6 实验 + 2 动画)、《模型怎么评测》(45，6 实验 + 2 动画)
 - [x] Agent 篇前三讲（2026-10-19）：《大模型怎么调用工具》(order 100，6 实验 + 2 动画)、《Agent Loop》(105，6 实验 + 2 动画)、《上下文窗口是 Agent 的工作记忆》(110，6 实验 + 2 动画)
 - [x] Agent 篇第 4–7 讲（2026-10-19）：《Embedding 与 RAG》(115)、《MCP》(120)、《流式输出》(125)、《Trace 与 Eval》(130)，各 6 实验 + 2 动画
-- [ ] Agent 篇剩余：`gateway-orchestration` 135、`agent-frameworks` 140（纯文字）；基础篇 `ai-coding-tools` 3.8
+- [x] 课程规划 14 讲全部上线（2026-10-19）：最后一批《AI 写代码是怎么回事》(3.8，5 实验 + 1 动画)、《多模型网关与多 Agent 编排》(135，6 实验 + 2 动画)、《Agent 框架全景》(140，纯文字)
+- [ ] 可补题目见第 7 节；本人自学时发现缺口再补
 - [ ] 关于页只有两句话，待充实
 - [ ] 没有统计/分析（可考虑 Cloudflare Web Analytics，免费，一行脚本）
 - [x] 账号系统第 0 期代码完成并推送（默认关闭，线上行为不变）：邮箱验证码注册/登录、Passkey、单会话、注册来源、门禁、登录/账号/购买占位页；本地端到端 22/22 通过（2026-10-14）
@@ -183,6 +185,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-19 · Claude** — 最后一批三讲上线，14 讲规划全部完成：`ai-coding-tools`（基础篇 3.8：00 一次 AI 改代码的示意回放（每步 diff 页内真实计算）/ 01 页内 LCS 行级 diff，可编辑 / 02 三种权限模式 × 12 条命令 / 03 Git 安全网：页内真跑测试，commit 与否的回退结果，blob 哈希与 git 一致 / 04 需求检查清单打分；动画 AgentEditLoop；Codex、Cursor 形态取自第三方资料，表格只写大致形态）、`gateway-orchestration`（135：00 三档模型路由与级联成本 / 01 降级与重试蒙特卡洛 / 02 响应缓存与 prompt cache / 03 orchestrator-worker 甘特图 / 04 上下文隔离 / 05 依赖度与拆分收益（示意）；动画 GatewayRouting、OrchestratorWorkers；引 Anthropic 多 Agent 研究系统一文的 4× / 15× token 数字，并说明同等工作量下多 Agent 反而更省）、`agent-frameworks`（140，纯文字：手写 vs 框架 SVG 图、同一 Agent 三种框架写法、LangChain / LangGraph / LlamaIndex / Claude Agent SDK / OpenAI Agents SDK 两张对照表，API 名以 2026-10-19 的 PyPI 源码核实，查不到的格子写「—」）。修了全站一处手机版问题：宽表格与长行内代码会撑出横向滚动（见第 4 节）。本地 build 32 页通过；全部 24 讲 1440 浅色 / 390 深色无横向滚动、无脚本错误；个人信息检索 0。
 
 - **2026-10-19 · Claude** — Agent 篇第 4–7 讲上线（四个子任务并行，主会话统一检查）：`rag-embedding`（115：被限流中断的草稿补完；00 页内 LSA（TF-IDF + SVD，24 维）向量 / 01 切块与答案被切断 / 02 top-k 召回 / 03 BM25、向量、RRF 混合 / 04 片段位置 × 片段数（沿用上一讲 Lost in the Middle 示意曲线）/ 05 rerank（启发式，已标明）；embedding 模型表 2026-10-19 查证）、`mcp`（120：按 2026-07-28 规范，页内两个真的迷你 MCP server 处理 JSON-RPC；00 M×N→M+N / 01 报文时序（可切 2025-11-25 握手式、stdio / Streamable HTTP）/ 02 MCP 工具→模型 tools→tools/call 字段流转 / 03 手发请求看真实响应与错误码 / 04 审批策略 / 05 工具说明里的提示注入（示意）；动画 MxN、MCPRoundTrip）、`streaming`（125：00 TTFT 与总时长 / 01 setTimeout 真推送的 SSE，Anthropic / OpenAI 两种格式，o200k 真分词 / 02 随机字节切块下三种解析器对照，TextDecoder stream 正确 / 03 input_json_delta 拼接 / 04 按 token/s 真打字 / 05 ReadableStream + AbortController 取消；流式格式 2026-10-19 核对官方文档）、`trace-eval`（130：00 span 树 + 甘特图 / 01 耗时成本归因 / 02 结果、轨迹、单步三层判分 / 03 LLM 裁判位置与长度偏差蒙特卡洛——交换顺序判两次不提高期望分，改讲「一致结论更可靠」/ 04 30 题回归矩阵 + McNemar / 05 拦截规则引擎；示例数据已标明）。注：Manim 产物实际落在 `manim-src/media/{videos,images}/scenes/`（按模块名），不是 `<slug>/`。本地 build 29 页通过；headless Chromium 1440 浅色 / 390 深色无横向滚动、iframe 自动长高、无脚本错误；个人信息检索 0。`wip/rag-embedding` 分支已无用，可删。
 
@@ -339,7 +343,7 @@ door4ai-lab/
 
 ## 7. 下一步建议（接手者可直接挑一个做）
 
-1. **课程规划（2026-10-16 立项，slug / order 固定，写完一讲在第 5 节勾掉）**：
+1. **课程规划（2026-10-16 立项，2026-10-19 全部写完上线）**：
    - 基础篇：`ai-coding-tools` 3.8 AI Coding 入门（Claude Code / Codex 怎么用，接 Resource 页）
    - 模型篇：`backpropagation` 30 反向传播 · `layernorm` 35 LayerNorm · `lora` 40 LoRA · `model-evaluation` 45 模型评测
    - Agent 篇：`tool-calling` 100 工具调用 · `agent-loop` 105 Agent Loop 与 ReAct · `context-window` 110 上下文与记忆 · `rag-embedding` 115 Embedding 与 RAG · `mcp` 120 MCP · `streaming` 125 流式输出（SSE）· `trace-eval` 130 Trace 与 Eval · `gateway-orchestration` 135 多模型网关与多 Agent 编排 · `agent-frameworks` 140 框架全景（纯文字）

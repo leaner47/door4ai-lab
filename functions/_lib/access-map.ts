@@ -1,7 +1,15 @@
 // 自动生成，勿手改：scripts/gen-access-map.mjs（npm run build 时运行）
 export type PostAccess = { access: 'free' | 'paid'; series?: string };
 export const POSTS: Record<string, PostAccess> = {
+  "agent-frameworks": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
   "agent-loop": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
+  "ai-coding-tools": {
     "access": "paid",
     "series": "ai-mastery"
   },
@@ -22,6 +30,10 @@ export const POSTS: Record<string, PostAccess> = {
     "series": "ai-mastery"
   },
   "context-window": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
+  "gateway-orchestration": {
     "access": "paid",
     "series": "ai-mastery"
   },
@@ -84,10 +96,12 @@ export const POSTS: Record<string, PostAccess> = {
 };
 export const LABS: Record<string, string> = {
   "labs/agent-loop": "agent-loop",
+  "labs/ai-coding-tools": "ai-coding-tools",
   "labs/attention-qkv": "attention-qkv",
   "labs/backpropagation": "backpropagation",
   "labs/computer-anatomy": "computer-anatomy",
   "labs/context-window": "context-window",
+  "labs/gateway-orchestration": "gateway-orchestration",
   "labs/git-github": "git-github",
   "labs/gradient-descent": "gradient-descent",
   "labs/internet-basics": "internet-basics",

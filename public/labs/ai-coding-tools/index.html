@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>AI 写代码实验室</title>
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c; --ok-soft:#dcf1e5;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  --mono:Menlo,Consolas,"SF Mono","Courier New","PingFang SC","Microsoft YaHei","Noto Sans SC",monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --ok-soft:#173826; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --ok-soft:#173826; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+code{font-family:var(--mono);font-size:.82em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0;min-width:0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.side{display:grid;grid-template-columns:200px minmax(0,1fr);gap:14px}
+@media (max-width:700px){.two,.side{grid-template-columns:minmax(0,1fr)}}
+.cap{font-size:12px;color:var(--muted);margin:4px 0}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn{border-color:var(--warn)} .ro.warn b{color:var(--warn)}
+.ro.ok{border-color:var(--ok)} .ro.ok b{color:var(--ok)}
+.ro.acc{border-color:var(--accent)} .ro.acc b{color:var(--accent)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+
+/* 代码与 diff */
+.code{font-family:var(--mono);font-size:12.5px;line-height:1.6;background:var(--bg);border-radius:6px;padding:8px 0;overflow-x:auto;margin:0;min-height:3em}
+.code .ln{display:grid;grid-template-columns:2.6em 2.6em 1.4em minmax(0,1fr);white-space:pre-wrap;word-break:break-word;padding-right:8px}
+.code.one .ln{grid-template-columns:2.6em minmax(0,1fr)}
+.code .no{color:var(--muted);text-align:right;padding-right:8px;user-select:none;opacity:.7}
+.code .sg{text-align:center;user-select:none}
+.code .add{background:var(--ok-soft)} .code .add .sg{color:var(--ok)}
+.code .del{background:var(--warn-soft)} .code .del .sg{color:var(--warn)}
+.code .hk{color:var(--accent);padding:2px 10px}
+.term{background:#0d1117;color:#d6dde6;font-family:var(--mono);font-size:12.5px;line-height:1.6;border-radius:6px;padding:10px 12px;white-space:pre-wrap;word-break:break-word;min-height:3.4em;margin:0;max-height:340px;overflow-y:auto}
+.term .p{color:#7ee787} .term .r{color:#ff7b72} .term .y{color:#e3b341} .term .c{color:#79c0ff} .term .m{color:#8b949e} .term .g{color:#7ee787}
+textarea{width:100%;box-sizing:border-box;font-family:var(--mono);font-size:13px;line-height:1.55;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;resize:vertical}
+input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:5px 9px;min-width:0;flex:1}
+
+/* 00 回放 */
+.steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.steps button{font:inherit;font-size:12.5px;border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:999px;padding:2px 10px;cursor:pointer}
+.steps button.done{color:var(--fg)}
+.steps button.cur{background:var(--accent);border-color:var(--accent);color:#fff}
+.steps button.bad.done:not(.cur){border-color:var(--warn);color:var(--warn)}
+.steps button.good.done:not(.cur){border-color:var(--ok);color:var(--ok)}
+.tree{font-family:var(--mono);font-size:13px;background:var(--bg);border-radius:6px;padding:8px 0}
+.tree div{display:flex;justify-content:space-between;gap:8px;padding:2px 10px}
+.tree div.cur{background:var(--accent-soft)}
+.tree .dir{color:var(--muted)}
+.tree .bd{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.tree .bd .a{color:var(--ok)} .tree .bd .d{color:var(--warn)}
+.act{font-size:15px;margin:0 0 8px}
+.act b{color:var(--accent)}
+.act.bad b{color:var(--warn)} .act.good b{color:var(--ok)}
+.bubble{background:var(--accent-soft);border-radius:8px;padding:10px 14px;margin:0;font-size:15px}
+.plan{background:var(--bg);border-radius:6px;padding:10px 14px 10px 32px;margin:0;font-size:15px}
+
+/* 02 权限 */
+.perm{width:100%;border-collapse:collapse;font-size:14px}
+.perm td,.perm th{padding:6px 8px;text-align:left;vertical-align:middle}
+.perm th{font-weight:500;color:var(--muted);font-size:12px}
+.perm tr:nth-child(even) td{background:var(--bg)}
+.perm td:first-child{font-family:var(--mono);font-size:12.5px;word-break:break-all}
+.perm .ty{color:var(--muted);font-size:13px}
+.chip{display:inline-block;border-radius:999px;padding:0 10px;font-size:12.5px;white-space:nowrap}
+.chip.auto{background:var(--ok-soft);color:var(--ok)}
+.chip.ask{background:var(--accent-soft);color:var(--accent)}
+.chip.deny{background:var(--warn-soft);color:var(--warn)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* 04 清单 */
+.checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:12px}
+.ck{background:var(--bg);border-radius:6px;padding:8px 12px;font-size:14px}
+.ck b{display:block;font-size:15px}
+.ck.y b{color:var(--ok)} .ck.n b{color:var(--warn)}
+.ck span{color:var(--muted);font-size:12.5px}
+.hl{font-size:15px;background:var(--bg);border-radius:6px;padding:10px 14px;margin:12px 0 0;line-height:2}
+.hl mark{background:none;color:inherit;border-radius:3px;padding:0 2px}
+.hl mark.g{background:var(--accent-soft)} .hl mark.s{background:var(--ok-soft)} .hl mark.c{background:var(--warn-soft)} .hl mark.v{outline:1.5px solid var(--ok);outline-offset:-1px}
+.flag{font-size:14px;margin:10px 0 0}
+.flag.w{color:var(--warn)} .flag.o{color:var(--ok)}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">Agent · diff · 权限 · Git · 提需求</div>
+  <h1>AI 写代码实验室</h1>
+  <p class="lede">AI 编程工具在你的项目里读文件、改文件、跑命令。下面把这个过程拆开：diff、测试和 Git 都在浏览器里真实计算和执行。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>一次 AI 改代码的全过程</h2>
+  <p>任务是「给网页加一个深色模式按钮」。一步一步看 AI 做了什么：先读文件，再说计划，然后改文件、跑测试，测试失败后自己找原因再改，直到通过。这是一段预先写好的示意回放，但每一步的 diff 都是页面根据改前改后的文件真实算出来的。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="btns"><button class="btn" id="p0">上一步</button><button class="btn pri" id="n0">下一步</button><button class="btn" id="a0">自动播放</button><button class="btn" id="r0">重来</button></div>
+    </div>
+    <div class="steps" id="steps0"></div>
+    <div class="side">
+      <div><div class="tree" id="tree0"></div><p class="cap">项目文件夹（AI 的工作目录）</p></div>
+      <div><p class="act" id="act0"></p><div id="body0"></div></div>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r0a">–</b><span>当前步骤</span></div>
+      <div class="ro acc"><b id="r0b">–</b><span>读过的文件</span></div>
+      <div class="ro ok"><b id="r0c">–</b><span>改动（新增 / 删除行）</span></div>
+      <div class="ro warn"><b id="r0d">–</b><span>跑命令次数（失败）</span></div>
+    </div>
+    <p class="note">注意第 9 步：AI 第一次写的代码是错的，而且它当时很自信。救场的不是它更聪明，而是「跑一下测试」这一步把错误暴露了出来，它才能看着报错再改。</p>
+  </div>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>diff 怎么看</h2>
+  <p>AI 改完代码，你要看的就是 diff：哪些行删了（红色、<code>-</code> 开头），哪些行加了（绿色、<code>+</code> 开头），其余没变。页面用最长公共子序列（LCS）逐行比较左右两段文字。右边可以随便改，diff 立刻重算。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>例子</label><div class="seg" id="ex1"><button data-v="0" aria-pressed="true">改一行</button><button data-v="1" aria-pressed="false">加一段</button><button data-v="2" aria-pressed="false">顺手改了别处</button></div></div>
+      <div class="ctrl"><label>显示</label><div class="seg" id="mode1"><button data-v="all" aria-pressed="true">全文</button><button data-v="git" aria-pressed="false">git diff 格式</button></div></div>
+    </div>
+    <div class="two">
+      <div><p class="cap">改之前</p><textarea id="ta1" rows="9" spellcheck="false"></textarea></div>
+      <div><p class="cap">改之后（可以改）</p><textarea id="tb1" rows="9" spellcheck="false"></textarea></div>
+    </div>
+    <p class="cap" style="margin-top:12px">diff</p>
+    <div class="code" id="out1"></div>
+    <div class="readout">
+      <div class="ro ok"><b id="r1a">–</b><span>新增行</span></div>
+      <div class="ro warn"><b id="r1b">–</b><span>删除行</span></div>
+      <div class="ro"><b id="r1c">–</b><span>没变的行</span></div>
+      <div class="ro acc"><b id="r1d">–</b><span>改动块（hunk）</span></div>
+    </div>
+    <p class="note">改一行在 diff 里是一红一绿两行：旧的删掉，新的加上。第三个例子里，你只让它改函数名，它却顺手改了别的地方，只有逐行看 diff 才发现得了。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>它能执行什么：权限</h2>
+  <p>AI 想执行的每个动作，工具都会先按规则判断：自动执行、停下来问你，还是直接拒绝。下面是一套示意规则，和真实工具的细节不同，但思路一样：读最安全，改文件次之，跑命令、联网、删东西、推送到远端越来越需要你点头；项目外的危险操作在任何模式下都拒绝。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>模式</label><div class="seg" id="mode2"><button data-v="0" aria-pressed="true">每步都问</button><button data-v="1" aria-pressed="false">自动改文件</button><button data-v="2" aria-pressed="false">放手干（带检查）</button></div></div>
+    </div>
+    <div class="row" style="margin-bottom:12px"><input type="text" id="cmd2" placeholder="自己输入一条命令，例如 npm run build" aria-label="自定义命令"><button class="btn" id="add2">加入</button></div>
+    <table class="perm"><thead><tr><th>AI 想做的事</th><th>规则认为它是</th><th>结果</th></tr></thead><tbody id="tb2"></tbody></table>
+    <div class="readout">
+      <div class="ro ok"><b id="r2a">–</b><span>自动执行</span></div>
+      <div class="ro acc"><b id="r2b">–</b><span>先问你</span></div>
+      <div class="ro warn"><b id="r2c">–</b><span>拒绝</span></div>
+    </div>
+    <p class="note">切换模式时，变的只有中间那一档；读文件永远自动，项目外的 <code>rm -rf</code> 永远拒绝。模式越放手，你越要靠 Git 存档和事后看 diff 兜底。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>Git 安全网：改坏了能退回去</h2>
+  <p>你刚给 <code>app.js</code> 写了一个 <code>average()</code> 函数，还没存档。现在想让 AI 把 <code>total()</code> 改简洁一点。按下面的按钮试两种顺序：先 <code>git commit</code> 再让 AI 改，或者直接让 AI 改。测试是页面真的执行 <code>app.js</code> 里的代码跑出来的，<code>git diff</code> 和提交编号也是真实算出来的。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="btns"><button class="btn" id="g-commit">git commit</button><button class="btn" id="g-ai">让 AI 改</button><button class="btn" id="g-test">npm test</button><button class="btn" id="g-diff">git diff</button><button class="btn" id="g-restore">git restore app.js</button><button class="btn" id="g-log">git log</button><button class="btn" id="g-reset">重来</button></div>
+    </div>
+    <svg id="fig3" viewBox="0 0 800 120" role="img" aria-label="操作时间线"></svg>
+    <div class="two" style="margin-top:10px">
+      <div><p class="cap">工作区里的 app.js</p><div class="code one" id="file3"></div></div>
+      <div><p class="cap">终端</p><pre class="term" id="term3"></pre></div>
+    </div>
+    <div class="readout">
+      <div class="ro acc"><b id="r3a">–</b><span>存档（提交）数</span></div>
+      <div class="ro"><b id="r3b">–</b><span>比最近一次存档</span></div>
+      <div class="ro ok" id="r3cw"><b id="r3c">–</b><span>你写的 average() 还在吗</span></div>
+      <div class="ro" id="r3dw"><b id="r3d">–</b><span>测试通过</span></div>
+    </div>
+    <p class="note">AI 不但让 <code>total([])</code> 报错，还顺手删掉了你的 <code>average()</code>。先存档的话，<code>git restore</code> 一步回到改之前；没存档就 restore，会退回更早的存档，你自己写的那段也一起没了。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>需求写得好不好</h2>
+  <p>同一个 AI，需求写得清楚，结果差别很大。一条好需求至少说清四件事：<b>目标</b>（要做成什么）、<b>范围</b>（改哪些文件、别动哪些）、<b>约束</b>（不许用什么、要保持什么）、<b>验证</b>（怎么算做完）。下面用一张检查清单按关键词给需求打分。这是页内规则，不是 AI 评分，只用来提醒你漏了哪一项。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>例子</label><div class="seg" id="ex4"><button data-v="0" aria-pressed="true">模糊 1</button><button data-v="1" aria-pressed="false">清楚 1</button><button data-v="2" aria-pressed="false">模糊 2</button><button data-v="3" aria-pressed="false">清楚 2</button><button data-v="4" aria-pressed="false">一次好几件</button></div></div>
+    </div>
+    <textarea id="ta4" rows="4" spellcheck="false" aria-label="你的需求"></textarea>
+    <div class="hl" id="hl4"></div>
+    <div class="checks" id="ck4"></div>
+    <p class="flag" id="fl4"></p>
+    <div class="readout">
+      <div class="ro acc"><b id="r4a">–</b><span>检查清单得分</span></div>
+      <div class="ro warn"><b id="r4b">–</b><span>还缺</span></div>
+    </div>
+    <p class="note">关键词规则很粗糙，写满四项也不代表需求一定好；但缺了哪一项，AI 往往就在哪一项上自己猜。最常缺的是「验证」：不说怎么算做完，它就会在自认为做完时停下。</p>
+  </div>
+</section>
+
+</div>
+<script>
+/*CORE-START*/
+// —— 通用：按行切分、LCS 行级 diff、git diff 式的改动块、SHA-1 ——
+function splitLines(s) { const a = s.replace(/\r\n/g, '\n').split('\n'); if (a.length && a[a.length - 1] === '') a.pop(); return a; }
+function diffLines(A, B) {
+  const n = A.length, m = B.length;
+  const dp = Array.from({ length: n + 1 }, () => new Int32Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) dp[i][j] = A[i] === B[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+  const ops = []; let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (A[i] === B[j]) { ops.push({ t: ' ', s: A[i], a: i + 1, b: j + 1 }); i++; j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) { ops.push({ t: '-', s: A[i], a: i + 1 }); i++; }
+    else { ops.push({ t: '+', s: B[j], b: j + 1 }); j++; }
+  }
+  while (i < n) { ops.push({ t: '-', s: A[i], a: i + 1 }); i++; }
+  while (j < m) { ops.push({ t: '+', s: B[j], b: j + 1 }); j++; }
+  return ops;
+}
+function diffStats(ops) { let add = 0, del = 0, same = 0; ops.forEach((o) => o.t === '+' ? add++ : o.t === '-' ? del++ : same++); return { add, del, same }; }
+// 和 diff -u / git diff 一样：每处改动前后各带 3 行上下文，相距不远的改动并成一块
+function hunks(ops, ctx = 3) {
+  const ch = []; ops.forEach((o, k) => { if (o.t !== ' ') ch.push(k); });
+  if (!ch.length) return [];
+  const groups = []; let s = ch[0], e = ch[0];
+  for (const k of ch.slice(1)) { if (k - e - 1 <= 2 * ctx) e = k; else { groups.push([s, e]); s = e = k; } }
+  groups.push([s, e]);
+  return groups.map(([s, e]) => {
+    const lo = Math.max(0, s - ctx), hi = Math.min(ops.length - 1, e + ctx);
+    let oBefore = 0, nBefore = 0; for (let k = 0; k < lo; k++) { if (ops[k].t !== '+') oBefore++; if (ops[k].t !== '-') nBefore++; }
+    const body = ops.slice(lo, hi + 1);
+    const ol = body.filter((o) => o.t !== '+').length, nl = body.filter((o) => o.t !== '-').length;
+    const f = (start, len) => len === 1 ? `${start}` : `${len === 0 ? start : start},${len}`;
+    return { head: `@@ -${f(ol ? oBefore + 1 : oBefore, ol)} +${f(nl ? nBefore + 1 : nBefore, nl)} @@`, body, oBefore };
+  });
+}
+function sha1(str) {
+  const b = Array.from(new TextEncoder().encode(str)); const ml = b.length * 8;
+  b.push(0x80); while (b.length % 64 !== 56) b.push(0);
+  for (let i = 7; i >= 0; i--) b.push(i >= 4 ? 0 : (ml >>> (i * 8)) & 255);
+  let h0 = 0x67452301, h1 = 0xEFCDAB89, h2 = 0x98BADCFE, h3 = 0x10325476, h4 = 0xC3D2E1F0; const w = new Array(80);
+  for (let o = 0; o < b.length; o += 64) {
+    for (let i = 0; i < 16; i++) w[i] = (b[o + 4 * i] << 24) | (b[o + 4 * i + 1] << 16) | (b[o + 4 * i + 2] << 8) | b[o + 4 * i + 3];
+    for (let i = 16; i < 80; i++) { const x = w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16]; w[i] = (x << 1) | (x >>> 31); }
+    let a = h0, bb = h1, c = h2, d = h3, e = h4;
+    for (let i = 0; i < 80; i++) {
+      const f = i < 20 ? (bb & c) | (~bb & d) : i < 40 ? bb ^ c ^ d : i < 60 ? (bb & c) | (bb & d) | (c & d) : bb ^ c ^ d;
+      const k = i < 20 ? 0x5A827999 : i < 40 ? 0x6ED9EBA1 : i < 60 ? 0x8F1BBCDC : 0xCA62C1D6;
+      const t = (((a << 5) | (a >>> 27)) + f + e + k + w[i]) | 0; e = d; d = c; c = (bb << 30) | (bb >>> 2); bb = a; a = t;
+    }
+    h0 = (h0 + a) | 0; h1 = (h1 + bb) | 0; h2 = (h2 + c) | 0; h3 = (h3 + d) | 0; h4 = (h4 + e) | 0;
+  }
+  return [h0, h1, h2, h3, h4].map((x) => (x >>> 0).toString(16).padStart(8, '0')).join('');
+}
+// Git 存文件内容用的哈希：sha1("blob <字节数>\0<内容>")，与 git hash-object 一致
+function blobHash(s) { return sha1(`blob ${new TextEncoder().encode(s).length}\0${s}`); }
+function gitDiffText(name, A, B) {
+  const ops = diffLines(splitLines(A), splitLines(B)), hs = hunks(ops);
+  if (!hs.length) return '';
+  let out = `diff --git a/${name} b/${name}\nindex ${blobHash(A).slice(0, 7)}..${blobHash(B).slice(0, 7)} 100644\n--- a/${name}\n+++ b/${name}\n`;
+  // git 默认在 @@ 后面附上改动块之前最近的一行「顶格写的」代码（通常是函数名），方便认出改在哪
+  const AL = splitLines(A);
+  hs.forEach((h) => { let fn = ''; for (let i = h.oBefore - 1; i >= 0; i--) if (/^[A-Za-z_$]/.test(AL[i])) { fn = ' ' + AL[i].slice(0, 80).trimEnd(); break; } out += h.head + fn + '\n'; h.body.forEach((o) => out += o.t + o.s + '\n'); });
+  return out;
+}
+
+// —— 02 权限规则（示意）——
+const KINDS = {
+  read: { name: '只读：看文件、搜代码', r: ['auto', 'auto', 'auto'] },
+  edit: { name: '改项目里的文件', r: ['ask', 'auto', 'auto'] },
+  run: { name: '在本机跑程序', r: ['ask', 'ask', 'auto'] },
+  gitlocal: { name: '本地 Git 操作', r: ['ask', 'ask', 'auto'] },
+  install: { name: '联网下载并装依赖', r: ['ask', 'ask', 'auto'] },
+  remote: { name: '推送到远端（别人看得见）', r: ['ask', 'ask', 'ask'] },
+  del: { name: '删除项目里的文件', r: ['ask', 'ask', 'ask'] },
+  outside: { name: '改项目外的文件', r: ['ask', 'ask', 'ask'] },
+  danger: { name: '禁止清单：不可挽回', r: ['deny', 'deny', 'deny'] },
+  unknown: { name: '规则认不出', r: ['ask', 'ask', 'ask'] },
+};
+function classify(cmd) {
+  const c = cmd.trim(), outside = /(^|\s)(\/|~|\.\.\/|\$HOME)/.test(c.replace(/^\S+/, ''));
+  if (/\bcurl\b[^|]*\|\s*(sudo\s+)?(sh|bash|zsh)\b/.test(c)) return 'danger';
+  if (/\brm\s+-\w*r/.test(c) && outside) return 'danger';
+  if (/^git\s+push\b.*(--force|\s-f\b)/.test(c)) return 'danger';
+  if (/^sudo\b/.test(c)) return 'danger';
+  if (/^(读取|查看|搜索)\s/.test(c) || /^(cat|ls|grep|rg|head|tail|find|wc|pwd)\b/.test(c) || /^git\s+(status|diff|log|show)\b/.test(c)) return outside ? 'outside' : 'read';
+  if (/^(编辑|修改|新建|写入)\s/.test(c) || /^(mkdir|touch|mv|cp)\b/.test(c)) return outside ? 'outside' : 'edit';
+  if (/^(rm|rmdir|del)\b/.test(c)) return outside ? 'outside' : 'del';
+  if (/^git\s+push\b/.test(c)) return 'remote';
+  if (/^(npm|pnpm|yarn|bun)\s+(install|i|add)\b/.test(c) || /^(pip3?|uv\s+pip)\s+install\b/.test(c)) return 'install';
+  if (/^git\s+(add|commit|restore|checkout|switch|branch|stash|merge)\b/.test(c)) return 'gitlocal';
+  if (/^(npm\s+(test|run|start)|npx|node|python3?|pytest|bun\s+(test|run)|make|cargo\s+(test|run|build)|go\s+(test|run|build))\b/.test(c)) return 'run';
+  return 'unknown';
+}
+
+// —— 03 Git 安全网：真执行 app.js 的测试 ——
+const APP0 = `function add(a, b) {\n  return a + b;\n}\n\nfunction total(list) {\n  let s = 0;\n  for (const x of list) s = add(s, x);\n  return s;\n}\n`;
+const APP_MINE = APP0 + `\nfunction average(list) {\n  return total(list) / list.length;\n}\n`;
+// AI 的改动：把 total 换成一行 reduce（没给初始值，空数组会报错），还顺手删掉了 average
+function aiEdit(src) {
+  const L = splitLines(src), out = []; let skip = false, done = false;
+  for (const line of L) {
+    if (/^function (total|average)\(/.test(line)) { skip = true; if (/total/.test(line)) { out.push('const total = (list) => list.reduce(add);'); done = true; } continue; }
+    if (skip) { if (line === '}') skip = false; continue; }
+    out.push(line);
+  }
+  while (out.length && out[out.length - 1] === '') out.pop();
+  return done ? out.join('\n') + '\n' : src;
+}
+const TESTS = [
+  ['total([1, 2, 3]) 等于 6', (m) => m.total([1, 2, 3]) === 6],
+  ['total([]) 等于 0', (m) => m.total([]) === 0],
+  ['average([2, 4]) 等于 3', (m) => m.average([2, 4]) === 3],
+];
+function runTests(src) {
+  let mod;
+  try { mod = new Function(src + '\nreturn { total: typeof total === "undefined" ? undefined : total, average: typeof average === "undefined" ? undefined : average };')(); }
+  catch (e) { return TESTS.map(([name]) => ({ name, ok: false, err: `${e.name}: ${e.message}` })); }
+  return TESTS.map(([name, fn]) => {
+    try {
+      if (/average/.test(name) && typeof mod.average !== 'function') throw new ReferenceError('average is not defined');
+      const ok = fn(mod); return { name, ok, err: ok ? '' : 'AssertionError: 结果不对' };
+    } catch (e) { return { name, ok: false, err: `${e.name}: ${e.message}` }; }
+  });
+}
+
+// —— 04 需求检查清单（关键词规则）——
+const CHECK = [
+  { k: 'goal', name: '目标', cls: 'g', re: /加一个|加上|添加|增加|新增|修复|修好|删除|删掉|去掉|改成|换成|实现|重命名|补一个|补上|写一个|做一个|拆成|合并/g, min: 12, tip: '说清楚要做成什么样' },
+  { k: 'scope', name: '范围', cls: 's', re: /[\w\-\/]+\.(html|css|js|ts|tsx|jsx|py|md|json|go|rs|java|vue)\b|只改|只动|不要改|不要动|别动|不要碰|这个函数|这个文件|目录/g, tip: '说清楚改哪些文件、别动哪些' },
+  { k: 'cons', name: '约束', cls: 'c', re: /不要引入|不引入|不要用|不用|不要加|保持|沿用|兼容|不能|必须|不超过|不变|风格一致/g, tip: '说清楚不许做什么、要保持什么' },
+  { k: 'verify', name: '验证', cls: 'v', re: /测试|npm test|pytest|跑一下|运行|验证|确认|截图|打开.{0,8}看|才算完成|能看到|应该显示/g, tip: '说清楚怎么算做完' },
+];
+function scorePrompt(text) {
+  const items = CHECK.map((c) => { const hits = [...text.matchAll(c.re)].map((m) => ({ i: m.index, s: m[0] })); return { ...c, hits, ok: hits.length > 0 && (!c.min || text.replace(/\s/g, '').length >= c.min) }; });
+  const multi = (text.match(/顺便|另外|还有|同时|以及|再把|并且/g) || []).length;
+  const readFirst = /先读|先看|先阅读|先了解|先说|先告诉我|说说你的计划|计划/.test(text);
+  return { items, score: items.filter((x) => x.ok).length, multi, readFirst };
+}
+/*CORE-END*/
+
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function seg(id, cb) {
+  const el = $(id);
+  el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; el.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); cb(b.dataset.v); });
+  return () => el.querySelector('[aria-pressed=true]').dataset.v;
+}
+function renderOps(ops) {
+  return ops.map((o) => `<div class="ln ${o.t === '+' ? 'add' : o.t === '-' ? 'del' : ''}"><span class="no">${o.a ?? ''}</span><span class="no">${o.b ?? ''}</span><span class="sg">${o.t === ' ' ? '' : o.t === '-' ? '−' : '+'}</span><span>${esc(o.s) || ' '}</span></div>`).join('');
+}
+function renderHunks(ops) {
+  const hs = hunks(ops); if (!hs.length) return '<div class="hk">（没有改动）</div>';
+  return hs.map((h) => `<div class="hk">${h.head}</div>` + renderOps(h.body)).join('');
+}
+function renderFile(src) { return splitLines(src).map((s, i) => `<div class="ln"><span class="no">${i + 1}</span><span>${esc(s) || ' '}</span></div>`).join(''); }
+
+/* ---------- 00 回放 ---------- */
+const F0 = {
+  'index.html': `<!doctype html>\n<html lang="zh-CN">\n<head>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <h1>我的小站</h1>\n  <p>欢迎来到我的小站。</p>\n  <script src="app.js"><\/script>\n</body>\n</html>\n`,
+  'style.css': `body {\n  background: #ffffff;\n  color: #222222;\n}\n`,
+  'app.js': `console.log('页面加载完成');\n`,
+};
+const F1 = {
+  'index.html': F0['index.html'].replace('  <h1>我的小站</h1>\n', '  <h1>我的小站</h1>\n  <button id="theme-toggle">深色模式</button>\n'),
+  'style.css': F0['style.css'] + `\nbody.dark {\n  background: #111214;\n  color: #e8e6df;\n}\n`,
+  'app.js': F0['app.js'] + `\nconst btn = document.getElementById('theme-btn');\nbtn.addEventListener('click', () => {\n  document.body.classList.toggle('dark');\n});\n`,
+};
+const APP_FIX = F1['app.js'].replace("'theme-btn'", "'theme-toggle'");
+const T0 = '$ npm test\n\n<span class="m">&gt; my-site@1.0.0 test\n&gt; node tests/theme.test.js</span>\n\n';
+const STEPS = [
+  { k: 'user', tag: '你', t: '你提出需求', text: '给网页加一个深色模式按钮，点一下在深浅色之间切换。只改 index.html、style.css、app.js，不要引入新的库。先读文件、说说计划再动手；改完跑 npm test，全部通过才算完成。' },
+  { k: 'read', tag: '读', t: '读文件', f: 'index.html' },
+  { k: 'read', tag: '读', t: '读文件', f: 'style.css' },
+  { k: 'read', tag: '读', t: '读文件', f: 'app.js' },
+  { k: 'plan', tag: '计划', t: '提出计划', plan: ['index.html：在标题下面加一个按钮，id 叫 theme-toggle', 'style.css：加一组 body.dark 的深色配色', 'app.js：点按钮时给 body 加上或去掉 dark'] },
+  { k: 'edit', tag: '改', t: '改文件', f: 'index.html', from: F0['index.html'], to: F1['index.html'] },
+  { k: 'edit', tag: '改', t: '改文件', f: 'style.css', from: F0['style.css'], to: F1['style.css'] },
+  { k: 'edit', tag: '改', t: '改文件', f: 'app.js', from: F0['app.js'], to: F1['app.js'] },
+  { k: 'run', tag: '跑', t: '跑命令', cmd: 'npm test', bad: true, out: T0 + 'tests/theme.test.js\n  <span class="g">✓</span> 页面上有 #theme-toggle 按钮\n  <span class="r">✗ 点按钮后 body 带上 dark</span>\n    <span class="r">TypeError: Cannot read properties of null (reading \'addEventListener\')\n        at app.js:4</span>\n\n<span class="r">1 failed</span>, <span class="g">1 passed</span>' },
+  { k: 'think', tag: '看结果', t: '看结果，找原因', text: 'app.js 第 4 行的 btn 是 null：页面里按钮的 id 是 theme-toggle，第 3 行却写成了 theme-btn，所以没找到按钮。改第 3 行。' },
+  { k: 'edit', tag: '再改', t: '再改文件', f: 'app.js', from: F1['app.js'], to: APP_FIX },
+  { k: 'run', tag: '再跑', t: '再跑命令', cmd: 'npm test', out: T0 + 'tests/theme.test.js\n  <span class="g">✓</span> 页面上有 #theme-toggle 按钮\n  <span class="g">✓</span> 点按钮后 body 带上 dark\n\n<span class="g">2 passed</span>' },
+  { k: 'done', tag: '完成', t: '完成，汇报' },
+];
+const TREE = [['my-site/', 0, 1], ['index.html', 1], ['style.css', 1], ['app.js', 1], ['package.json', 1], ['tests/', 1, 1], ['theme.test.js', 2]];
+let k0 = 0, auto0 = 0;
+function state0(k) {
+  const read = new Set(), ch = {}; let runs = 0, fails = 0;
+  for (let i = 0; i <= k; i++) {
+    const s = STEPS[i];
+    if (s.k === 'read') read.add(s.f);
+    if (s.k === 'edit') { const st = diffStats(diffLines(splitLines(s.from), splitLines(s.to))); ch[s.f] = ch[s.f] || { add: 0, del: 0 }; ch[s.f].add += st.add; ch[s.f].del += st.del; }
+    if (s.k === 'run') { runs++; if (s.bad) fails++; }
+  }
+  return { read, ch, runs, fails };
+}
+function draw0() {
+  const s = STEPS[k0], st = state0(k0);
+  $('#steps0').innerHTML = STEPS.map((x, i) => `<button data-i="${i}" class="${i < k0 ? 'done' : ''}${i === k0 ? ' cur done' : ''}${x.bad ? ' bad' : ''}${x.k === 'run' && !x.bad ? ' good' : ''}">${i + 1} ${x.tag}</button>`).join('');
+  $('#tree0').innerHTML = TREE.map(([n, d, dir]) => {
+    let bd = '';
+    if (st.ch[n]) bd = `<span class="a">+${st.ch[n].add}</span> <span class="d">−${st.ch[n].del}</span>`; else if (st.read.has(n)) bd = '读过';
+    return `<div class="${s.f === n ? 'cur' : ''}"><span class="${dir ? 'dir' : ''}" style="padding-left:${d * 14}px">${n}</span><span class="bd">${bd}</span></div>`;
+  }).join('');
+  const act = $('#act0'); act.className = 'act' + (s.bad ? ' bad' : s.k === 'run' || s.k === 'done' ? ' good' : '');
+  act.innerHTML = `<b>${s.t}</b>${s.f ? ' · ' + s.f : ''}${s.cmd ? ' · ' + s.cmd : ''}`;
+  let body = '';
+  if (s.k === 'user' || s.k === 'think') body = `<p class="bubble">${esc(s.text)}</p>`;
+  else if (s.k === 'read') body = `<div class="code one">${renderFile(F0[s.f])}</div>`;
+  else if (s.k === 'plan') body = `<ol class="plan">${s.plan.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>`;
+  else if (s.k === 'edit') body = `<div class="code">${renderOps(diffLines(splitLines(s.from), splitLines(s.to)))}</div>`;
+  else if (s.k === 'run') body = `<pre class="term">${s.out}</pre>`;
+  else {
+    const files = Object.keys(st.ch), a = files.reduce((x, f) => x + st.ch[f].add, 0), d = files.reduce((x, f) => x + st.ch[f].del, 0);
+    body = `<p class="bubble">做完了。改了 ${files.length} 个文件（${files.join('、')}），共新增 ${a} 行、删除 ${d} 行。第一次测试失败是因为按钮 id 写错，已修正，现在 npm test 全部通过。请看一下 diff 再提交。</p>`;
+  }
+  $('#body0').innerHTML = body;
+  const tot = Object.values(st.ch).reduce((x, c) => [x[0] + c.add, x[1] + c.del], [0, 0]);
+  $('#r0a').textContent = `${k0 + 1} / ${STEPS.length}`;
+  $('#r0b').textContent = st.read.size;
+  $('#r0c').textContent = `+${tot[0]} / −${tot[1]}`;
+  $('#r0d').textContent = `${st.runs}（${st.fails}）`;
+  $('#p0').disabled = k0 === 0; $('#n0').disabled = k0 === STEPS.length - 1;
+}
+function stop0() { clearInterval(auto0); auto0 = 0; $('#a0').textContent = '自动播放'; }
+$('#steps0').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; stop0(); k0 = +b.dataset.i; draw0(); });
+$('#p0').addEventListener('click', () => { stop0(); if (k0 > 0) k0--; draw0(); });
+$('#n0').addEventListener('click', () => { stop0(); if (k0 < STEPS.length - 1) k0++; draw0(); });
+$('#r0').addEventListener('click', () => { stop0(); k0 = 0; draw0(); });
+$('#a0').addEventListener('click', () => {
+  if (auto0) return stop0();
+  if (k0 === STEPS.length - 1) k0 = 0;
+  $('#a0').textContent = '暂停'; draw0();
+  auto0 = setInterval(() => { if (k0 < STEPS.length - 1) { k0++; draw0(); } if (k0 === STEPS.length - 1) stop0(); }, 1800);
+});
+
+/* ---------- 01 diff ---------- */
+const EX1 = [
+  [`function greet(name) {\n  const msg = 'Hello, ' + name;\n  console.log(msg);\n  return msg;\n}\n`,
+   `function greet(name) {\n  const msg = '你好，' + name;\n  console.log(msg);\n  return msg;\n}\n`],
+  [`function total(list) {\n  let s = 0;\n  for (const x of list) s += x;\n  return s;\n}\n`,
+   `function total(list) {\n  let s = 0;\n  for (const x of list) s += x;\n  return s;\n}\n\nfunction average(list) {\n  if (list.length === 0) return 0;\n  return total(list) / list.length;\n}\n`],
+  [`const API = 'https://api.example.com';\nconst TIMEOUT = 5000;\n\nfunction getUser(id) {\n  return fetch(API + '/users/' + id);\n}\n\nfunction getPosts(id) {\n  return fetch(API + '/posts?user=' + id);\n}\n\nfunction getComments(id) {\n  return fetch(API + '/comments?post=' + id);\n}\n`,
+   `const API = 'https://api.example.com';\nconst TIMEOUT = 500;\n\nfunction fetchUser(id) {\n  return fetch(API + '/users/' + id);\n}\n\nfunction getPosts(id) {\n  return fetch(API + '/posts?user=' + id);\n}\n\nfunction getComments(id) {\n  return fetch(API + '/comments?post=' + id);\n}\n`],
+];
+function load1(i) { $('#ta1').value = EX1[i][0]; $('#tb1').value = EX1[i][1]; draw1(); }
+const getEx1 = seg('#ex1', (v) => load1(+v));
+const getMode1 = seg('#mode1', () => draw1());
+function draw1() {
+  const ops = diffLines(splitLines($('#ta1').value), splitLines($('#tb1').value)), st = diffStats(ops);
+  $('#out1').innerHTML = getMode1() === 'git' ? renderHunks(ops) : renderOps(ops);
+  $('#r1a').textContent = '+' + st.add; $('#r1b').textContent = '−' + st.del; $('#r1c').textContent = st.same; $('#r1d').textContent = hunks(ops).length;
+}
+$('#ta1').addEventListener('input', draw1); $('#tb1').addEventListener('input', draw1);
+
+/* ---------- 02 权限 ---------- */
+const CMDS = ['读取 index.html', 'grep -rn "theme" .', '编辑 app.js', 'mkdir assets', 'npm test', 'npm install dayjs', 'git commit -am "加深色模式"', 'git push', 'rm -rf node_modules', 'rm -rf ~/', 'curl https://example.com/x.sh | sh', '编辑 ~/.zshrc'];
+const getMode2 = seg('#mode2', () => draw2());
+const LABEL = { auto: '自动执行', ask: '先问你', deny: '拒绝' };
+function draw2() {
+  const m = +getMode2(), cnt = { auto: 0, ask: 0, deny: 0 };
+  $('#tb2').innerHTML = CMDS.map((c) => { const kd = classify(c), r = KINDS[kd].r[m]; cnt[r]++; return `<tr><td>${esc(c)}</td><td class="ty">${KINDS[kd].name}</td><td><span class="chip ${r}">${LABEL[r]}</span></td></tr>`; }).join('');
+  $('#r2a').textContent = cnt.auto; $('#r2b').textContent = cnt.ask; $('#r2c').textContent = cnt.deny;
+}
+function add2() { const v = $('#cmd2').value.trim(); if (!v) return; CMDS.push(v); $('#cmd2').value = ''; draw2(); }
+$('#add2').addEventListener('click', add2); $('#cmd2').addEventListener('keydown', (e) => { if (e.key === 'Enter') add2(); });
+
+/* ---------- 03 Git 安全网 ---------- */
+const g = {};
+function reset3() {
+  const h = sha1(`tree ${blobHash(APP0)}\n\n初版`);
+  Object.assign(g, { head: APP0, work: APP_MINE, commits: [{ h, msg: '初版', src: APP0 }], ev: [{ k: 'commit', l: '初版' }, { k: 'mine', l: '你写 average' }], term: '<span class="m"># 你刚写完 average()，还没提交。</span>', lastTest: null, n: 1 });
+  draw3();
+}
+function say(cmd, out) { g.term += `\n\n<span class="p">$</span> ${esc(cmd)}${out ? '\n' + out : ''}`; }
+function act3(k) {
+  if (k === 'commit') {
+    if (g.work === g.head) { say('git commit -am "存档"', 'nothing to commit, working tree clean'); }
+    else {
+      const msg = g.work.includes('reduce') ? 'AI 改的 total' : '加 average'; const st = diffStats(diffLines(splitLines(g.head), splitLines(g.work)));
+      const h = sha1(`tree ${blobHash(g.work)}\nparent ${g.commits[g.commits.length - 1].h}\n\n${msg}`);
+      g.commits.push({ h, msg, src: g.work }); g.head = g.work; g.ev.push({ k: 'commit', l: msg });
+      say(`git commit -am "${msg}"`, `[main ${h.slice(0, 7)}] ${msg}\n 1 file changed, ${st.add} insertions(+), ${st.del} deletions(-)`);
+    }
+  } else if (k === 'ai') {
+    const nw = aiEdit(g.work);
+    if (nw === g.work) say('# AI', '<span class="m">total() 已经是一行了，没有可改的。</span>');
+    else { g.work = nw; g.ev.push({ k: 'ai', l: 'AI 改' }); g.term += '\n\n<span class="y">AI：已把 total() 改成一行 reduce，更简洁了。</span>'; }
+  } else if (k === 'test') {
+    const r = runTests(g.work); g.lastTest = r; const ok = r.filter((x) => x.ok).length;
+    say('npm test', r.map((x) => x.ok ? `  <span class="g">✓</span> ${x.name}` : `  <span class="r">✗ ${x.name}\n    ${esc(x.err)}</span>`).join('\n') + `\n\n${ok < r.length ? `<span class="r">${r.length - ok} failed</span>, ` : ''}<span class="g">${ok} passed</span>`);
+    g.ev.push({ k: ok === r.length ? 'pass' : 'fail', l: `测试 ${ok}/${r.length}` });
+  } else if (k === 'diff') {
+    const d = gitDiffText('app.js', g.head, g.work);
+    say('git diff', d ? esc(d).split('\n').map((l) => l.startsWith('+') && !l.startsWith('+++') ? `<span class="g">${l}</span>` : l.startsWith('-') && !l.startsWith('---') ? `<span class="r">${l}</span>` : l.startsWith('@@') ? `<span class="c">${l}</span>` : l).join('\n').trimEnd() : '');
+  } else if (k === 'restore') {
+    const lost = g.work !== g.head; g.work = g.head; say('git restore app.js', ''); if (lost) g.ev.push({ k: 'restore', l: '回退' });
+  } else if (k === 'log') {
+    say('git log --oneline', g.commits.slice().reverse().map((c, i) => `<span class="y">${c.h.slice(0, 7)}</span>${i === 0 ? ' <span class="c">(HEAD -&gt; main)</span>' : ''} ${esc(c.msg)}`).join('\n'));
+  }
+  draw3();
+}
+function draw3() {
+  const st = diffStats(diffLines(splitLines(g.head), splitLines(g.work)));
+  $('#file3').innerHTML = renderFile(g.work);
+  const t = $('#term3'); t.innerHTML = g.term; t.scrollTop = t.scrollHeight;
+  $('#r3a').textContent = g.commits.length;
+  $('#r3b').textContent = st.add + st.del ? `+${st.add} / −${st.del} 行` : '没有改动';
+  const has = /function average\(/.test(g.work);
+  $('#r3c').textContent = has ? '在' : (g.commits.some((c) => /function average\(/.test(c.src)) ? '不在（存档里还有）' : '不在，找不回了');
+  $('#r3cw').className = 'ro ' + (has ? 'ok' : 'warn');
+  const r = runTests(g.work), ok = r.filter((x) => x.ok).length;
+  $('#r3d').textContent = `${ok} / ${r.length}`; $('#r3dw').className = 'ro ' + (ok === r.length ? 'ok' : 'warn');
+  // 时间线
+  const mu = css('--muted'), li = css('--line'), col = { commit: css('--accent'), mine: css('--fg'), ai: css('--warn'), pass: css('--ok'), fail: css('--warn'), restore: css('--ok') };
+  const fig = $('#fig3'), nar = fig.clientWidth > 0 && fig.clientWidth < 600, W = nar ? 420 : 800, H = 120; fig.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const ev = g.ev.slice(nar ? -5 : -8), x0 = 44, x1 = W - 44, X = (i) => ev.length < 2 ? (x0 + x1) / 2 : x0 + i * (x1 - x0) / (ev.length - 1), y = 52;
+  let s = `<line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}" stroke="${li}" stroke-width="2"/>`;
+  ev.forEach((e, i) => {
+    const c = col[e.k]; const x = X(i);
+    s += e.k === 'commit' ? `<circle cx="${x}" cy="${y}" r="11" fill="${c}"/>` : e.k === 'ai' ? `<rect x="${x - 10}" y="${y - 10}" width="20" height="20" rx="3" fill="${c}"/>` : e.k === 'restore' ? `<path d="M${x + 10} ${y - 10} L${x - 10} ${y} L${x + 10} ${y + 10}Z" fill="${c}"/>` : `<circle cx="${x}" cy="${y}" r="9" fill="${css('--paper')}" stroke="${c}" stroke-width="3"/>`;
+    s += `<text x="${x}" y="${i % 2 ? y + 38 : y - 22}" font-size="${nar ? 17 : 14}" fill="${e.k === 'mine' ? mu : c}" text-anchor="middle">${esc(e.l)}</text>`;
+  });
+  $('#fig3').innerHTML = s;
+}
+['commit', 'ai', 'test', 'diff', 'restore', 'log'].forEach((k) => $('#g-' + k).addEventListener('click', () => act3(k)));
+$('#g-reset').addEventListener('click', reset3);
+
+/* ---------- 04 检查清单 ---------- */
+const EX4 = [
+  '帮我把网页改好看一点',
+  '在 index.html 的标题下面加一个深色模式按钮，点一下在深浅色之间切换。只改 index.html、style.css、app.js，不要引入新的库。先读这三个文件、说说你的计划再动手；改完跑 npm test，全部通过才算完成。',
+  '登录有 bug，修一下',
+  '输错密码时登录页直接白屏，控制台报 TypeError。先读 login.js 找出原因，只改这个文件，保持现有的函数名不变。修好后跑 npm test，再补一个「密码错误时显示提示」的测试。',
+  '顺便把首页重做一下，另外加个评论功能，还有把数据库换成 PostgreSQL，同时把测试也补上',
+];
+seg('#ex4', (v) => { $('#ta4').value = EX4[+v]; draw4(); });
+function draw4() {
+  const text = $('#ta4').value, r = scorePrompt(text);
+  // 高亮命中的词
+  const marks = []; r.items.forEach((it) => it.hits.forEach((h) => marks.push({ ...h, cls: it.cls })));
+  marks.sort((a, b) => a.i - b.i); let out = '', p = 0;
+  marks.forEach((m) => { if (m.i < p) return; out += esc(text.slice(p, m.i)) + `<mark class="${m.cls}">${esc(m.s)}</mark>`; p = m.i + m.s.length; });
+  out += esc(text.slice(p)); $('#hl4').innerHTML = out || '<span style="color:var(--muted)">（空）</span>';
+  $('#ck4').innerHTML = r.items.map((it) => `<div class="ck ${it.ok ? 'y' : 'n'}"><b>${it.ok ? '✓' : '✗'} ${it.name}</b><span>${it.ok ? '命中：' + [...new Set(it.hits.map((h) => h.s))].slice(0, 4).join('、') : it.hits.length && it.min ? '太短，说不清要做成什么' : it.tip}</span></div>`).join('');
+  const fl = []; if (r.multi >= 2) fl.push(['w', `一次说了好几件事（${r.multi} 个「顺便 / 另外 / 还有」）：拆成几次，每次一件，做完一件验证一件。`]);
+  if (r.readFirst) fl.push(['o', '要求先读、先说计划再动手：好习惯，计划不对可以在它改文件前就纠正。']);
+  $('#fl4').innerHTML = fl.map(([c, t]) => `<span class="flag ${c}" style="display:block">${t}</span>`).join('');
+  $('#r4a').textContent = `${r.score} / 4`;
+  $('#r4b').textContent = r.items.filter((x) => !x.ok).map((x) => x.name).join('、') || '无';
+}
+$('#ta4').addEventListener('input', draw4);
+
+/* ---------- 启动与重绘 ---------- */
+load1(0); $('#ta4').value = EX4[0]; reset3();
+const all = () => { draw0(); draw1(); draw2(); draw3(); draw4(); };
+all();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(draw3, 150); });
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>

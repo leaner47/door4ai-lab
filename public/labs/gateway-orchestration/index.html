@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>网关与多 Agent 编排实验室</title>
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
+  --tool:#a8740a; --tool-soft:#f6ead0;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f;
+  --tool:#f2b84b; --tool-soft:#3d3018; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f;
+  --tool:#f2b84b; --tool-soft:#3d3018; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+p code,li code,.note code{font-size:.88em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0;min-width:0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl b{font-variant-numeric:tabular-nums;min-width:2.6em}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input[type=range]{accent-color:var(--accent);max-width:180px}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:720px){.two{grid-template-columns:minmax(0,1fr)}}
+.cap{font-size:12px;color:var(--muted);margin:4px 0 0;text-align:center}
+.key{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;margin:0 0 8px}
+.key i{display:inline-block;width:18px;height:10px;vertical-align:middle;margin-right:6px;border-radius:2px}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px;min-width:0}
+.ro b{display:block;font-size:20px;font-weight:600;overflow-wrap:anywhere}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn{border-color:var(--warn)} .ro.warn b{color:var(--warn)}
+.ro.acc{border-color:var(--accent)} .ro.acc b{color:var(--accent)}
+.ro.ok{border-color:var(--ok)} .ro.ok b{color:var(--ok)}
+.ro.tool{border-color:var(--tool)} .ro.tool b{color:var(--tool)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:6px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.num,th.num{text-align:right}
+.tw{overflow-x:auto}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">网关 · 路由 · 降级 · 缓存 · 多 Agent 编排</div>
+  <h1>网关与多 Agent 编排实验室</h1>
+  <p class="lede">一个模型不够用的时候，请求要在几个模型之间分流，任务要在几个 Agent 之间拆分。下面每个读数都是页内模拟真实算出来的，模型价格和能力是示例参数。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>路由与成本：先让便宜模型试</h2>
+  <p>三档模型，价格和能力都是<b>示例参数</b>：小档每百万 token 输入 $0.15、输出 $0.60，中档 $1 / $4，大档 $5 / $25；每个请求按 800 个输入 token、400 个输出 token 计费。每个请求有一个难度 <i>d</i>，模型答对的概率是 1 / (1 + e<sup>−12(<i>a</i> − <i>d</i>)</sup>)，<i>a</i> 是模型能力（小 0.35、中 0.60、大 0.85）。「先小后大」：小档先答，同时给出一个自评把握；把握低于阈值就把请求升级到中档，中档再没把握就升级到大档。被升级的请求，前面那几次调用的钱照付。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="h0">难题比例</label><input id="h0" type="range" min="0" max="100" step="5" value="30"><b id="h0v"></b></div>
+      <div class="ctrl"><label for="t0">升级阈值</label><input id="t0" type="range" min="0" max="100" step="5" value="80"><b id="t0v"></b></div>
+      <div class="ctrl"><label for="n0">自评噪声</label><input id="n0" type="range" min="0" max="50" step="5" value="10"><b id="n0v"></b></div>
+    </div>
+    <div class="key"><span><i style="background:var(--muted)"></i>全用小档</span><span><i style="background:var(--tool)"></i>全用中档</span><span><i style="background:var(--accent)"></i>全用大档</span><span><i style="background:var(--ok)"></i>先小后大（阈值从 0 扫到 1）</span></div>
+    <svg id="fig0" viewBox="0 0 800 300" role="img" aria-label="四种策略的成本与正确率"></svg>
+    <p class="cap">横轴：每 1000 个请求的费用（美元，对数坐标）；纵轴：正确率。4000 个请求，种子固定</p>
+    <div class="readout">
+      <div class="ro"><b id="r0a">–</b><span>全用小档：费用 · 正确率</span></div>
+      <div class="ro acc"><b id="r0b">–</b><span>全用大档：费用 · 正确率</span></div>
+      <div class="ro ok"><b id="r0c">–</b><span>先小后大：费用 · 正确率</span></div>
+      <div class="ro ok"><b id="r0d">–</b><span>先小后大：升到中档 · 升到大档</span></div>
+    </div>
+    <p class="note">把握阈值拉高，升级的请求变多，正确率逼近全用大档，费用也往上走；拉到 0 就等于全用小档。自评噪声越大，该升级的没升、不该升的升了，绿色曲线整体往右下方塌：路由省不省钱，取决于便宜模型「知道自己不知道」的能力。</p>
+  </div>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>降级与重试：主模型挂了怎么办</h2>
+  <p>20000 个请求。主模型以一定概率整段不可用（这个请求的所有尝试都会等到超时），可用时每次尝试又有一定概率被限流（HTTP 429，0.2 s 内返回）。限流就按 0.5 s、1 s、2 s 退避后重试；有备用模型时，超时或重试用完就切过去。主模型正常响应的中位数 1.5 s，备用模型 2.2 s、可用率 99.5%、限流概率 2%（示例参数）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="a1">主模型可用率</label><input id="a1" type="range" min="80" max="100" step="0.5" value="95"><b id="a1v"></b></div>
+      <div class="ctrl"><label for="q1">限流概率</label><input id="q1" type="range" min="0" max="50" step="1" value="10"><b id="q1v"></b></div>
+      <div class="ctrl"><label>重试次数</label><div class="seg" id="rt1"><button data-v="0" aria-pressed="false">0</button><button data-v="1" aria-pressed="false">1</button><button data-v="2" aria-pressed="true">2</button><button data-v="3" aria-pressed="false">3</button></div></div>
+      <div class="ctrl"><label>超时</label><div class="seg" id="to1"><button data-v="3" aria-pressed="false">3 s</button><button data-v="10" aria-pressed="true">10 s</button><button data-v="30" aria-pressed="false">30 s</button></div></div>
+    </div>
+    <div class="key"><span><i style="background:var(--warn)"></i>只有主模型</span><span><i style="background:var(--accent)"></i>主模型 + 备用</span></div>
+    <svg id="fig1" viewBox="0 0 800 280" role="img" aria-label="请求耗时的累积分布"></svg>
+    <p class="cap">横轴：从发出请求到拿到结果或报错的时间（对数坐标）；纵轴：在这个时间内结束的请求比例。竖线是 P95</p>
+    <div class="readout">
+      <div class="ro warn"><b id="r1a">–</b><span>只有主模型：成功率</span></div>
+      <div class="ro acc"><b id="r1b">–</b><span>加备用：成功率</span></div>
+      <div class="ro warn"><b id="r1c">–</b><span>只有主模型：P95 耗时</span></div>
+      <div class="ro acc"><b id="r1d">–</b><span>加备用：P95 耗时</span></div>
+      <div class="ro"><b id="r1e">–</b><span>由备用模型完成的请求</span></div>
+      <div class="ro"><b id="r1f">–</b><span>只有主模型的成功率（解析解）</span></div>
+    </div>
+    <p class="note">重试只救得了限流这种「下一次可能就好」的错误，救不了整段不可用：模型挂了，重试三次就是多等三次超时，成功率不变，P95 反而更难看。备用模型把这部分请求接住；超时设短一点，切换来得更早，尾部延迟随之下降，代价是偶尔把本来会慢慢返回的请求也切走。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>缓存：完全相同的请求不再花钱</h2>
+  <p>10000 个请求，每分钟 10 个。每个请求以「重复率」的概率和之前某个请求一字不差（隔多久重复按指数分布抽，平均 1 小时），否则是新请求。网关的<b>响应缓存</b>按完整请求做键：命中且没过期就直接返回上次的结果，不调模型。每个请求 2800 个输入 token（其中 2000 是固定的系统提示）、400 个输出 token，按示例价 $3 / $15 每百万 token 计。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="p2">重复率</label><input id="p2" type="range" min="0" max="80" step="5" value="30"><b id="p2v"></b></div>
+      <div class="ctrl"><label>缓存有效期</label><div class="seg" id="ttl2"><button data-v="5" aria-pressed="false">5 min</button><button data-v="60" aria-pressed="true">1 h</button><button data-v="1440" aria-pressed="false">24 h</button></div></div>
+    </div>
+    <div class="key"><span><i style="background:var(--warn)"></i>不缓存</span><span><i style="background:var(--accent)"></i>响应缓存</span><span><i style="background:var(--ok)"></i>响应缓存 + prompt cache</span></div>
+    <svg id="fig2" viewBox="0 0 800 260" role="img" aria-label="累计费用随请求数"></svg>
+    <p class="cap">横轴：第几个请求；纵轴：累计费用（美元）</p>
+    <div class="readout">
+      <div class="ro acc"><b id="r2a">–</b><span>响应缓存命中率</span></div>
+      <div class="ro acc"><b id="r2b">–</b><span>省下的模型调用</span></div>
+      <div class="ro warn"><b id="r2c">–</b><span>不缓存：总费用</span></div>
+      <div class="ro acc"><b id="r2d">–</b><span>响应缓存：总费用</span></div>
+      <div class="ro ok"><b id="r2e">–</b><span>再加 prompt cache：总费用</span></div>
+    </div>
+    <p class="note">两种缓存省的不是一回事。响应缓存只对一字不差的请求有效，命中时整个调用都省了，连等待也没有；prompt cache 对每一次真正发生的调用都有效，但只省重复前缀那部分输入的钱（这里按读缓存 0.1 倍计）。重复率为 0 时只剩 prompt cache 在省钱。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>主 Agent 拆任务：并行能快多少</h2>
+  <p>一个调研任务拆成 <i>n</i> 个子任务，每个子任务要转 4 圈工具调用，每圈带回 1500 个 token 的工具结果、模型输出 150 个 token。<b>单 Agent</b> 一个接一个做，所有结果都堆在同一个上下文里；<b>多 Agent</b> 由主 Agent 先拆分，派给 <i>n</i> 个子 Agent 并行做，每个子 Agent 从干净的上下文开始，先要花几圈熟悉情况（冷启动），做完写一段 500 token 的结论交回，主 Agent 读完所有结论再汇总。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="k3">子任务数</label><input id="k3" type="range" min="1" max="8" step="1" value="4"><b id="k3v"></b></div>
+      <div class="ctrl"><label for="t3">每个子任务耗时</label><input id="t3" type="range" min="10" max="120" step="5" value="40"><b id="t3v"></b></div>
+      <div class="ctrl"><label for="v3">耗时差异</label><input id="v3" type="range" min="0" max="80" step="10" value="40"><b id="v3v"></b></div>
+      <div class="ctrl"><label>冷启动</label><div class="seg" id="c3"><button data-v="0" aria-pressed="false">0 圈</button><button data-v="1" aria-pressed="true">1 圈</button><button data-v="2" aria-pressed="false">2 圈</button></div></div>
+    </div>
+    <div class="key"><span><i style="background:var(--warn)"></i>单 Agent 的子任务</span><span><i style="background:var(--accent)"></i>子 Agent 的子任务</span><span><i style="background:var(--muted)"></i>规划 / 冷启动</span><span><i style="background:var(--ok)"></i>写结论 / 汇总</span></div>
+    <svg id="fig3" viewBox="0 0 800 300" role="img" aria-label="单 Agent 与多 Agent 的时间线"></svg>
+    <p class="cap">横轴：墙钟时间（s）</p>
+    <div class="readout">
+      <div class="ro warn"><b id="r3a">–</b><span>单 Agent：墙钟时间</span></div>
+      <div class="ro acc"><b id="r3b">–</b><span>多 Agent：墙钟时间</span></div>
+      <div class="ro"><b id="r3c">–</b><span>加速比</span></div>
+      <div class="ro warn"><b id="r3d">–</b><span>单 Agent：总 token</span></div>
+      <div class="ro acc"><b id="r3e">–</b><span>多 Agent：总 token</span></div>
+    </div>
+    <p class="note">多 Agent 的墙钟时间由最慢的那个子 Agent 决定，所以耗时差异越大，加速越打折。总 token 这一栏不一定是多 Agent 更多：同样的工作量下，单 Agent 每一圈都要把之前所有子任务的结果重发一遍，而子 Agent 只重发自己的；多出来的是冷启动、结论和主 Agent 的拆分与汇总。真实系统里多 Agent 往往更贵，是因为它被允许做更多的事，下一个实验细看。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>上下文隔离：谁的窗口先撑爆</h2>
+  <p>还是实验 03 的任务（冷启动 1 圈），这次看每一次模型调用发出去的上下文有多长。单 Agent 的上下文一路堆高；每个子 Agent 只装自己那一份，主 Agent 只读各家的结论。费用按示例价 $3 每百万输入 token 计，「有 prompt cache」时上一次调用已经发过的前缀按 0.1 倍计。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="k4">子任务数</label><input id="k4" type="range" min="1" max="10" step="1" value="6"><b id="k4v"></b></div>
+      <div class="ctrl"><label for="w4">每圈工具结果</label><input id="w4" type="range" min="500" max="10000" step="500" value="3000"><b id="w4v"></b></div>
+    </div>
+    <div class="key"><span><i style="background:var(--warn)"></i>单 Agent</span><span><i style="background:var(--accent)"></i>各子 Agent</span><span><i style="background:var(--ok)"></i>主 Agent</span><span><i style="background:var(--muted)"></i>200K 窗口</span></div>
+    <svg id="fig4" viewBox="0 0 800 280" role="img" aria-label="每次调用的上下文长度"></svg>
+    <p class="cap">横轴：第几次模型调用（子 Agent 并行，画在同一段横轴上）；纵轴：这次调用的输入长度（token）</p>
+    <div class="readout">
+      <div class="ro warn"><b id="r4a">–</b><span>单 Agent：最长上下文</span></div>
+      <div class="ro acc"><b id="r4b">–</b><span>多 Agent：最长上下文</span></div>
+      <div class="ro warn"><b id="r4c">–</b><span>单 Agent：总输入 token</span></div>
+      <div class="ro acc"><b id="r4d">–</b><span>多 Agent：总输入 token</span></div>
+      <div class="ro warn"><b id="r4e">–</b><span>单 Agent：输入费用（无 / 有缓存）</span></div>
+      <div class="ro acc"><b id="r4f">–</b><span>多 Agent：输入费用（无 / 有缓存）</span></div>
+    </div>
+    <p class="note">隔离最直接的好处是没有哪个上下文会撑爆窗口，也没有哪条关键信息被埋在十几万 token 的中间。费用上，单 Agent 二次方增长的重发量大多是重复前缀，开了 prompt cache 会便宜得多，所以「省 token」本身通常不是拆分的理由；拆分换来的是速度和每个上下文的干净。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>何时不该拆：子任务互相依赖的时候</h2>
+  <p>这是一个<b>示意模型</b>，用来看趋势，不是测量值。<i>n</i> 个子任务，每个耗时 1 个单位；任意两个子任务之间以「依赖程度」的概率存在先后依赖（后一个要用前一个的结果）。单 Agent 顺序做，一切都在同一个上下文里，不丢信息，耗时 <i>n</i>。多 Agent 按依赖关系分批并行，拆分与汇总另花 0.5；每条依赖要靠结论交接，以「交接丢失率」的概率丢掉关键信息，接收方要返工一次（返工再并行补一轮，耗时 +1）。每个点 2000 张随机依赖图。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="d5">依赖程度</label><input id="d5" type="range" min="0" max="100" step="5" value="30"><b id="d5v"></b></div>
+      <div class="ctrl"><label for="q5">交接丢失率</label><input id="q5" type="range" min="0" max="60" step="5" value="20"><b id="q5v"></b></div>
+      <div class="ctrl"><label for="k5">子任务数</label><input id="k5" type="range" min="2" max="10" step="1" value="6"><b id="k5v"></b></div>
+    </div>
+    <div class="two">
+      <div><svg id="fig5a" viewBox="0 0 400 260" role="img" aria-label="加速比随依赖程度"></svg><p class="cap">加速比（单 Agent 耗时 ÷ 多 Agent 耗时）随依赖程度；虚线 = 1</p></div>
+      <div><svg id="fig5b" viewBox="0 0 400 260" role="img" aria-label="返工率随依赖程度"></svg><p class="cap">返工率（返工的子任务 ÷ 子任务数）随依赖程度</p></div>
+    </div>
+    <div class="readout">
+      <div class="ro acc"><b id="r5a">–</b><span>当前：加速比</span></div>
+      <div class="ro warn"><b id="r5b">–</b><span>当前：返工率</span></div>
+      <div class="ro"><b id="r5c">–</b><span>当前：总工作量（单 Agent = 1）</span></div>
+      <div class="ro warn"><b id="r5d">–</b><span>依赖程度超过多少就不如不拆</span></div>
+    </div>
+    <p class="note">依赖为 0 时拆分最划算；依赖越密，能并行的批次越少，交接越多，丢信息返工也越多，加速比一路掉到 1 以下。交接丢失率拉到 0，曲线仍会往下走：那部分损失来自「必须等前一个做完」，跟信息丢不丢无关。</p>
+  </div>
+</section>
+
+</div>
+<script>
+// ==LOGIC== 纯计算，浏览器与 node 共用
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function gauss(r) { let u = 0; while (u === 0) u = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r()); }
+const quant = (a, q) => { const b = Float64Array.from(a).sort(); return b[Math.min(b.length - 1, Math.floor(q * b.length))]; };
+
+/* 00 路由：三档模型（示例参数） */
+const TIERS = [
+  { name: '小', a: 0.35, pin: 0.15, pout: 0.60 },
+  { name: '中', a: 0.60, pin: 1.00, pout: 4.00 },
+  { name: '大', a: 0.85, pin: 5.00, pout: 25.00 },
+];
+const TIN = 800, TOUT = 400;
+const callCost = (t) => (TIN * t.pin + TOUT * t.pout) / 1e6;
+const pRight = (t, d) => 1 / (1 + Math.exp(-12 * (t.a - d)));
+function makeBatch(hard, n = 4000, seed = 7) { const r = rng(seed), ds = []; for (let i = 0; i < n; i++) ds.push(r() < hard ? 0.5 + 0.5 * r() : 0.5 * r()); return ds; }
+// strat: 0/1/2 = 只用某一档；'cascade' = 小 → 中 → 大
+function route(ds, strat, tau = 0.8, noise = 0.1, seed = 11) {
+  const r = rng(seed); let cost = 0, ok = 0; const calls = [0, 0, 0];
+  for (const d of ds) {
+    if (strat !== 'cascade') { const t = TIERS[strat]; cost += callCost(t); calls[strat]++; if (r() < pRight(t, d)) ok++; continue; }
+    for (let k = 0; k < 3; k++) {
+      const t = TIERS[k], p = pRight(t, d), right = r() < p, conf = p + noise * gauss(r);
+      cost += callCost(t); calls[k]++;
+      if (k === 2 || conf >= tau) { if (right) ok++; break; }
+    }
+  }
+  return { cost: cost / ds.length * 1000, acc: ok / ds.length, up1: calls[1] / ds.length, up2: calls[2] / ds.length };
+}
+
+/* 01 降级与重试 */
+function simFail({ avail = 0.95, r429 = 0.1, retries = 2, timeout = 10, backup = false, N = 20000, seed = 3 }) {
+  const r = rng(seed), lat = new Float64Array(N); let ok = 0, viaB = 0;
+  const logn = (med) => med * Math.exp(0.4 * gauss(r));
+  // 在一个模型上尝试：返回 [是否成功, 耗时, 是否因超时放弃]
+  const tryModel = (up, rl, med, allowRetryTimeout) => {
+    let t = 0;
+    for (let k = 0; k <= retries; k++) {
+      if (k > 0) t += 0.5 * 2 ** (k - 1);           // 退避 0.5, 1, 2 s
+      if (!up) { t += timeout; if (!allowRetryTimeout) return [false, t]; continue; }
+      if (r() < rl) { t += 0.2; continue; }          // 429
+      return [true, t + logn(med)];
+    }
+    return [false, t];
+  };
+  for (let i = 0; i < N; i++) {
+    const up = r() < avail;
+    let [s, t] = tryModel(up, r429, 1.5, !backup);
+    if (!s && backup) { const upB = r() < 0.995; const [s2, t2] = tryModel(upB, 0.02, 2.2, false); s = s2; t += t2; if (s2) viaB++; }
+    lat[i] = t; if (s) ok++;
+  }
+  return { succ: ok / N, p50: quant(lat, 0.5), p95: quant(lat, 0.95), viaB: viaB / N, lat };
+}
+const succNoBackup = (a, q, R) => a * (1 - q ** (R + 1));
+
+/* 02 响应缓存 */
+const C2 = { tin: 2800, tfix: 2000, tout: 400, pin: 3, pout: 15 };
+function simCache(rho, ttlMin, N = 10000, seed = 5) {
+  const r = rng(seed), keys = new Int32Array(N), cachedAt = new Map(); let next = 0, hits = 0;
+  const full = (C2.tin * C2.pin + C2.tout * C2.pout) / 1e6;
+  const pc = ((C2.tin - C2.tfix) * C2.pin + C2.tfix * C2.pin * 0.1 + C2.tout * C2.pout) / 1e6;
+  const cum = [[0, 0, 0]]; let c0 = 0, c1 = 0, c2 = 0;
+  for (let i = 0; i < N; i++) {
+    const now = i / 10;  // 分钟
+    let key;
+    if (i > 0 && r() < rho) { const lag = Math.max(1, Math.round(-600 * Math.log(1 - r()))); key = keys[Math.max(0, i - lag)]; } else key = next++;
+    keys[i] = key;
+    c0 += full;
+    const at = cachedAt.get(key);
+    if (at !== undefined && now - at <= ttlMin) hits++;
+    else { cachedAt.set(key, now); c1 += full; c2 += pc; }
+    if ((i + 1) % 100 === 0) cum.push([c0, c1, c2]);
+  }
+  return { hit: hits / N, saved: hits, c0, c1, c2, cum };
+}
+
+/* 03 / 04 单 Agent vs 多 Agent（同样的工作量） */
+const W3 = { c0: 3000, plan: 300, brief: 150, rounds: 4, tool: 1500, out: 150, summ: 500, final: 800, tPlan: 3, tSumm: 2, tFinal: 5 };
+function durations(n, t, cv, seed = 9) { const r = rng(seed), a = []; for (let i = 0; i < n; i++) a.push(t * Math.exp(cv * gauss(r) - cv * cv / 2)); return a; }
+// 返回每次调用的输入长度，以及墙钟时间与 token
+function orchestrate({ n = 4, t = 40, cv = 0.4, cold = 1, tool = W3.tool, seed = 9 }) {
+  const P = { ...W3, tool }, d = P.tool + P.out, ts = durations(n, t, cv, seed);
+  // 单 Agent
+  const single = { calls: [], out: 0 };
+  single.calls.push(P.c0); single.out += P.plan;
+  let ctx = P.c0 + P.plan;
+  for (let i = 0; i < n * P.rounds; i++) { single.calls.push(ctx); single.out += P.out; ctx += d; }
+  single.calls.push(ctx); single.out += P.final;
+  single.wall = P.tPlan + ts.reduce((a, b) => a + b, 0) + P.tFinal;
+  // 多 Agent
+  const multi = { lead: [], subs: [], out: 0 };
+  multi.lead.push(P.c0); multi.out += P.plan + n * P.brief;
+  const lanes = [];
+  for (let i = 0; i < n; i++) {
+    const calls = []; let c = P.c0 + P.brief; const R = P.rounds + cold;
+    for (let j = 0; j < R; j++) { calls.push(c); multi.out += P.out; c += d; }
+    calls.push(c); multi.out += P.summ;            // 写结论
+    multi.subs.push(calls);
+    const per = ts[i] / P.rounds;
+    lanes.push({ cold: cold * per, work: ts[i], summ: P.tSumm });
+  }
+  multi.lead.push(P.c0 + P.plan + n * P.brief + n * P.summ); multi.out += P.final;
+  const slow = Math.max(...lanes.map((l) => l.cold + l.work + l.summ));
+  multi.wall = P.tPlan + slow + P.tFinal;
+  const sum = (a) => a.reduce((x, y) => x + y, 0);
+  single.inTok = sum(single.calls); single.total = single.inTok + single.out; single.max = Math.max(...single.calls);
+  multi.inTok = sum(multi.lead) + sum(multi.subs.map(sum)); multi.total = multi.inTok + multi.out;
+  multi.max = Math.max(...multi.lead, ...multi.subs.flat());
+  return { ts, lanes, single, multi, P };
+}
+// 输入费用：无缓存全价；有缓存时，上一次调用已发过的前缀按 0.1 倍
+function inputCost(seqs, price = 3, cachedPrefix = 0) {
+  let full = 0, cached = 0, first = true;
+  for (const s of seqs) for (let i = 0; i < s.length; i++) {
+    full += s[i];
+    const prev = i > 0 ? s[i - 1] : (first ? 0 : cachedPrefix);
+    cached += Math.min(prev, s[i]) * 0.1 + (s[i] - Math.min(prev, s[i]));
+    first = false;
+  }
+  return [full * price / 1e6, cached * price / 1e6];
+}
+
+/* 05 依赖与返工（示意模型） */
+function splitSim(n, D, q, G = 2000, seed = 21) {
+  const r = rng(seed); let wall = 0, rework = 0;
+  for (let g = 0; g < G; g++) {
+    const f = new Array(n).fill(1); let any = false, rw = 0;
+    for (let j = 0; j < n; j++) {
+      let lost = false;
+      for (let i = 0; i < j; i++) if (r() < D) { f[j] = Math.max(f[j], f[i] + 1); if (r() < q) lost = true; }
+      if (lost) { rw++; any = true; }
+    }
+    wall += 0.5 + Math.max(...f) + (any ? 1 : 0); rework += rw / n;
+  }
+  const mw = wall / G;
+  return { speed: n / mw, rework: rework / G, work: 1 + rework / G };
+}
+// ==END==
+
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function seg(id, cb) {
+  const el = $(id);
+  el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; el.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); cb(b.dataset.v); });
+  return () => +el.querySelector('[aria-pressed=true]').dataset.v;
+}
+function vb(id, w, h, nw, nh) { const el = $(id), n = el.clientWidth > 0 && el.clientWidth < 600, W = n ? nw : w, H = n ? nh : h; el.setAttribute('viewBox', `0 0 ${W} ${H}`); return [W, H, n]; }
+const path = (pts, col, w = 2, extra = '') => pts.length ? `<path d="${pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('')}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linejoin="round" ${extra}/>` : '';
+const pct = (v, d = 1) => (v * 100).toFixed(d) + '%';
+const usd = (v) => '$' + (v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2));
+const sec = (v) => (v >= 10 ? v.toFixed(0) : v.toFixed(1)) + ' s';
+const ktok = (v) => v >= 1e6 ? (v / 1e6).toFixed(2) + 'M' : v >= 1e4 ? Math.round(v / 1e3) + 'K' : (v / 1e3).toFixed(1) + 'K';
+const txt = (x, y, s, fs, col, anchor = 'start', extra = '') => `<text x="${x}" y="${y}" font-size="${fs}" fill="${col}" text-anchor="${anchor}" ${extra}>${s}</text>`;
+
+/* ---------- 00 ---------- */
+function draw0() {
+  const hard = +$('#h0').value / 100, tau = +$('#t0').value / 100, noise = +$('#n0').value / 100;
+  $('#h0v').textContent = pct(hard, 0); $('#t0v').textContent = tau.toFixed(2); $('#n0v').textContent = noise.toFixed(2);
+  const ds = makeBatch(hard);
+  const fixed = [0, 1, 2].map((k) => route(ds, k));
+  const cur = route(ds, 'cascade', tau, noise);
+  const sweep = []; for (let i = 0; i <= 20; i++) sweep.push(route(ds, 'cascade', i / 20, noise));
+  const [W, H, nar] = vb('#fig0', 800, 300, 420, 320), fs = nar ? 15 : 13, mu = css('--muted'), li = css('--line');
+  const pl = nar ? 46 : 52, pr = 16, pt = 14, pb = 32, lx0 = Math.log10(0.2), lx1 = Math.log10(30);
+  const accs = [...fixed, ...sweep].map((o) => o.acc), lo = Math.max(0, Math.floor(Math.min(...accs) * 10) / 10 - 0.05), hi = 1;
+  const X = (c) => pl + (Math.log10(c) - lx0) / (lx1 - lx0) * (W - pl - pr), Y = (a) => pt + (hi - a) / (hi - lo) * (H - pt - pb);
+  let s = '';
+  for (let a = Math.ceil(lo * 10) / 10; a <= hi + 1e-9; a += 0.1) s += `<line x1="${pl}" y1="${Y(a)}" x2="${W - pr}" y2="${Y(a)}" stroke="${li}"/>` + txt(pl - 6, Y(a) + 4, pct(a, 0), fs, mu, 'end');
+  [0.3, 1, 3, 10, 30].forEach((c) => s += txt(X(c), H - 10, '$' + c, fs, mu, 'middle'));
+  s += path(sweep.map((o) => [X(o.cost), Y(o.acc)]), css('--ok'), 2.5);
+  sweep.forEach((o) => s += `<circle cx="${X(o.cost)}" cy="${Y(o.acc)}" r="2.5" fill="${css('--ok')}"/>`);
+  const cols = [mu, css('--tool'), css('--accent')], names = ['全小', '全中', '全大'];
+  fixed.forEach((o, k) => { s += `<circle cx="${X(o.cost)}" cy="${Y(o.acc)}" r="7" fill="${cols[k]}"/>` + txt(X(o.cost) + (k === 2 ? -11 : 11), Y(o.acc) + (k === 2 ? 5 : -8), names[k], fs, cols[k], k === 2 ? 'end' : 'start'); });
+  s += `<circle cx="${X(cur.cost)}" cy="${Y(cur.acc)}" r="8" fill="none" stroke="${css('--ok')}" stroke-width="3"/>`;
+  $('#fig0').innerHTML = s;
+  $('#r0a').textContent = `${usd(fixed[0].cost)} · ${pct(fixed[0].acc)}`;
+  $('#r0b').textContent = `${usd(fixed[2].cost)} · ${pct(fixed[2].acc)}`;
+  $('#r0c').textContent = `${usd(cur.cost)} · ${pct(cur.acc)}`;
+  $('#r0d').textContent = `${pct(cur.up1, 0)} · ${pct(cur.up2, 0)}`;
+}
+['#h0', '#t0', '#n0'].forEach((id) => $(id).addEventListener('input', draw0));
+
+/* ---------- 01 ---------- */
+let rt1 = 2, to1 = 10;
+const get1r = seg('#rt1', (v) => { rt1 = +v; draw1(); }), get1t = seg('#to1', (v) => { to1 = +v; draw1(); });
+function draw1() {
+  const a = +$('#a1').value / 100, q = +$('#q1').value / 100;
+  $('#a1v').textContent = pct(a, 1); $('#q1v').textContent = pct(q, 0);
+  const res = [false, true].map((backup) => simFail({ avail: a, r429: q, retries: rt1, timeout: to1, backup }));
+  const [W, H, nar] = vb('#fig1', 800, 280, 420, 300), fs = nar ? 15 : 13, mu = css('--muted'), li = css('--line'), cols = [css('--warn'), css('--accent')];
+  const pl = nar ? 40 : 46, pr = 14, pt = 12, pb = 30, l0 = Math.log10(0.3), l1 = Math.log10(150);
+  const X = (t) => pl + (Math.log10(Math.max(0.3, t)) - l0) / (l1 - l0) * (W - pl - pr), Y = (p) => pt + (1 - p) * (H - pt - pb);
+  let s = '';
+  [0, 0.5, 0.95, 1].forEach((p) => s += `<line x1="${pl}" y1="${Y(p)}" x2="${W - pr}" y2="${Y(p)}" stroke="${li}"/>` + txt(pl - 6, Y(p) + 4, pct(p, 0), fs, mu, 'end'));
+  [0.3, 1, 3, 10, 30, 100].forEach((t) => s += txt(X(t), H - 8, t + ' s', fs, mu, 'middle'));
+  res.forEach((o, k) => {
+    const b = Float64Array.from(o.lat).sort(), pts = [];
+    for (let i = 0; i <= 200; i++) { const p = i / 200, v = b[Math.min(b.length - 1, Math.floor(p * (b.length - 1)))]; pts.push([X(v), Y(p)]); }
+    s += path(pts, cols[k], 2.5);
+    s += `<line x1="${X(o.p95)}" y1="${pt}" x2="${X(o.p95)}" y2="${H - pb}" stroke="${cols[k]}" stroke-dasharray="4 3"/>`;
+  });
+  $('#fig1').innerHTML = s;
+  $('#r1a').textContent = pct(res[0].succ, 2); $('#r1b').textContent = pct(res[1].succ, 2);
+  $('#r1c').textContent = sec(res[0].p95); $('#r1d').textContent = sec(res[1].p95);
+  $('#r1e').textContent = pct(res[1].viaB, 1); $('#r1f').textContent = pct(succNoBackup(a, q, rt1), 2);
+}
+['#a1', '#q1'].forEach((id) => $(id).addEventListener('input', draw1));
+
+/* ---------- 02 ---------- */
+let ttl2 = 60; seg('#ttl2', (v) => { ttl2 = +v; draw2(); });
+function draw2() {
+  const rho = +$('#p2').value / 100; $('#p2v').textContent = pct(rho, 0);
+  const o = simCache(rho, ttl2);
+  const [W, H, nar] = vb('#fig2', 800, 260, 420, 280), fs = nar ? 15 : 13, mu = css('--muted'), li = css('--line'), cols = [css('--warn'), css('--accent'), css('--ok')];
+  const pl = nar ? 44 : 50, pr = 14, pt = 12, pb = 30, top = Math.ceil(o.c0 / 20) * 20;
+  const X = (i) => pl + i / (o.cum.length - 1) * (W - pl - pr), Y = (c) => pt + (1 - c / top) * (H - pt - pb);
+  let s = '';
+  for (let c = 0; c <= top + 1e-9; c += top / 4) s += `<line x1="${pl}" y1="${Y(c)}" x2="${W - pr}" y2="${Y(c)}" stroke="${li}"/>` + txt(pl - 6, Y(c) + 4, '$' + Math.round(c), fs, mu, 'end');
+  [0, 5000, 10000].forEach((i) => s += txt(X(i / 100), H - 8, i, fs, mu, i ? (i === 10000 ? 'end' : 'middle') : 'start'));
+  [0, 1, 2].forEach((k) => s += path(o.cum.map((c, i) => [X(i), Y(c[k])]), cols[k], 2.5));
+  $('#fig2').innerHTML = s;
+  $('#r2a').textContent = pct(o.hit, 1); $('#r2b').textContent = o.saved.toLocaleString('en-US') + ' 次';
+  $('#r2c').textContent = usd(o.c0); $('#r2d').textContent = usd(o.c1); $('#r2e').textContent = usd(o.c2);
+}
+$('#p2').addEventListener('input', draw2);
+
+/* ---------- 03 ---------- */
+let cold3 = 1; seg('#c3', (v) => { cold3 = +v; draw3(); });
+function draw3() {
+  const n = +$('#k3').value, t = +$('#t3').value, cv = +$('#v3').value / 100;
+  $('#k3v').textContent = n; $('#t3v').textContent = t + ' s'; $('#v3v').textContent = cv.toFixed(1);
+  const o = orchestrate({ n, t, cv, cold: cold3 }), P = o.P;
+  const [W, H0, nar] = vb('#fig3', 800, 300, 420, 340), fs = nar ? 14 : 13, mu = css('--muted'), li = css('--line');
+  const cS = css('--warn'), cM = css('--accent'), cOk = css('--ok');
+  const pl = nar ? 40 : 80, pr = 12, top = 10, rowH = nar ? 22 : 20, gap = 4;
+  const H = top + rowH + 22 + (rowH + gap) * (n + 2) + 34;
+  $('#fig3').setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const T = Math.max(o.single.wall, o.multi.wall), X = (v) => pl + v / T * (W - pl - pr);
+  let s = '';
+  const bar = (x0, x1, y, col, op = 1) => `<rect x="${X(x0)}" y="${y}" width="${Math.max(1, X(x1) - X(x0))}" height="${rowH - 4}" rx="3" fill="${col}" fill-opacity="${op}"/>`;
+  // 单 Agent 一行
+  let y = top; s += txt(pl - 8, y + rowH - 8, nar ? '单' : '单 Agent', fs, cS, 'end');
+  let x = 0; s += bar(0, P.tPlan, y, mu, 0.6); x = P.tPlan;
+  o.ts.forEach((d, i) => { s += bar(x, x + d, y, cS, i % 2 ? 0.65 : 1); x += d; });
+  s += bar(x, x + P.tFinal, y, cOk);
+  // 多 Agent
+  y += rowH + 22; s += txt(pl - 8, y + rowH - 8, nar ? '主' : '主 Agent', fs, cOk, 'end'); s += bar(0, P.tPlan, y, mu, 0.6);
+  const t1 = P.tPlan + Math.max(...o.lanes.map((l) => l.cold + l.work + l.summ));
+  s += bar(t1, t1 + P.tFinal, y, cOk);
+  o.lanes.forEach((l, i) => {
+    const yy = y + (rowH + gap) * (i + 1); s += txt(pl - 8, yy + rowH - 8, (nar ? '子' : '子 Agent ') + (i + 1), fs, mu, 'end');
+    let xx = P.tPlan; if (l.cold) { s += bar(xx, xx + l.cold, yy, mu, 0.6); xx += l.cold; }
+    s += bar(xx, xx + l.work, yy, cM); xx += l.work; s += bar(xx, xx + l.summ, yy, cOk);
+  });
+  const yAx = y + (rowH + gap) * (n + 1) + 8;
+  s += `<line x1="${pl}" y1="${yAx}" x2="${W - pr}" y2="${yAx}" stroke="${li}"/>`;
+  const step = T > 400 ? 100 : T > 160 ? 50 : T > 60 ? 20 : 10;
+  for (let v = 0; v <= T; v += step) s += txt(X(v), yAx + 18, v, fs, mu, 'middle');
+  s += `<line x1="${X(o.multi.wall)}" y1="${top + rowH + 14}" x2="${X(o.multi.wall)}" y2="${yAx}" stroke="${cM}" stroke-dasharray="4 3"/>`;
+  $('#fig3').innerHTML = s;
+  $('#r3a').textContent = sec(o.single.wall); $('#r3b').textContent = sec(o.multi.wall);
+  $('#r3c').textContent = (o.single.wall / o.multi.wall).toFixed(2) + '×';
+  $('#r3d').textContent = ktok(o.single.total); $('#r3e').textContent = ktok(o.multi.total);
+}
+['#k3', '#t3', '#v3'].forEach((id) => $(id).addEventListener('input', draw3));
+
+/* ---------- 04 ---------- */
+function draw4() {
+  const n = +$('#k4').value, tool = +$('#w4').value;
+  $('#k4v').textContent = n; $('#w4v').textContent = tool.toLocaleString('en-US');
+  const o = orchestrate({ n, t: 40, cv: 0, cold: 1, tool });
+  const [W, H, nar] = vb('#fig4', 800, 280, 420, 300), fs = nar ? 15 : 13, mu = css('--muted'), li = css('--line');
+  const pl = nar ? 48 : 54, pr = 14, pt = 12, pb = 30;
+  const S = o.single.calls, top = Math.max(220000, Math.ceil(Math.max(...S) / 50000) * 50000), N = S.length;
+  const X = (i) => pl + i / (N - 1) * (W - pl - pr), Y = (c) => pt + (1 - c / top) * (H - pt - pb);
+  let s = '';
+  for (let c = 0; c <= top; c += top > 400000 ? 100000 : 50000) s += `<line x1="${pl}" y1="${Y(c)}" x2="${W - pr}" y2="${Y(c)}" stroke="${li}"/>` + txt(pl - 6, Y(c) + 4, c ? (c / 1000) + 'K' : 0, fs, mu, 'end');
+  s += `<line x1="${pl}" y1="${Y(200000)}" x2="${W - pr}" y2="${Y(200000)}" stroke="${mu}" stroke-width="2" stroke-dasharray="6 4"/>`;
+  [0, Math.round((N - 1) / 2), N - 1].forEach((i) => s += txt(X(i), H - 8, i + 1, fs, mu, 'middle'));
+  s += path(S.map((c, i) => [X(i), Y(c)]), css('--warn'), 2.5);
+  // 子 Agent：并行，从第 2 次调用开始，铺在同样的横轴范围里
+  const sub = o.multi.subs[0], L = sub.length, span = (N - 2) / L;
+  o.multi.subs.forEach((calls) => s += path(calls.map((c, j) => [X(1 + j * span), Y(c)]), css('--accent'), 2, 'stroke-opacity="0.55"'));
+  const ld = o.multi.lead; s += `<circle cx="${X(0)}" cy="${Y(ld[0])}" r="4" fill="${css('--ok')}"/><circle cx="${X(N - 1)}" cy="${Y(ld[1])}" r="5" fill="${css('--ok')}"/>`;
+  $('#fig4').innerHTML = s;
+  const cs = inputCost([S]), cm = inputCost([o.multi.lead.slice(0, 1), ...o.multi.subs, o.multi.lead.slice(1)], 3, W3.c0);
+  $('#r4a').textContent = ktok(o.single.max) + (o.single.max > 200000 ? ' 超窗' : ''); $('#r4b').textContent = ktok(o.multi.max);
+  $('#r4c').textContent = ktok(o.single.inTok); $('#r4d').textContent = ktok(o.multi.inTok);
+  $('#r4e').textContent = `${usd(cs[0])} / ${usd(cs[1])}`; $('#r4f').textContent = `${usd(cm[0])} / ${usd(cm[1])}`;
+}
+['#k4', '#w4'].forEach((id) => $(id).addEventListener('input', draw4));
+
+/* ---------- 05 ---------- */
+let cache5 = { key: '', curve: null };
+function draw5() {
+  const D = +$('#d5').value / 100, q = +$('#q5').value / 100, n = +$('#k5').value;
+  $('#d5v').textContent = pct(D, 0); $('#q5v').textContent = pct(q, 0); $('#k5v').textContent = n;
+  const key = n + '|' + q;
+  if (cache5.key !== key) { const c = []; for (let i = 0; i <= 20; i++) c.push(splitSim(n, i / 20, q, 1000)); cache5 = { key, curve: c }; }
+  const cur = splitSim(n, D, q), curve = cache5.curve, mu = css('--muted'), li = css('--line');
+  const plot = (id, vals, lo, hi, ticks, fmt, col, cy, ref) => {
+    const W = 400, H = 260, pl = 46, pr = 12, pt = 12, pb = 30, X = (d) => pl + d * (W - pl - pr), Y = (v) => pt + (hi - Math.max(lo, Math.min(hi, v))) / (hi - lo) * (H - pt - pb);
+    let s = '';
+    ticks.forEach((v) => s += `<line x1="${pl}" y1="${Y(v)}" x2="${W - pr}" y2="${Y(v)}" stroke="${li}"/>` + txt(pl - 6, Y(v) + 4, fmt(v), 13, mu, 'end'));
+    if (ref !== undefined) s += `<line x1="${pl}" y1="${Y(ref)}" x2="${W - pr}" y2="${Y(ref)}" stroke="${mu}" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+    [0, 0.5, 1].forEach((d) => s += txt(X(d), H - 8, pct(d, 0), 13, mu, d === 1 ? 'end' : 'middle'));
+    s += path(vals.map((v, i) => [X(i / 20), Y(v)]), col, 2.5);
+    s += `<line x1="${X(D)}" y1="${pt}" x2="${X(D)}" y2="${H - pb}" stroke="${col}" stroke-opacity=".4"/><circle cx="${X(D)}" cy="${Y(cy)}" r="6" fill="${col}"/>`;
+    $(id).innerHTML = s;
+  };
+  const sp = curve.map((c) => c.speed), hiS = Math.max(2, Math.ceil(Math.max(...sp)));
+  plot('#fig5a', sp, 0, hiS, Array.from({ length: hiS + 1 }, (_, i) => i), (v) => v + '×', css('--accent'), cur.speed, 1);
+  plot('#fig5b', curve.map((c) => c.rework), 0, 0.6, [0, 0.2, 0.4, 0.6], (v) => pct(v, 0), css('--warn'), cur.rework);
+  $('#r5a').textContent = cur.speed.toFixed(2) + '×'; $('#r5b').textContent = pct(cur.rework, 0); $('#r5c').textContent = cur.work.toFixed(2) + '×';
+  let be = null; for (let i = 1; i <= 20; i++) if (curve[i].speed < 1 && curve[i - 1].speed >= 1) { be = (i - 1 + (curve[i - 1].speed - 1) / (curve[i - 1].speed - curve[i].speed)) / 20; break; }
+  $('#r5d').textContent = be === null ? (curve[20].speed >= 1 ? '一直值得拆' : '一直不值得') : '约 ' + pct(be, 0);
+}
+['#d5', '#q5', '#k5'].forEach((id) => $(id).addEventListener('input', draw5));
+
+/* ---------- 启动与重绘 ---------- */
+const all = () => { draw0(); draw1(); draw2(); draw3(); draw4(); draw5(); };
+all();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(all, 150); });
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>
