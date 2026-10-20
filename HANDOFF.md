@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-19 18:45 America/New_York · 更新者：Claude（会话 session_01RbNocXbB6CzayVPYBwkwdY）
+最后更新：2026-10-20 13:15 America/New_York · 更新者：Claude（会话 session_01ViBoemAJxz2CQYEKk8rBUY）
 
 ---
 
@@ -194,6 +194,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-20 · Claude（session_01ViBoemAJxz2CQYEKk8rBUY）** — 本人反馈多头讲实验 01 的热力图大到一屏看不完：`public/labs/multihead-gqa/index.html` 把六个缩略图改为 3 × 2，与选中头的大热力图并排（`.duo`），大图 viewBox 收紧到网格本身；两张图同高 = min(外层视口 50%, 460px)，并排放不下时按容器宽度一起缩小，手机宽度上下排。两张图加 `data-nofit`，页尾「图形尺寸上限」脚本跳过带此属性的图。大图标签字号 14 → 17。Chromium 检查 1512 × 860 / 1000 × 780 整个实验一屏可见、390 宽无横向滚动、无脚本错误。
 
 - **2026-10-19 · Claude（session_01RbNocXbB6CzayVPYBwkwdY）** — 本人问 Token 实验 01（字母级 BPE）里的数字怎么来的，要求把说明补进去。`public/labs/tokenizer-llm/index.html`：(1) 实验 01 导语加一句：默认语料 low 5 / lower 2 / newest 6 / widest 3 是给定词频，出自 Sennrich 等 2016 BPE 论文；(2) 片段对列表不再在并列次数中间截断（保留与第 7 名同分的全部），其余的写「另有 N 对，各 X 次」；(3) note 下加可展开的「这些数字是怎么算出来的」（`#how1`，随当前状态实时生成）：每一对的加权次数拆成「newest 6 + widest 3 = 9」、合并时打平的规则（取先出现的一对）、词表 = 初始字母 + 合并出的 token（不再单独出现的字母仍在词表里）、总 token 数 = 各词片段数 × 频次之和，以及与合并前的差 = 各规则次数之和（首尾重叠的对如 aaaa 时说明为何不等）。`src/content/blog/tokenizer-llm.md` 实验列表第 1 项补一句。云端 clone build 39 页通过；Chromium 1440 浅色 / 390 深色无横向滚动、无脚本错误，用默认语料、合并到底、aaaa/banana 三种情况核对过数字。
 

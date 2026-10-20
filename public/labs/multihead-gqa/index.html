@@ -49,6 +49,7 @@ input[type=range]{accent-color:var(--accent);max-width:200px}
 input[type=number]{width:5.2em;font:inherit;font-size:14px;padding:3px 6px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg)}
 input[type=text]{box-sizing:border-box;width:100%;font:inherit;font-size:15px;padding:6px 10px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg)}
 svg{display:block;width:100%;height:auto}
+.duo{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:16px 40px}
 svg text{font-family:var(--sans)}
 .cap{font-size:12px;color:var(--muted);margin:4px 0 0;text-align:center}
 .key{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;margin:0 0 8px}
@@ -109,8 +110,10 @@ td.num,th.num{text-align:right}
       <label class="toggle"><input type="checkbox" id="c1" checked> 因果遮罩（只能看前面）</label>
       <button class="btn" id="s1btn">换随机种子</button>
     </div>
-    <svg id="fig1t" viewBox="0 0 800 150" role="img" aria-label="六个头的注意力热力图缩略图，点击切换"></svg>
-    <svg id="fig1" viewBox="0 0 800 420" role="img" aria-label="选中头的注意力热力图"></svg>
+    <div class="duo">
+      <svg id="fig1t" data-nofit viewBox="0 0 420 300" role="img" aria-label="六个头的注意力热力图缩略图，点击切换"></svg>
+      <svg id="fig1" data-nofit viewBox="0 0 800 420" role="img" aria-label="选中头的注意力热力图"></svg>
+    </div>
     <p class="cap">行：提问的 token（Q）；列：被看的 token（K）。颜色越深权重越大，每行加起来等于 1。点上面的缩略图切换头</p>
     <div class="readout">
       <div class="ro acc"><b id="r1a">–</b><span>当前头</span></div>
@@ -303,20 +306,28 @@ function draw1() {
   const maps = attnMaps(toks, beta, causal, seed1), A = maps[sel1];
   const acc = css('--accent'), warn = css('--warn'), mu = css('--muted'), fg = css('--fg'), li = css('--line');
   // 缩略图
-  const [Wt, Ht, nar] = vb('#fig1t', 800, 150, 420, 300); let s = '';
-  const per = nar ? 3 : 6, cw = Wt / per, sz = Math.min(cw - 26, nar ? 100 : 104);
+  // 缩略图 3 × 2，与大图并排；两张图同高，整组不超过半屏
+  const duo = $('#fig1').parentElement, cwid = duo.clientWidth, nar = cwid > 0 && cwid < 600;
+  let vh = innerHeight; try { if (window.top !== window) vh = window.top.innerHeight; } catch (e) {}
+  let Hfig = Math.max(260, Math.min(vh * 0.5, 460));
+  const Wt = 420; $('#fig1t').setAttribute('viewBox', '0 0 420 300'); let s = '';
+  const per = 3, cw = Wt / per, sz = Math.min(cw - 26, 100);
   maps.forEach((M, k) => { const cx = (k % per) * cw + cw / 2, y = Math.floor(k / per) * (sz + 46) + 6; const col = HEADS1[k].k === 'rand' ? warn : acc;
     s += `<g data-k="${k}" style="cursor:pointer"><rect x="${cx - sz / 2 - 5}" y="${y - 4}" width="${sz + 10}" height="${sz + 38}" rx="6" fill="${k === sel1 ? css('--accent-soft') : 'transparent'}"/>${heat(M, cx - sz / 2, y, sz, col, mu)}<text x="${cx}" y="${y + sz + 22}" font-size="${nar ? 15 : 13}" fill="${k === sel1 ? fg : mu}" text-anchor="middle">${HEADS1[k].n}</text></g>`; });
   $('#fig1t').innerHTML = s;
   // 大图
-  const lab = nar ? 52 : 74, W = nar ? 420 : 800, cell = Math.min((W - lab - 10) / n, nar ? 30 : 40), Hh = lab + cell * n + 8;
+  const lab = nar ? 52 : 74, cell = nar ? Math.min((420 - lab - 30) / n, 30) : 40, W = lab + cell * n + 30, Hh = lab + cell * n + 8;
   $('#fig1').setAttribute('viewBox', `0 0 ${W} ${Hh}`);
-  const x0 = lab + Math.max(0, (W - lab - 10 - cell * n) / 2) * (nar ? 0 : 1), y0 = lab - 8, fs = nar ? 13 : 14, col = HEADS1[sel1].k === 'rand' ? warn : acc;
+  const need = Hfig * (420 / 300 + W / Hh) + 40; if (!nar && need > cwid) Hfig = (cwid - 40) / (420 / 300 + W / Hh);
+  const wide = !nar && Hfig >= 230;
+  const fitBox = (el, w, h) => { if (wide) { el.style.height = Hfig + 'px'; el.style.width = (Hfig * w / h) + 'px'; el.style.maxWidth = ''; } else { el.style.height = 'auto'; el.style.width = '100%'; el.style.maxWidth = (Hfig * w / h) + 'px'; } };
+  fitBox($('#fig1t'), 420, 300); fitBox($('#fig1'), W, Hh);
+  const x0 = lab, y0 = lab - 8, fs = nar ? 13 : 17, col = HEADS1[sel1].k === 'rand' ? warn : acc;
   const short = (t) => [...t].slice(0, 3).join('');
   s = '';
   toks.forEach((t, j) => { s += `<text x="${x0 + (j + 0.5) * cell}" y="${y0 - 8}" font-size="${fs}" fill="${mu}" text-anchor="start" transform="rotate(-50 ${x0 + (j + 0.5) * cell} ${y0 - 8})">${short(t)}</text>`; });
   toks.forEach((t, i) => { s += `<text x="${x0 - 8}" y="${y0 + (i + 0.5) * cell + 5}" font-size="${fs}" fill="${fg}" text-anchor="end">${short(t)}</text>`; });
-  A.forEach((row, i) => row.forEach((w, j) => { const masked = causal && j > i; s += `<rect x="${x0 + j * cell + 1}" y="${y0 + i * cell + 1}" width="${cell - 2}" height="${cell - 2}" rx="2" fill="${masked ? li : col}" fill-opacity="${masked ? 0.25 : Math.max(0.04, Math.min(1, w * 1.05)).toFixed(3)}"><title>${toks[i]} → ${toks[j]}：${masked ? '遮罩' : (w * 100).toFixed(1) + '%'}</title></rect>`; if (!masked && w >= 0.3 && cell >= 26) s += `<text x="${x0 + (j + 0.5) * cell}" y="${y0 + (i + 0.5) * cell + 4}" font-size="${nar ? 10 : 11}" fill="#fff" text-anchor="middle" pointer-events="none">${Math.round(w * 100)}</text>`; }));
+  A.forEach((row, i) => row.forEach((w, j) => { const masked = causal && j > i; s += `<rect x="${x0 + j * cell + 1}" y="${y0 + i * cell + 1}" width="${cell - 2}" height="${cell - 2}" rx="2" fill="${masked ? li : col}" fill-opacity="${masked ? 0.25 : Math.max(0.04, Math.min(1, w * 1.05)).toFixed(3)}"><title>${toks[i]} → ${toks[j]}：${masked ? '遮罩' : (w * 100).toFixed(1) + '%'}</title></rect>`; if (!masked && w >= 0.3 && cell >= 26) s += `<text x="${x0 + (j + 0.5) * cell}" y="${y0 + (i + 0.5) * cell + 4}" font-size="${nar ? 10 : 13}" fill="#fff" text-anchor="middle" pointer-events="none">${Math.round(w * 100)}</text>`; }));
   $('#fig1').innerHTML = s;
   const eff = A.reduce((a, row) => a + 1 / row.reduce((b, w) => b + w * w, 0), 0) / n;
   const colSum = toks.map((_, j) => A.reduce((a, row) => a + row[j], 0)); const top = colSum.indexOf(Math.max(...colSum));
@@ -482,7 +493,7 @@ let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(all
 </script>
 <script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
 (()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
-let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.hasAttribute('data-nofit')||el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
 /* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
 fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
 </body>
