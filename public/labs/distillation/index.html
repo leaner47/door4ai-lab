@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>蒸馏实验室</title>
+<link rel="stylesheet" href="/vendor/katex/katex.min.css">
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(18px,9vw - 16px,200px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+p code,li code{font-size:.88em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+ul,ol{padding-left:1.2em}
+.aside{border-left:3px solid var(--accent);padding:4px 0 4px 16px;margin:16px 0;font-size:15.5px}
+.aside b{display:block;margin-bottom:2px}
+.eq{margin:18px 0;overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.eq .katex-display{margin:0}
+.katex{font-size:1.08em}
+.eq .katex-display>.katex{font-size:1.22em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+.seg.q button[aria-pressed=true]{background:var(--warn)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px}
+.toggle input{accent-color:var(--warn)}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn b{color:var(--warn)} .ro.ok b{color:var(--ok)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.sum{font-size:15px;margin-top:10px;line-height:1.9}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.num{text-align:right}
+.tw{overflow-x:auto}
+.key{margin-top:40px;border-top:1px solid var(--line);padding-top:20px}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">蒸馏 · 软标签 · 温度 · KL 散度</div>
+  <h1>蒸馏实验室</h1>
+  <p class="lede">大模型当老师，小模型当学生。老师的概率分布、温度、KL 损失和 T² 都在页面里真实算出来；第 03、04 个实验在你的浏览器里真的训练一个老师和一批学生。</p>
+</header>
+
+<section id="s1">
+  <h2><span class="n">01</span>温度：老师的软分布变平</h2>
+  <p>一张猫的图片，老师给四个类别的分数（logits）是 \(v = (4,\ 1,\ 0,\ -5)\)，依次是猫、狗、狐狸、汽车。硬标签只说「这是猫」：猫 1，其余 0。老师的分布要先除以温度 \(T\) 再做 softmax：</p>
+  <div class="eq">\[ p_i = \frac{e^{v_i/T}}{\sum_j e^{v_j/T}} \]</div>
+  <p>\(T = 1\) 就是普通的 softmax。拖动 \(T\)，看灰色的硬标签和蓝色的老师分布。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="t1">温度 T</label><input id="t1" type="range" min="0" max="100" step="1" value="0"><b id="t1v">1</b></div>
+    </div>
+    <svg id="fig1" viewBox="0 0 800 250" role="img" aria-label="硬标签与老师在温度 T 下的概率分布"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r1a">–</b><span>p(猫)</span></div>
+      <div class="ro"><b id="r1b">–</b><span>p(狗) / p(汽车)</span></div>
+      <div class="ro"><b id="r1c">–</b><span>熵（nat），最大 ln 4 = 1.386</span></div>
+    </div>
+    <p class="note">T = 1 时狗只有 4.7%，汽车只有 0.01%，挤在柱子底部几乎看不见；T = 4 时狗 24.3%、狐狸 18.9%、汽车 5.4%，「狗比汽车像猫得多」变得看得见。狗和汽车的比值是 \(e^{6/T}\)：T 越大比值越小，排序不变。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>KL 损失与交叉熵：两项各推学生往哪走</h2>
+  <p>学生对同一张图的 logits 是 \(z\)。蒸馏的损失由两项加权：硬标签的交叉熵（\(T = 1\)），和老师、学生在同一个温度下的 KL 散度，后者乘 \(T^2\)：</p>
+  <div class="eq">\[ L = \alpha\,\mathrm{CE}\big(y,\ q^{(1)}\big) + (1-\alpha)\,T^2\,\mathrm{KL}\big(p^{(T)}\,\big\|\,q^{(T)}\big) \]</div>
+  <p>两项对学生 logit \(z_k\) 的梯度分别是 \(q^{(1)}_k - y_k\) 和 \(\big(q^{(T)}_k - p^{(T)}_k\big)/T\)。左图是温度 \(T\) 下老师（蓝）和学生（橙）的分布；右图是两项各自给每个 logit 的梯度（已乘上权重），梯度为负表示这个 logit 要升。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>学生</label><div class="seg" id="st2"><button aria-pressed="true" data-k="0">起点 (2, 0, 1, −3)</button><button aria-pressed="false" data-k="1">只会认猫 (6, −2, −2, −2)</button><button aria-pressed="false" data-k="2">和老师一样</button></div></div>
+      <div class="ctrl"><label for="t2">温度 T</label><input id="t2" type="range" min="1" max="20" step="1" value="4"><b id="t2v">4</b></div>
+      <div class="ctrl"><label for="a2">硬标签权重 α</label><input id="a2" type="range" min="0" max="1" step="0.1" value="0.5"><b id="a2v">0.5</b></div>
+      <label class="toggle"><input type="checkbox" id="m2" checked>软项乘 T²</label>
+    </div>
+    <svg id="fig2" viewBox="0 0 800 260" role="img" aria-label="老师与学生的分布，以及两项损失给每个 logit 的梯度"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r2a">–</b><span>交叉熵 −ln q(猫)</span></div>
+      <div class="ro"><b id="r2b">–</b><span>KL(pᵀ ‖ qᵀ)</span></div>
+      <div class="ro warn"><b id="r2c">–</b><span>总损失 L</span></div>
+      <div class="ro"><b id="r2d">–</b><span>软项 / 硬项梯度长度比</span></div>
+    </div>
+    <svg id="fig2b" viewBox="0 0 800 220" role="img" aria-label="软项梯度长度随温度的变化，乘与不乘 T 平方"></svg>
+    <p class="note">选「只会认猫」：交叉熵只有 0.001，硬标签已经没什么可教；KL 却是最大的，因为它把狗、狐狸、汽车一视同仁。下面的曲线：不乘 T² 时，软项梯度随 T 增大大约按 1/T² 缩小（T 从 4 到 20，缩小约 23 倍，1/T² 预言的是 25 倍）；乘上 T² 后基本走平。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>真实训练：硬标签学生 vs 软标签学生</h2>
+  <p>数据是平面上三条旋臂，三类（三种颜色）。先用 600 个带标签的点训练一个老师：单隐层 MLP，32 个隐藏单元，Adam 300 步。学生是同样结构、但只有 16 个隐藏单元的 MLP，而且只拿到 \(N\) 个点。两个学生从同一组初始参数出发、训练同样 300 步，区别只有目标：</p>
+  <ul>
+    <li><b>硬标签学生</b>：每个点的真实类别，损失是交叉熵。</li>
+    <li><b>软标签学生</b>：老师在温度 \(T\) 下对这个点的概率，损失是 \(T^2\,\mathrm{KL}\)。</li>
+  </ul>
+  <p>三个学生都在另外 1500 个点上算错误率。随机种子固定，同样的设置每次结果都一样。背景色是模型在每个位置判成哪一类，圆点是学生拿到的 \(N\) 个点。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>学生拿到的点数 N</label><div class="seg" id="n3"><button aria-pressed="false" data-v="30">30</button><button aria-pressed="true" data-v="60">60</button><button aria-pressed="false" data-v="120">120</button></div></div>
+      <div class="ctrl"><label>温度 T</label><div class="seg" id="tt3"><button aria-pressed="false" data-v="1">1</button><button aria-pressed="false" data-v="2">2</button><button aria-pressed="true" data-v="4">4</button><button aria-pressed="false" data-v="8">8</button></div></div>
+    </div>
+    <svg id="fig3" viewBox="0 0 800 300" role="img" aria-label="老师、硬标签学生、软标签学生的分界"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r3a">训练中…</b><span>老师的验证错误率</span></div>
+      <div class="ro warn"><b id="r3b">–</b><span>硬标签学生</span></div>
+      <div class="ro ok"><b id="r3c">–</b><span>软标签学生</span></div>
+    </div>
+    <p class="note">默认设置（N = 60、T = 4）：硬标签学生错 3.9%，软标签学生错 1.2%，老师 1.1%。看中间那张：硬标签学生在没有点的地方随手画了分界；软标签学生在每个点上还知道「这里离另一类有多近」，分界更贴老师。把 T 调回 1：软标签几乎和硬标签一样（N = 60 时都是 3.9%），因为 T = 1 的老师分布本身就接近硬标签。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>学生容量：隐藏层多宽才学得到</h2>
+  <p>同样 60 个点、\(T = 4\)，把学生的隐藏层宽度从 1 一路加到 32，每个宽度都训练一个硬标签学生和一个软标签学生。曲线是验证错误率，虚线是老师。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="w4">学生隐藏层宽度</label><input id="w4" type="range" min="0" max="7" step="1" value="6"><b id="w4v">16</b></div>
+    </div>
+    <svg id="fig4" viewBox="0 0 800 280" role="img" aria-label="验证错误率随学生宽度的变化，以及当前宽度下软标签学生的分界"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r4a">–</b><span>学生参数量</span></div>
+      <div class="ro warn"><b id="r4b">–</b><span>硬标签学生错误率</span></div>
+      <div class="ro ok"><b id="r4c">–</b><span>软标签学生错误率</span></div>
+    </div>
+    <p class="note">宽度 1：一个隐藏单元只能把平面切成一刀，两种学生都错一半左右。宽度 2–4：学生画不出三条旋臂，老师的软标签反而更难拟合，软标签学生不比硬标签好。宽度 6 起软标签学生持续更好，16 和 32 时接近老师。老师再好，学生装不下也学不到。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>DeepSeek-R1 蒸馏出的小模型</h2>
+  <p>DeepSeek-R1 用 R1 整理出约 80 万条样本（约 60 万条推理、20 万条非推理），在 6 个开源底座上只做 SFT，不做强化学习。下面是论文表 5、表 6 和 R1 表 4 的分数（2026-10-22 对照 arXiv 2501.12948 v1 与官方模型卡核实）。「纯 RL」那一行是同一个 Qwen2.5-32B 底座、不蒸馏、直接做大规模强化学习的结果。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>指标</label><div class="seg" id="m5"><button aria-pressed="true" data-v="0">AIME 2024</button><button aria-pressed="false" data-v="1">MATH-500</button><button aria-pressed="false" data-v="2">GPQA Diamond</button><button aria-pressed="false" data-v="3">LiveCodeBench</button><button aria-pressed="false" data-v="4">Codeforces</button></div></div>
+    </div>
+    <svg id="fig5" viewBox="0 0 800 400" role="img" aria-label="DeepSeek-R1 蒸馏模型与对照模型的分数"></svg>
+    <p class="note">同一个 Qwen2.5-32B 底座：蒸馏 AIME 72.6，纯 RL 47.0。1.5B 的蒸馏学生 AIME 28.9，已经高过 GPT-4o 的 9.3；但在 GPQA 上 1.5B 只有 33.8，低于 GPT-4o 的 49.9：知识类的题，小模型装不下。所有学生都没有超过老师 R1。</p>
+  </div>
+</section>
+</div>
+<script src="/vendor/katex/katex.min.js"></script>
+<script src="/vendor/katex/auto-render.min.js"></script>
+<script>
+try{renderMathInElement(document.body,{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});}catch(e){}
+</script>
+<script>
+/*CORE-BEGIN*/
+/* 蒸馏实验的计算核心：贯穿算例（四类 logits）+ 页内真实训练（老师 MLP → 学生 MLP）。
+   这段代码原样内联在 public/labs/distillation/index.html 里；labs-src/distillation/run_lab.mjs 从页面里抽出同一段来跑，
+   文章里的训练结果（误差、分界图、容量曲线）都来自它。 */
+const D = {};
+D.CLASSES = ['猫', '狗', '狐狸', '汽车'];
+D.V = [4, 1, 0, -5];      // 老师对一张猫图的 logits（示意，平均为 0）
+D.Z = [2, 0, 1, -3];      // 学生对同一张图的 logits（示意，平均为 0）
+D.HARD = 0;               // 硬标签：猫
+D.softmax = (z, T = 1) => { const m = Math.max(...z.map(v => v / T)); const e = z.map(v => Math.exp(v / T - m)); const s = e.reduce((a, b) => a + b, 0); return e.map(v => v / s); };
+D.entropy = (p) => -p.reduce((s, v) => s + (v > 0 ? v * Math.log(v) : 0), 0);
+D.ce = (p, q) => -p.reduce((s, v, i) => s + (v > 0 ? v * Math.log(q[i]) : 0), 0);
+D.kl = (p, q) => p.reduce((s, v, i) => s + (v > 0 ? v * Math.log(v / q[i]) : 0), 0);
+/* 损失 = α·CE(硬标签, q¹) + (1 − α)·s·KL(pᵀ ‖ qᵀ)，s = T²（或 1）。返回每一项与各自对 z 的梯度 */
+D.loss = (v, z, y, T, alpha, mulT2 = true) => {
+  const pT = D.softmax(v, T), qT = D.softmax(z, T), q1 = D.softmax(z, 1);
+  const s = mulT2 ? T * T : 1;
+  const ce = -Math.log(q1[y]), kl = D.kl(pT, qT);
+  const gHard = q1.map((q, k) => q - (k === y ? 1 : 0));
+  const gSoft = qT.map((q, k) => (q - pT[k]) / T);           // KL(pᵀ‖qᵀ) 对 z 的梯度
+  const gTot = gHard.map((g, k) => alpha * g + (1 - alpha) * s * gSoft[k]);
+  return { pT, qT, q1, ce, kl, s, total: alpha * ce + (1 - alpha) * s * kl, gHard, gSoft, gTot };
+};
+D.norm = (g) => Math.sqrt(g.reduce((a, b) => a + b * b, 0));
+
+/* ———— 页内真实训练 ———— */
+D.rng = (seed) => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; };
+D.gauss = (r) => { let u = 0; while (u === 0) u = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r()); };
+D.NOISE = 0.08;
+/* 三条旋臂的二维数据，三类；X 是 [x0, y0, x1, y1, …] */
+D.makeData = (n, seed) => {
+  const r = D.rng(seed), X = new Float64Array(2 * n), Y = new Int32Array(n);
+  for (let i = 0; i < n; i++) {
+    const c = i % 3, t = r(), ang = c * 2 * Math.PI / 3 + t * 3.2, rad = 0.15 + t * 0.85;
+    X[2 * i] = rad * Math.cos(ang) + D.gauss(r) * D.NOISE; X[2 * i + 1] = rad * Math.sin(ang) + D.gauss(r) * D.NOISE; Y[i] = c;
+  }
+  return { n, X, Y };
+};
+/* 单隐层 MLP：2 → h（tanh）→ 3 */
+D.init = (h, seed) => {
+  const r = D.rng(seed), m = { h, W1: new Float64Array(2 * h), b1: new Float64Array(h), W2: new Float64Array(3 * h), b2: new Float64Array(3) };
+  for (let j = 0; j < 2 * h; j++) m.W1[j] = D.gauss(r) * 1.5;
+  for (let j = 0; j < h; j++) m.b1[j] = D.gauss(r) * 0.5;
+  for (let j = 0; j < 3 * h; j++) m.W2[j] = D.gauss(r) / Math.sqrt(h);
+  return m;
+};
+D.logits = (m, x0, x1, a) => {
+  const h = m.h, z = [m.b2[0], m.b2[1], m.b2[2]];
+  for (let j = 0; j < h; j++) { const t = Math.tanh(m.W1[2 * j] * x0 + m.W1[2 * j + 1] * x1 + m.b1[j]); if (a) a[j] = t; z[0] += m.W2[j] * t; z[1] += m.W2[h + j] * t; z[2] += m.W2[2 * h + j] * t; }
+  return z;
+};
+/* 全批量 Adam。target = null 用硬标签 Y（交叉熵）；否则 target[i] 是老师在温度 T 下的概率，损失 T²·KL(pᵀ‖qᵀ) */
+D.train = (m, data, { target = null, T = 1, steps = 300, lr = 0.03 } = {}) => {
+  const { n, X, Y } = data, h = m.h, P = [m.W1, m.b1, m.W2, m.b2];
+  const G = P.map(p => new Float64Array(p.length)), M1 = P.map(p => new Float64Array(p.length)), M2 = P.map(p => new Float64Array(p.length));
+  const a = new Float64Array(h), dz = [0, 0, 0];
+  for (let t = 1; t <= steps; t++) {
+    G.forEach(g => g.fill(0));
+    for (let i = 0; i < n; i++) {
+      const x0 = X[2 * i], x1 = X[2 * i + 1], z = D.logits(m, x0, x1, a);
+      if (target) { const q = D.softmax(z, T); for (let k = 0; k < 3; k++) dz[k] = T * T * (q[k] - target[i][k]) / T; }
+      else { const q = D.softmax(z, 1); for (let k = 0; k < 3; k++) dz[k] = q[k] - (k === Y[i] ? 1 : 0); }
+      for (let k = 0; k < 3; k++) { G[3][k] += dz[k]; for (let j = 0; j < h; j++) G[2][k * h + j] += dz[k] * a[j]; }
+      for (let j = 0; j < h; j++) {
+        const da = (m.W2[j] * dz[0] + m.W2[h + j] * dz[1] + m.W2[2 * h + j] * dz[2]) * (1 - a[j] * a[j]);
+        G[1][j] += da; G[0][2 * j] += da * x0; G[0][2 * j + 1] += da * x1;
+      }
+    }
+    const c1 = 1 - Math.pow(0.9, t), c2 = 1 - Math.pow(0.999, t);
+    for (let p = 0; p < 4; p++) for (let j = 0; j < P[p].length; j++) {
+      const g = G[p][j] / n; M1[p][j] = 0.9 * M1[p][j] + 0.1 * g; M2[p][j] = 0.999 * M2[p][j] + 0.001 * g * g;
+      P[p][j] -= lr * (M1[p][j] / c1) / (Math.sqrt(M2[p][j] / c2) + 1e-8);
+    }
+  }
+  return m;
+};
+D.pred = (m, x0, x1) => { const z = D.logits(m, x0, x1); return z[0] >= z[1] ? (z[0] >= z[2] ? 0 : 2) : (z[1] >= z[2] ? 1 : 2); };
+D.err = (m, data) => { let e = 0; for (let i = 0; i < data.n; i++) if (D.pred(m, data.X[2 * i], data.X[2 * i + 1]) !== data.Y[i]) e++; return e / data.n; };
+D.grid = (m, g = 36) => { const out = []; for (let r = 0; r < g; r++) for (let c = 0; c < g; c++) out.push(D.pred(m, -1.2 + 2.4 * (c + 0.5) / g, 1.2 - 2.4 * (r + 0.5) / g)); return out; };
+/* 固定的设置：老师 32 个隐藏单元、600 个带标签的点；学生只拿到 N 个点；验证集 1500 个点 */
+D.SEED = { teacherData: 1, test: 2, transfer: 10, teacherInit: 3, studentInit: 5 };
+D.makeTeacher = () => { const data = D.makeData(600, D.SEED.teacherData); const m = D.train(D.init(32, D.SEED.teacherInit), data, { steps: 300 }); return m; };
+D.TEST = null;
+D.test = () => D.TEST || (D.TEST = D.makeData(1500, D.SEED.test));
+D.transfer = (N) => D.makeData(N, D.SEED.transfer + N);
+D.softTargets = (teacher, data, T) => { const out = []; for (let i = 0; i < data.n; i++) out.push(D.softmax(D.logits(teacher, data.X[2 * i], data.X[2 * i + 1]), T)); return out; };
+D.student = (teacher, N, h, mode, T) => {
+  const tr = D.transfer(N), m = D.init(h, D.SEED.studentInit);
+  D.train(m, tr, mode === 'soft' ? { target: D.softTargets(teacher, tr, T), T } : {});
+  return m;
+};
+D.WIDTHS = [1, 2, 3, 4, 6, 8, 16, 32];
+/*CORE-END*/
+
+/* 蒸馏实验室的界面；计算都在上面的 D（core.js）里 */
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const vw = (id) => { const lab = document.getElementById(id).closest('.lab'); return Math.max(300, Math.min(800, lab ? lab.clientWidth - 36 : 800)); };
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const T_ = (x, y, s, o = {}) => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${o.size || 15}" text-anchor="${o.anchor || 'start'}"${o.italic ? ' font-style="italic"' : ''}${o.weight ? ` font-weight="${o.weight}"` : ''} fill="${o.fill || css('--fg')}">${esc(s)}</text>`;
+const R_ = (x, y, w, h, fill, o = '') => `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(0, w).toFixed(1)}" height="${Math.max(0, h).toFixed(1)}" rx="3" fill="${fill}" ${o}/>`;
+const L_ = (x1, y1, x2, y2, stroke, w = 1.5, dash = '') => `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${stroke}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash}"` : ''}/>`;
+const pc = (v, d = 1) => (v * 100).toFixed(d) + '%';
+const num = (v, d = 3) => (v < 0 ? '−' : '') + Math.abs(v).toFixed(d);
+const segInit = (id, cb) => { const el = $(id); el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; el.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); cb(b); }); };
+const segVal = (id, key = 'v') => $(id).querySelector('[aria-pressed=true]').dataset[key];
+
+/* ———— 01 温度 ———— */
+const tFrom = (s) => +(Math.pow(20, s / 100)).toFixed(2);   // 0..100 → 1..20（对数刻度）
+function draw1() {
+  const T = tFrom(+$('#t1').value); $('#t1v').textContent = T.toFixed(T < 10 ? 2 : 1).replace(/\.?0+$/, '');
+  const p = D.softmax(D.V, T), W = vw('fig1'), narrow = W < 560, H = 250;
+  $('#fig1').setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const base = 200, top = 34, slot = (W - 40) / 4, bw = Math.min(46, slot * 0.3);
+  let s = L_(20, base, W - 20, base, css('--line'));
+  s += R_(20, 8, 12, 12, css('--muted')) + T_(38, 19, '硬标签', { size: 14, fill: css('--muted') });
+  s += R_(110, 8, 12, 12, css('--accent')) + T_(128, 19, `老师 T = ${$('#t1v').textContent}`, { size: 14, fill: css('--muted') });
+  D.CLASSES.forEach((c, i) => {
+    const cx = 20 + slot * (i + 0.5), hy = (i === D.HARD ? 1 : 0) * (base - top), hp = p[i] * (base - top);
+    s += R_(cx - bw - 3, base - hy, bw, hy, css('--muted'));
+    s += R_(cx + 3, base - hp, bw, hp, css('--accent'));
+    s += T_(cx + 3 + bw / 2, base - hp - 6, pc(p[i], p[i] < 0.001 ? 2 : 1), { anchor: 'middle', size: narrow ? 12 : 14, fill: css('--accent') });
+    s += T_(cx, base + 22, c, { anchor: 'middle', size: 15 });
+    s += T_(cx, base + 40, `v = ${num(D.V[i], 0)}`, { anchor: 'middle', size: 13, fill: css('--muted') });
+  });
+  $('#fig1').innerHTML = s;
+  $('#r1a').textContent = pc(p[0]); $('#r1b').textContent = (p[1] / p[3]).toFixed(p[1] / p[3] < 10 ? 2 : 0); $('#r1c').textContent = D.entropy(p).toFixed(3);
+}
+$('#t1').addEventListener('input', draw1);
+
+/* ———— 02 KL 与交叉熵 ———— */
+const STUD = [D.Z, [6, -2, -2, -2], D.V];
+function draw2() {
+  const z = STUD[+segVal('#st2', 'k')], T = +$('#t2').value, a = +$('#a2').value, mul = $('#m2').checked;
+  $('#t2v').textContent = T; $('#a2v').textContent = a.toFixed(1);
+  const r = D.loss(D.V, z, D.HARD, T, a, mul);
+  const W = vw('fig2'), narrow = W < 560, colW = narrow ? W : W / 2, blockH = 230, H = narrow ? blockH * 2 : blockH;
+  $('#fig2').setAttribute('viewBox', `0 0 ${W} ${H}`);
+  let s = '';
+  // 左：分布
+  { const ox = 0, base = 180, top = 40, slot = (colW - 30) / 4, bw = Math.min(30, slot * 0.32);
+    s += T_(ox + 10, 18, `温度 ${T} 下的分布`, { size: 14, fill: css('--muted') });
+    s += R_(ox + 10, 26, 10, 10, css('--accent')) + T_(ox + 24, 36, '老师 p', { size: 13, fill: css('--muted') }) + R_(ox + 84, 26, 10, 10, css('--warn')) + T_(ox + 98, 36, '学生 q', { size: 13, fill: css('--muted') });
+    s += L_(ox + 10, base, ox + colW - 20, base, css('--line'));
+    D.CLASSES.forEach((c, i) => {
+      const cx = ox + 15 + slot * (i + 0.5), hp = r.pT[i] * (base - top - 10), hq = r.qT[i] * (base - top - 10);
+      s += R_(cx - bw - 2, base - hp, bw, hp, css('--accent')) + R_(cx + 2, base - hq, bw, hq, css('--warn'));
+      s += T_(cx, base + 20, c, { anchor: 'middle', size: 14 });
+      s += T_(cx - bw / 2 - 2, base - hp - 5, (r.pT[i] * 100).toFixed(0), { anchor: 'middle', size: 12, fill: css('--accent') });
+      s += T_(cx + bw / 2 + 2, base - hq - 5, (r.qT[i] * 100).toFixed(0), { anchor: 'middle', size: 12, fill: css('--warn') });
+    });
+    s += T_(ox + 10, base + 42, '（数字是百分比）', { size: 12, fill: css('--muted') });
+  }
+  // 右：梯度
+  { const ox = narrow ? 0 : colW, oy = narrow ? blockH : 0, mid = oy + 115, slot = (colW - 30) / 4, bw = Math.min(26, slot * 0.3);
+    const gh = r.gHard.map(g => a * g), gs = r.gSoft.map(g => (1 - a) * r.s * g);
+    const mx = Math.max(0.2, ...gh.map(Math.abs), ...gs.map(Math.abs)), sc = 75 / mx;
+    s += T_(ox + 10, oy + 18, '每个 logit 的梯度（负 = 要升）', { size: 14, fill: css('--muted') });
+    s += R_(ox + 10, oy + 26, 10, 10, css('--muted')) + T_(ox + 24, oy + 36, '硬项', { size: 13, fill: css('--muted') }) + R_(ox + 70, oy + 26, 10, 10, css('--accent')) + T_(ox + 84, oy + 36, mul ? '软项（含 T²）' : '软项（不乘 T²）', { size: 13, fill: css('--muted') });
+    s += L_(ox + 10, mid, ox + colW - 20, mid, css('--line'));
+    D.CLASSES.forEach((c, i) => {
+      const cx = ox + 15 + slot * (i + 0.5);
+      [[gh[i], css('--muted'), cx - bw - 2], [gs[i], css('--accent'), cx + 2]].forEach(([g, col, x]) => {
+        const h = Math.abs(g) * sc; s += R_(x, g >= 0 ? mid - h : mid, bw, h, col);
+        s += T_(x + bw / 2, g >= 0 ? mid - h - 5 : mid + h + 14, num(g, 2), { anchor: 'middle', size: 11, fill: col });
+      });
+      s += T_(cx, oy + 222, c, { anchor: 'middle', size: 14 });
+    });
+  }
+  $('#fig2').innerHTML = s;
+  $('#r2a').textContent = r.ce.toFixed(3); $('#r2b').textContent = r.kl.toFixed(3); $('#r2c').textContent = r.total.toFixed(3);
+  const nh = D.norm(r.gHard.map(g => a * g)), ns = D.norm(r.gSoft.map(g => (1 - a) * r.s * g));
+  $('#r2d').textContent = nh < 1e-9 ? '—' : (ns / nh).toFixed(2);
+  draw2b(z, T, mul);
+}
+function draw2b(z, Tcur, mul) {
+  const W = vw('fig2b'), H = 220, X0 = 64, X1 = W - 20, Y0 = 180, Y1 = 30;
+  $('#fig2b').setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const Ts = []; for (let T = 1; T <= 20; T += 0.25) Ts.push(T);
+  const raw = Ts.map(T => D.norm(D.softmax(z, T).map((q, k) => (q - D.softmax(D.V, T)[k]) / T)));
+  const scl = raw.map((g, i) => g * Ts[i] * Ts[i]);
+  const all = raw.concat(scl).filter(v => v > 0); const lo = Math.log10(Math.min(...all) * 0.8), hi = Math.log10(Math.max(...all) * 1.25);
+  const xs = (T) => X0 + (X1 - X0) * (Math.log(T) / Math.log(20)), ys = (g) => Y0 - (Y0 - Y1) * ((Math.log10(Math.max(g, 1e-12)) - lo) / (hi - lo || 1));
+  let s = L_(X0, Y0, X1, Y0, css('--line')) + L_(X0, Y0, X0, Y1 - 10, css('--line'));
+  [1, 2, 4, 8, 20].forEach(T => { s += T_(xs(T), Y0 + 20, T, { anchor: 'middle', size: 13, fill: css('--muted') }); });
+  s += T_(X1, Y0 + 38, '温度 T（对数刻度）', { anchor: 'end', size: 13, fill: css('--muted') });
+  for (let e = Math.ceil(lo); e <= Math.floor(hi); e++) { s += L_(X0 - 4, ys(10 ** e), X0, ys(10 ** e), css('--line')) + T_(X0 - 8, ys(10 ** e) + 4, e === 0 ? '1' : `1e${e}`.replace('-', '−'), { anchor: 'end', size: 12, fill: css('--muted') }); }
+  s += T_(X0 + 6, Y1 - 14, '软项梯度长度（对数刻度）', { size: 13, fill: css('--muted') });
+  if (raw.some(v => v > 1e-9)) {
+    const path = (arr) => arr.map((g, i) => `${i ? 'L' : 'M'}${xs(Ts[i]).toFixed(1)} ${ys(g).toFixed(1)}`).join(' ');
+    s += `<path d="${path(raw)}" fill="none" stroke="${css('--muted')}" stroke-width="2" stroke-dasharray="5 4"/>`;
+    s += `<path d="${path(scl)}" fill="none" stroke="${css('--accent')}" stroke-width="2.5"/>`;
+    const i = Ts.indexOf(Tcur), g0 = mul ? scl[i] : raw[i];
+    s += `<circle cx="${xs(Tcur).toFixed(1)}" cy="${ys(g0).toFixed(1)}" r="5" fill="${css('--warn')}"/>`;
+    s += T_(xs(20) - 4, ys(scl[scl.length - 1]) - 8, '乘 T²', { anchor: 'end', size: 13, fill: css('--accent') });
+    s += T_(xs(20) - 4, ys(raw[raw.length - 1]) - 8, '不乘', { anchor: 'end', size: 13, fill: css('--muted') });
+  } else s += T_((X0 + X1) / 2, (Y0 + Y1) / 2, '学生和老师完全一样：软项梯度处处为 0', { anchor: 'middle', size: 14, fill: css('--muted') });
+  $('#fig2b').innerHTML = s;
+}
+segInit('#st2', draw2); ['#t2', '#a2', '#m2'].forEach(id => $(id).addEventListener('input', draw2));
+
+/* ———— 03 / 04 真实训练 ———— */
+let TEACHER = null, TGRID = null;
+const cache3 = {}, cache4 = {};
+const CLS = () => [css('--accent'), css('--warn'), css('--ok')];
+function region(ox, oy, size, grid, pts, title, sub) {
+  const g = Math.round(Math.sqrt(grid.length)), c = size / g, cols = CLS();
+  /* 每一类拼成一条 path（同一行连续的格子并成一段），避免格子之间露缝 */
+  const d = ['', '', ''];
+  for (let r = 0; r < g; r++) { let k = 0; while (k < g) { const cl = grid[r * g + k]; let e = k; while (e + 1 < g && grid[r * g + e + 1] === cl) e++; d[cl] += `M${(ox + k * c).toFixed(2)} ${(oy + r * c).toFixed(2)}h${((e - k + 1) * c).toFixed(2)}v${(c + 0.3).toFixed(2)}h${(-(e - k + 1) * c).toFixed(2)}z`; k = e + 1; } }
+  let s = `<g>` + d.map((dd, i) => dd ? `<path d="${dd}" fill="${cols[i]}" fill-opacity="0.28"/>` : '').join('');
+  if (pts) for (let i = 0; i < pts.n; i++) {
+    const x = ox + (pts.X[2 * i] + 1.2) / 2.4 * size, y = oy + (1.2 - pts.X[2 * i + 1]) / 2.4 * size;
+    s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${size < 160 ? 2.4 : 3.2}" fill="${cols[pts.Y[i]]}" stroke="${css('--paper')}" stroke-width="1"/>`;
+  }
+  s += `</g>` + T_(ox + size / 2, oy + size + 20, title, { anchor: 'middle', size: 14 }) + (sub ? T_(ox + size / 2, oy + size + 38, sub, { anchor: 'middle', size: 13, fill: css('--muted') }) : '');
+  return s;
+}
+function run3() {
+  const N = +segVal('#n3'), T = +segVal('#tt3'), key = N + '_' + T;
+  if (!cache3[key]) {
+    const hard = D.student(TEACHER, N, 16, 'hard'), soft = D.student(TEACHER, N, 16, 'soft', T);
+    cache3[key] = { N, T, pts: D.transfer(N), eh: D.err(hard, D.test()), es: D.err(soft, D.test()), gh: D.grid(hard), gs: D.grid(soft) };
+  }
+  draw3();
+}
+function draw3() {
+  const W = vw('fig3');
+  if (!TEACHER) { $('#fig3').setAttribute('viewBox', `0 0 ${W} 60`); $('#fig3').innerHTML = T_(W / 2, 36, '老师训练中…', { anchor: 'middle', size: 15, fill: css('--muted') }); return; }
+  const r = cache3[segVal('#n3') + '_' + segVal('#tt3')]; if (!r) return;
+  const gap = 12, size = Math.min(240, (W - 2 * gap) / 3), H = size + 46, x0 = (W - 3 * size - 2 * gap) / 2;
+  $('#fig3').setAttribute('viewBox', `0 0 ${W} ${H}`);
+  $('#fig3').innerHTML = region(x0, 4, size, TGRID, null, size < 180 ? '老师' : '老师（32 单元）', `错 ${pc(TERR)}`) + region(x0 + size + gap, 4, size, r.gh, r.pts, size < 180 ? '硬标签' : '硬标签学生', `错 ${pc(r.eh)}`) + region(x0 + 2 * (size + gap), 4, size, r.gs, r.pts, size < 180 ? `软标签 T = ${r.T}` : `软标签学生 T = ${r.T}`, `错 ${pc(r.es)}`);
+  $('#r3a').textContent = pc(TERR); $('#r3b').textContent = pc(r.eh); $('#r3c').textContent = pc(r.es);
+}
+segInit('#n3', () => { setTimeout(run3, 0); }); segInit('#tt3', () => { setTimeout(run3, 0); });
+let TERR = 0, sweepDone = false;
+function sweep4(i = 0) {
+  if (i >= D.WIDTHS.length) { sweepDone = true; draw4(); return; }
+  const h = D.WIDTHS[i], hard = D.student(TEACHER, 60, h, 'hard'), soft = D.student(TEACHER, 60, h, 'soft', 4);
+  cache4[h] = { eh: D.err(hard, D.test()), es: D.err(soft, D.test()), gs: D.grid(soft, 30), gh: D.grid(hard, 30) };
+  draw4(); setTimeout(() => sweep4(i + 1), 0);
+}
+function draw4() {
+  const h = D.WIDTHS[+$('#w4').value]; $('#w4v').textContent = h; $('#r4a').textContent = (2 * h + h + 3 * h + 3).toLocaleString();
+  const W = vw('fig4'), narrow = W < 560;
+  const mapS = narrow ? Math.min(150, (W - 12) / 2) : 190, plotW = narrow ? W : W - 2 * mapS - 40, plotH = 230;
+  const H = narrow ? plotH + mapS + 50 : 280;
+  $('#fig4').setAttribute('viewBox', `0 0 ${W} ${H}`);
+  if (!TEACHER) { $('#fig4').innerHTML = T_(W / 2, 40, '老师训练中…', { anchor: 'middle', size: 15, fill: css('--muted') }); return; }
+  const X0 = 50, X1 = plotW - 16, Y0 = plotH - 34, Y1 = 22, emax = 0.55;
+  const xs = (k) => X0 + (X1 - X0) * k / (D.WIDTHS.length - 1), ys = (e) => Y0 - (Y0 - Y1) * Math.sqrt(e / emax);
+  let s = L_(X0, Y0, X1, Y0, css('--line')) + L_(X0, Y0, X0, Y1 - 6, css('--line'));
+  D.WIDTHS.forEach((w, k) => { s += T_(xs(k), Y0 + 18, w, { anchor: 'middle', size: 13, fill: css('--muted') }); });
+  s += T_(X1, Y0 + 34, '隐藏层宽度', { anchor: 'end', size: 13, fill: css('--muted') });
+  [0.01, 0.05, 0.2, 0.5].forEach(e => { s += L_(X0 - 4, ys(e), X0, ys(e), css('--line')) + T_(X0 - 7, ys(e) + 4, pc(e, 0), { anchor: 'end', size: 12, fill: css('--muted') }); });
+  s += T_(X0 + 4, Y1 - 8, '验证错误率', { size: 13, fill: css('--muted') });
+  s += L_(X0, ys(TERR), X1, ys(TERR), css('--fg'), 1.2, '5 4') + T_(X0 + 6, ys(TERR) + 16, `老师 ${pc(TERR)}`, { size: 12 });
+  const done = D.WIDTHS.filter(w => cache4[w]);
+  const path = (f) => done.map((w, k) => `${k ? 'L' : 'M'}${xs(D.WIDTHS.indexOf(w)).toFixed(1)} ${ys(cache4[w][f]).toFixed(1)}`).join(' ');
+  s += `<path d="${path('eh')}" fill="none" stroke="${css('--warn')}" stroke-width="2.2"/><path d="${path('es')}" fill="none" stroke="${css('--ok')}" stroke-width="2.5"/>`;
+  done.forEach(w => { const k = D.WIDTHS.indexOf(w); s += `<circle cx="${xs(k)}" cy="${ys(cache4[w].eh)}" r="3.5" fill="${css('--warn')}"/><circle cx="${xs(k)}" cy="${ys(cache4[w].es)}" r="3.5" fill="${css('--ok')}"/>`; });
+  const k = D.WIDTHS.indexOf(h); s += L_(xs(k), Y1, xs(k), Y0, css('--muted'), 1, '2 3');
+  s += R_(X0 + 10, Y1 + 4, 14, 4, css('--warn')) + T_(X0 + 30, Y1 + 10, '硬标签', { size: 12, fill: css('--muted') }) + R_(X0 + 82, Y1 + 4, 14, 4, css('--ok')) + T_(X0 + 102, Y1 + 10, '软标签', { size: 12, fill: css('--muted') });
+  const c = cache4[h];
+  if (c) {
+    const mx = narrow ? (W - 2 * mapS - 12) / 2 : plotW + 20, my = narrow ? plotH + 4 : 30;
+    s += region(mx, my, mapS, c.gh, null, '硬标签', `错 ${pc(c.eh)}`) + region(mx + mapS + 12, my, mapS, c.gs, null, '软标签', `错 ${pc(c.es)}`);
+    $('#r4b').textContent = pc(c.eh); $('#r4c').textContent = pc(c.es);
+  } else { $('#r4b').textContent = '训练中…'; $('#r4c').textContent = '训练中…'; }
+  $('#fig4').innerHTML = s + (sweepDone ? '' : T_(plotW - 20, Y1 + 10, `训练中 ${done.length}/${D.WIDTHS.length}`, { anchor: 'end', size: 12, fill: css('--muted') }));
+}
+$('#w4').addEventListener('input', draw4);
+
+/* ———— 05 R1 蒸馏成绩（论文表 4、5、6） ———— */
+const R1 = {
+  metrics: ['AIME 2024 pass@1', 'MATH-500 pass@1', 'GPQA Diamond pass@1', 'LiveCodeBench pass@1', 'Codeforces 等级分'],
+  rows: [
+    ['GPT-4o-0513', 'ref', [9.3, 74.6, 49.9, 32.9, 759]],
+    ['Claude-3.5-Sonnet-1022', 'ref', [16.0, 78.3, 65.0, 38.9, 717]],
+    ['o1-mini', 'ref', [63.6, 90.0, 60.0, 53.8, 1820]],
+    ['R1-Distill-Qwen-1.5B', 'stu', [28.9, 83.9, 33.8, 16.9, 954]],
+    ['R1-Distill-Qwen-7B', 'stu', [55.5, 92.8, 49.1, 37.6, 1189]],
+    ['R1-Distill-Llama-8B', 'stu', [50.4, 89.1, 49.0, 39.6, 1205]],
+    ['R1-Distill-Qwen-14B', 'stu', [69.7, 93.9, 59.1, 53.1, 1481]],
+    ['R1-Distill-Qwen-32B', 'stu', [72.6, 94.3, 62.1, 57.2, 1691]],
+    ['R1-Distill-Llama-70B', 'stu', [70.0, 94.5, 65.2, 57.5, 1633]],
+    ['Qwen2.5-32B 纯 RL', 'rl', [47.0, 91.6, 55.0, 40.2, null]],
+    ['DeepSeek-R1（老师）', 'teacher', [79.8, 97.3, 71.5, 65.9, 2029]],
+  ],
+};
+function draw5() {
+  const m = +segVal('#m5'), W = vw('fig5'), narrow = W < 560, rowH = 32, lw = narrow ? 150 : 200, H = 30 + R1.rows.length * rowH + 6;
+  $('#fig5').setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const mx = m === 4 ? 2200 : 100, bw = W - lw - 70;
+  let s = T_(lw, 18, R1.metrics[m], { size: 14, fill: css('--muted') });
+  const col = { ref: css('--line'), stu: css('--accent'), rl: css('--warn'), teacher: css('--ok') };
+  R1.rows.forEach(([name, kind, vals], i) => {
+    const y = 30 + i * rowH, v = vals[m];
+    s += T_(lw - 10, y + 18, narrow ? name.replace('R1-Distill-', '蒸馏 ').replace('Claude-3.5-Sonnet-1022', 'Claude-3.5-Sonnet') : name, { anchor: 'end', size: narrow ? 12 : 14, fill: kind === 'ref' ? css('--muted') : css('--fg') });
+    if (v == null) { s += T_(lw + 4, y + 18, '论文未报告', { size: 13, fill: css('--muted') }); return; }
+    const w = bw * v / mx; s += R_(lw, y + 4, w, rowH - 12, col[kind]);
+    s += T_(lw + w + 6, y + 18, m === 4 ? String(v) : v.toFixed(1), { size: 13, fill: kind === 'ref' ? css('--muted') : col[kind] });
+  });
+  $('#fig5').innerHTML = s;
+}
+segInit('#m5', draw5);
+
+const all = () => { draw1(); draw2(); draw3(); draw4(); draw5(); };
+all();
+addEventListener('resize', () => { all(); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+/* 训练老师（约半秒），再训练实验 03 的默认学生和实验 04 的 8 个宽度 */
+setTimeout(() => {
+  TEACHER = D.makeTeacher(); TERR = D.err(TEACHER, D.test()); TGRID = D.grid(TEACHER);
+  run3(); draw4(); setTimeout(() => sweep4(0), 30);
+}, 60);
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>

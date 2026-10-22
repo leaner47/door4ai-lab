@@ -1,0 +1,102 @@
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">蒸馏 · 软标签 · 温度 · KL 散度</div>
+  <h1>蒸馏实验室</h1>
+  <p class="lede">大模型当老师，小模型当学生。老师的概率分布、温度、KL 损失和 T² 都在页面里真实算出来；第 03、04 个实验在你的浏览器里真的训练一个老师和一批学生。</p>
+</header>
+
+<section id="s1">
+  <h2><span class="n">01</span>温度：老师的软分布变平</h2>
+  <p>一张猫的图片，老师给四个类别的分数（logits）是 \(v = (4,\ 1,\ 0,\ -5)\)，依次是猫、狗、狐狸、汽车。硬标签只说「这是猫」：猫 1，其余 0。老师的分布要先除以温度 \(T\) 再做 softmax：</p>
+  <div class="eq">\[ p_i = \frac{e^{v_i/T}}{\sum_j e^{v_j/T}} \]</div>
+  <p>\(T = 1\) 就是普通的 softmax。拖动 \(T\)，看灰色的硬标签和蓝色的老师分布。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="t1">温度 T</label><input id="t1" type="range" min="0" max="100" step="1" value="0"><b id="t1v">1</b></div>
+    </div>
+    <svg id="fig1" viewBox="0 0 800 250" role="img" aria-label="硬标签与老师在温度 T 下的概率分布"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r1a">–</b><span>p(猫)</span></div>
+      <div class="ro"><b id="r1b">–</b><span>p(狗) / p(汽车)</span></div>
+      <div class="ro"><b id="r1c">–</b><span>熵（nat），最大 ln 4 = 1.386</span></div>
+    </div>
+    <p class="note">T = 1 时狗只有 4.7%，汽车只有 0.01%，挤在柱子底部几乎看不见；T = 4 时狗 24.3%、狐狸 18.9%、汽车 5.4%，「狗比汽车像猫得多」变得看得见。狗和汽车的比值是 \(e^{6/T}\)：T 越大比值越小，排序不变。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>KL 损失与交叉熵：两项各推学生往哪走</h2>
+  <p>学生对同一张图的 logits 是 \(z\)。蒸馏的损失由两项加权：硬标签的交叉熵（\(T = 1\)），和老师、学生在同一个温度下的 KL 散度，后者乘 \(T^2\)：</p>
+  <div class="eq">\[ L = \alpha\,\mathrm{CE}\big(y,\ q^{(1)}\big) + (1-\alpha)\,T^2\,\mathrm{KL}\big(p^{(T)}\,\big\|\,q^{(T)}\big) \]</div>
+  <p>两项对学生 logit \(z_k\) 的梯度分别是 \(q^{(1)}_k - y_k\) 和 \(\big(q^{(T)}_k - p^{(T)}_k\big)/T\)。左图是温度 \(T\) 下老师（蓝）和学生（橙）的分布；右图是两项各自给每个 logit 的梯度（已乘上权重），梯度为负表示这个 logit 要升。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>学生</label><div class="seg" id="st2"><button aria-pressed="true" data-k="0">起点 (2, 0, 1, −3)</button><button aria-pressed="false" data-k="1">只会认猫 (6, −2, −2, −2)</button><button aria-pressed="false" data-k="2">和老师一样</button></div></div>
+      <div class="ctrl"><label for="t2">温度 T</label><input id="t2" type="range" min="1" max="20" step="1" value="4"><b id="t2v">4</b></div>
+      <div class="ctrl"><label for="a2">硬标签权重 α</label><input id="a2" type="range" min="0" max="1" step="0.1" value="0.5"><b id="a2v">0.5</b></div>
+      <label class="toggle"><input type="checkbox" id="m2" checked>软项乘 T²</label>
+    </div>
+    <svg id="fig2" viewBox="0 0 800 260" role="img" aria-label="老师与学生的分布，以及两项损失给每个 logit 的梯度"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r2a">–</b><span>交叉熵 −ln q(猫)</span></div>
+      <div class="ro"><b id="r2b">–</b><span>KL(pᵀ ‖ qᵀ)</span></div>
+      <div class="ro warn"><b id="r2c">–</b><span>总损失 L</span></div>
+      <div class="ro"><b id="r2d">–</b><span>软项 / 硬项梯度长度比</span></div>
+    </div>
+    <svg id="fig2b" viewBox="0 0 800 220" role="img" aria-label="软项梯度长度随温度的变化，乘与不乘 T 平方"></svg>
+    <p class="note">选「只会认猫」：交叉熵只有 0.001，硬标签已经没什么可教；KL 却是最大的，因为它把狗、狐狸、汽车一视同仁。下面的曲线：不乘 T² 时，软项梯度随 T 增大大约按 1/T² 缩小（T 从 4 到 20，缩小约 23 倍，1/T² 预言的是 25 倍）；乘上 T² 后基本走平。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>真实训练：硬标签学生 vs 软标签学生</h2>
+  <p>数据是平面上三条旋臂，三类（三种颜色）。先用 600 个带标签的点训练一个老师：单隐层 MLP，32 个隐藏单元，Adam 300 步。学生是同样结构、但只有 16 个隐藏单元的 MLP，而且只拿到 \(N\) 个点。两个学生从同一组初始参数出发、训练同样 300 步，区别只有目标：</p>
+  <ul>
+    <li><b>硬标签学生</b>：每个点的真实类别，损失是交叉熵。</li>
+    <li><b>软标签学生</b>：老师在温度 \(T\) 下对这个点的概率，损失是 \(T^2\,\mathrm{KL}\)。</li>
+  </ul>
+  <p>三个学生都在另外 1500 个点上算错误率。随机种子固定，同样的设置每次结果都一样。背景色是模型在每个位置判成哪一类，圆点是学生拿到的 \(N\) 个点。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>学生拿到的点数 N</label><div class="seg" id="n3"><button aria-pressed="false" data-v="30">30</button><button aria-pressed="true" data-v="60">60</button><button aria-pressed="false" data-v="120">120</button></div></div>
+      <div class="ctrl"><label>温度 T</label><div class="seg" id="tt3"><button aria-pressed="false" data-v="1">1</button><button aria-pressed="false" data-v="2">2</button><button aria-pressed="true" data-v="4">4</button><button aria-pressed="false" data-v="8">8</button></div></div>
+    </div>
+    <svg id="fig3" viewBox="0 0 800 300" role="img" aria-label="老师、硬标签学生、软标签学生的分界"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r3a">训练中…</b><span>老师的验证错误率</span></div>
+      <div class="ro warn"><b id="r3b">–</b><span>硬标签学生</span></div>
+      <div class="ro ok"><b id="r3c">–</b><span>软标签学生</span></div>
+    </div>
+    <p class="note">默认设置（N = 60、T = 4）：硬标签学生错 3.9%，软标签学生错 1.2%，老师 1.1%。看中间那张：硬标签学生在没有点的地方随手画了分界；软标签学生在每个点上还知道「这里离另一类有多近」，分界更贴老师。把 T 调回 1：软标签几乎和硬标签一样（N = 60 时都是 3.9%），因为 T = 1 的老师分布本身就接近硬标签。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>学生容量：隐藏层多宽才学得到</h2>
+  <p>同样 60 个点、\(T = 4\)，把学生的隐藏层宽度从 1 一路加到 32，每个宽度都训练一个硬标签学生和一个软标签学生。曲线是验证错误率，虚线是老师。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="w4">学生隐藏层宽度</label><input id="w4" type="range" min="0" max="7" step="1" value="6"><b id="w4v">16</b></div>
+    </div>
+    <svg id="fig4" viewBox="0 0 800 280" role="img" aria-label="验证错误率随学生宽度的变化，以及当前宽度下软标签学生的分界"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r4a">–</b><span>学生参数量</span></div>
+      <div class="ro warn"><b id="r4b">–</b><span>硬标签学生错误率</span></div>
+      <div class="ro ok"><b id="r4c">–</b><span>软标签学生错误率</span></div>
+    </div>
+    <p class="note">宽度 1：一个隐藏单元只能把平面切成一刀，两种学生都错一半左右。宽度 2–4：学生画不出三条旋臂，老师的软标签反而更难拟合，软标签学生不比硬标签好。宽度 6 起软标签学生持续更好，16 和 32 时接近老师。老师再好，学生装不下也学不到。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>DeepSeek-R1 蒸馏出的小模型</h2>
+  <p>DeepSeek-R1 用 R1 整理出约 80 万条样本（约 60 万条推理、20 万条非推理），在 6 个开源底座上只做 SFT，不做强化学习。下面是论文表 5、表 6 和 R1 表 4 的分数（2026-10-22 对照 arXiv 2501.12948 v1 与官方模型卡核实）。「纯 RL」那一行是同一个 Qwen2.5-32B 底座、不蒸馏、直接做大规模强化学习的结果。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>指标</label><div class="seg" id="m5"><button aria-pressed="true" data-v="0">AIME 2024</button><button aria-pressed="false" data-v="1">MATH-500</button><button aria-pressed="false" data-v="2">GPQA Diamond</button><button aria-pressed="false" data-v="3">LiveCodeBench</button><button aria-pressed="false" data-v="4">Codeforces</button></div></div>
+    </div>
+    <svg id="fig5" viewBox="0 0 800 400" role="img" aria-label="DeepSeek-R1 蒸馏模型与对照模型的分数"></svg>
+    <p class="note">同一个 Qwen2.5-32B 底座：蒸馏 AIME 72.6，纯 RL 47.0。1.5B 的蒸馏学生 AIME 28.9，已经高过 GPT-4o 的 9.3；但在 GPQA 上 1.5B 只有 33.8，低于 GPT-4o 的 49.9：知识类的题，小模型装不下。所有学生都没有超过老师 R1。</p>
+  </div>
+</section>
+</div>

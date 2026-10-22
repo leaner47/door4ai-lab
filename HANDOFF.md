@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-22 12:40 America/New_York · 更新者：Claude（会话 session_017BBX6F9xKreqTAVSmrMzpE）
+最后更新：2026-10-22 13:20 America/New_York · 更新者：Claude（会话 session_017BBX6F9xKreqTAVSmrMzpE）
 
 ---
 
@@ -143,7 +143,7 @@ door4ai-lab/
 - 课程顺序：数学讲（vectors-softmax，order 4.5）放在 Token 讲与注意力讲之间（2026-10-22 本人指定）：给没学过线性代数和概率的读者补齐点积、矩阵形状、softmax。**它的贯穿算例与注意力讲 `labs-src/attention-qkv/toy.py` 完全相同**（4 个 token、x、W_Q、W_K，分数 1.6 / 0.48 / 0.08 / 1.0，T = √2 即注意力的 ÷√d_k），改其中一讲的数字时两讲要一起改。
 - 需要大数据表的实验（如分词器词表）把打包好的 JS 放在实验页同目录（`public/labs/<slug>/xxx.js`），同源、受同样的门禁保护；不依赖外部 CDN，国内访问更稳。
 - 课程顺序：注意力 QKV（order 5）在前，KV Cache（order 10）在后，因为 KV cache 建立在 Q/K/V 概念上。
-- 课程顺序（2026-10-22 本人指定）：推理服务（13）在量化（12）与 MoE（15）之间；过拟合（22）在梯度下降（20）与残差（25）之间；分布式训练（39）在 Scaling Laws（38）与 LoRA（40）之间。
+- 课程顺序（2026-10-22 本人指定）：推理服务（13）在量化（12）与 MoE（15）之间；过拟合（22）在梯度下降（20）与残差（25）之间；分布式训练（39）在 Scaling Laws（38）与 LoRA（40）之间；蒸馏（44）在推理模型（43）与模型评测（45）之间；扩散模型（50）为模型篇最后一讲；Agent 安全预定 132（Trace 与 Eval 130 与网关 135 之间）。
 - 课程顺序：残差连接（order 25）紧接梯度下降（20）：讲深网络为什么训不动。
 - 课程顺序：梯度下降（order 20）放在 KV Cache 之后：前面几讲讲推理，从这一讲开始讲训练（参数从哪来）；后续训练相关的讲（反向传播、LoRA 等）接在 20 之后。课程目录的「第 N 讲」由 order 排序自动生成。
 - **MCP 讲按 2026-07-28 规范写**（2026-10-19 已核对官方 changelog）：无状态，去掉了 `initialize` 握手与 `Mcp-Session-Id`，新增 `server/discover`，结果必带 `resultType`，Streamable HTTP 请求必带 `Mcp-Method` / `Mcp-Name` 头；实验 01 可切回 2025-11-25 握手式对照。规范再更新时改 `public/labs/mcp/` 与文章。
@@ -189,6 +189,9 @@ door4ai-lab/
 - [x] 新增《位置编码与 RoPE：注意力怎么知道谁在前谁在后》（order 6，注意力讲之后、多头 GQA 讲之前；按新标准图文写，沿用注意力讲的四个 token，11 张分镜图 + 实验 01–05；无视频）（2026-10-22）
 - [x] 新增《预训练是什么：模型是怎么从一大堆文字里学会说话的》（order 37，LayerNorm 之后、Scaling Laws(38) 与 LoRA 之前；按新标准图文写，贯穿算例「我爱吃米饭。」+ 7 token bigram，13 张分镜图、3 个「停一下」+ 实验 01–06，含页内真实训练的字符级小模型；无视频）（2026-10-22）
 - [x] 并行补写模型篇三讲（2026-10-22，按新标准图文写，无视频）：《推理服务：一张卡怎么同时伺候几百个用户》(order 13，12 张分镜图 + 实验 01–05)、《过拟合与泛化：模型背熟了训练题，为什么还是会考砸》(22，17 张分镜图 + 实验 01–07)、《分布式训练：一张卡放不下的模型是怎么训出来的》(39，12 张分镜图 + 实验 01–05)
+- [x] 并行补写第二批（2026-10-22，按新标准图文写，无视频）：《蒸馏：小模型怎么向大模型学》(order 44，9 张分镜图 + 实验 01–05，含页内老师→学生 MLP 真训)、《扩散模型：AI 是怎么从一片噪声里画出图的》(50，模型篇最后一讲，15 张分镜图 + 实验 01–06，含页内小网络真训与解析最优预测对照)
+- [ ] **Agent 安全（agent-security，order 132）未完成**：写手中途一次回复被安全分类器拦下，主会话没有让别的写手接着生成，等本人决定重写（可收窄为防御分层与权限设计）还是不做。半成品（model.js、article.src.md 草稿）未入库，只在当时会话的临时目录里。
+- [ ] reasoning-models（43）末段写「下一讲讲模型评测」，蒸馏（44）插入后已不准，由负责该讲的窗口改（本批未碰该讲文件）。
 - [ ] 待补查（第一批并行写手标注的）：推理服务讲的 H100 3.35 TB/s 只对照了第三方汇总页；INT8 按每权重 8.125 位（组 128 + FP16 scale）是写手自设；Orca / SGLang 论文出处凭记忆。分布式训练讲 405B 气泡 48%（假设 m = 16）与每卡 6.7 GB 是推算；激活值 34sbh 按 GPT 结构，对 Llama 为量级估算
 - [ ] 待补查（写手凭记忆、未找到原文出处）：RLHF 讲里 GPT-3 预训练 300 B token、InstructGPT 每题 4–9 个回答排序、Llama 2 双奖励模型与四档评分；量化讲的困惑度表来自单作者预印本（arXiv 2601.14277），如需更强出处可删
 - [ ] 本人自学时发现缺口再补
@@ -209,6 +212,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-22 · Claude（session_017BBX6F9xKreqTAVSmrMzpE，并行写课第二批）** — 新增 `distillation`（44；贯穿算例「猫图」老师 logits (4, 1, 0, −5)、学生 (2, 0, 1, −3)、T = 4；推出乘 T²；DeepSeek-R1 约 80 万条 SFT 样本与六个学生的 AIME 分数按 arXiv 2501.12948 v1 核对；Gemma 2 蒸馏；生成：`labs-src/distillation/` 先 `build.py` → `node run_lab.mjs` → `toy.py`）与 `diffusion-models`（50；两像素「图」两团数据、4 步玩具调度 ᾱ = 0.9 / 0.72 / 0.36 / 0.09；DDPM T = 1000、β 10⁻⁴–0.02，SD v1 8 倍下采样 4 通道、CFG 7.5 / 50 步，DiT、流匹配、FLUX.2 2026-10-22 核实；生成：`node labs-src/diffusion-models/mc.mjs` → `python3 labs-src/diffusion-models/toy.py`）。衔接句：model-evaluation（上一讲改称蒸馏；「模型篇的最后一讲接着讲模型怎么看图」→「后面接着讲模型怎么看图」）、vision-tokens 的 article.src.md 加一句引出扩散（重跑 toy.py）。agent-security 未完成（见第 5 节）。`npm run build` 通过；全部 43 篇文章页 1440 浅色 / 390 深色无横向滚动、无脚本错误；个人信息检索 0。
 
 - **2026-10-22 · Claude（session_017BBX6F9xKreqTAVSmrMzpE，主会话派 3 个子 agent 并行写，第一批）** — 新增三讲，均按 write-lesson 第 4、5 节写（toy.py/build 脚本生成文章与分镜图，实验页由模板起步、保留图形尺寸上限脚本，关键数字在 node 里用页内同一份代码核对）：`inference-serving`（13，贯穿算例 H100 SXM 跑 Llama-3-8B BF16、1000 token 上下文；屋顶线 / 静态与连续批处理 / PagedAttention / prefix caching / 投机解码 / 吞吐与延迟；vLLM 0.32.0、SGLang 0.5.22、TensorRT-LLM 1.3 移除 TensorRT 后端，2026-10-22 核实；生成：`labs-src/inference-serving/toy.py`）、`overfitting`（22，y = sin 2πx + 噪声 σ = 0.25、三组各 10 点；多项式 / 偏差方差 / L2 / 早停 / dropout 页内 MLP 真训 / 样本数 / 双下降（勒让德基最小范数）；生成：`node labs-src/overfitting/build.mjs`，文章与实验页都由它出）、`distributed-training`（39，Llama-3-8B 每参数 16 B → 128.5 GB、环形 all-reduce、ZeRO 1/2/3、张量并行手算、流水线气泡、3D 并行、Llama 3 405B 表 4 配置核算；生成：`labs-src/distributed-training/toy.py` + `build_lab.py`）。衔接句最小改动：weight-quantization、mixture-of-experts、gradient-descent、residual-connection、lora 的 .md，pretraining 的 article.src.md（重跑 toy.py，仅变一行）。scaling-laws（38）与 reasoning-models（43）由另一窗口在写，未碰；分布式训练讲里按「上一讲 Scaling Laws」称呼。`npm run build` 通过；dist 静态服务下全部 39 篇文章页 1440 浅色 / 390 深色 scrollWidth == innerWidth、无脚本错误；个人信息检索 0。
 
@@ -410,7 +415,7 @@ door4ai-lab/
    - 补充（2026-10-22）：`post-training` 41 后训练总览 · `scaling-laws` 38 Scaling Laws · `pretraining` 37 预训练 · `positional-encoding` 6 位置编码与 RoPE · `reasoning-models` 43 推理模型
    - 补充（2026-10-22）：`prompt-engineering` 99 Prompt 工程（Agent 篇第一讲）
    - 补充（2026-10-22 已写）：`vision-tokens` 48 模型怎么看图
-   - 补充（2026-10-22 已写，并行）：`inference-serving` 13 推理服务 · `overfitting` 22 过拟合与泛化 · `distributed-training` 39 分布式训练
+   - 补充（2026-10-22 已写，并行）：`inference-serving` 13 推理服务 · `overfitting` 22 过拟合与泛化 · `distributed-training` 39 分布式训练 · `distillation` 44 蒸馏 · `diffusion-models` 50 扩散模型（`agent-security` 132 未完成）
    - 补充（2026-10-22 已写）：`vectors-softmax` 4.5 向量、矩阵乘法与 softmax（数学讲）
    - 补充（2026-10-19 已写）：`multihead-gqa` 7 · `weight-quantization` 12 · `mixture-of-experts` 15 · `rlhf-alignment` 42 · `agent-harness` 107 · `browser-computer-use` 122
 2. 给文章列表加按 tag 过滤。

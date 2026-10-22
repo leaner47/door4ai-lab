@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>扩散实验室</title>
+<link rel="stylesheet" href="/vendor/katex/katex.min.css">
+<!-- 本页由 labs-src/diffusion-models/toy.py 生成：lab.src.html + core.js。改实验页请改这两个文件再运行脚本。 -->
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(18px,9vw - 16px,200px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+p code,li code{font-size:.88em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+ul,ol{padding-left:1.2em}
+.eq{margin:18px 0;overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.eq .katex-display{margin:0}
+.katex{font-size:1.08em}
+.eq .katex-display>.katex{font-size:1.22em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl input[type=range]{width:min(260px,60vw)}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+.seg button:disabled{opacity:.4;cursor:not-allowed}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.btn:disabled{opacity:.5;cursor:default}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn b{color:var(--warn)} .ro.ok b{color:var(--ok)} .ro.acc b{color:var(--accent)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;align-items:start}
+input[type=number]{width:84px;font:inherit;font-size:14px;padding:3px 6px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px}
+.tag{display:inline-block;font-size:12px;color:var(--muted);background:var(--accent-soft);border-radius:3px;padding:0 6px;margin-left:6px}
+#f2{cursor:crosshair}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">加噪 · 猜噪声 · 去噪 · DDIM · 潜空间 · guidance</div>
+  <h1>扩散实验室：从一片噪声里画出图</h1>
+  <p class="lede">每张「图」只有两个像素，画成平面上的一个点。加噪、猜噪声、去噪、guidance 都在页面里实时计算，随机数用固定种子。</p>
+</header>
+
+<section id="s1">
+  <h2><span class="n">01</span>前向加噪：图怎样褪成噪声</h2>
+  <p>每张图是两个数：左像素和右像素，从 −1（黑）到 1（白）。蓝点是训练图。第 \(t\) 步的加噪图可以一步算出：</p>
+  <div class="eq">\[ x_t = \sqrt{\bar\alpha_t}\;x_0 + \sqrt{1 - \bar\alpha_t}\;\varepsilon \]</div>
+  <p>\(\varepsilon\) 是每个点自己的一组标准正态噪声（拖动 \(t\) 时不变），\(\bar\alpha_t\) 由噪声调度决定。线性调度是 DDPM 用的：1000 步，\(\beta_t\) 从 \(10^{-4}\) 线性增到 0.02，\(\bar\alpha_t = (1-\beta_1)(1-\beta_2)\cdots(1-\beta_t)\)。余弦调度是 Nichol 和 Dhariwal（2021）提出的，\(\bar\alpha_t\) 按余弦曲线下降。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="t1">步数 \(t\)</label><input id="t1" type="range" min="0" max="1000" step="1" value="250"><b id="t1v">250</b></div>
+      <div class="ctrl"><label>调度</label><div class="seg" id="sch1"><button data-v="linear" aria-pressed="true">线性</button><button data-v="cosine" aria-pressed="false">余弦</button></div></div>
+      <div class="ctrl"><label>数据</label><div class="seg" id="ds1"><button data-v="two" aria-pressed="true">两团</button><button data-v="ring" aria-pressed="false">圆环</button></div></div>
+    </div>
+    <div class="row2">
+      <svg id="f1a" viewBox="0 0 320 330" role="img" aria-label="一批训练图在第 t 步加噪后的位置"></svg>
+      <svg id="f1b" viewBox="0 0 400 300" role="img" aria-label="原图系数与噪声系数随 t 变化的曲线"></svg>
+    </div>
+    <div class="readout">
+      <div class="ro acc"><b id="r1a">–</b><span>原图的系数 √ᾱ</span></div>
+      <div class="ro warn"><b id="r1b">–</b><span>噪声的系数 √(1 − ᾱ)</span></div>
+      <div class="ro"><b id="r1c">–</b><span>ᾱ</span></div>
+    </div>
+    <p class="note">线性调度在 t = 260 附近两条曲线交叉，之后原图很快消失；余弦调度下降得更平缓，最后一段才降到 0。t = 1000 时两种数据都变成同一团噪声。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>训练目标：猜噪声</h2>
+  <p>训练时，网络只看到加噪后的 \(x_t\) 和步数 \(t\)，要猜出加进去的噪声 \(\varepsilon\)。损失是猜的和真的差的平方：</p>
+  <div class="eq">\[ L = \bigl\lVert\, \varepsilon - \varepsilon_\theta(x_t,\ t) \,\bigr\rVert^2 \]</div>
+  <p>下面的绿色箭头是<b>解析最优预测</b>：只看 \(x_t\) 时噪声的条件平均，按「来自左边亮 / 右边亮哪一团的可能性」把两种猜法加权。它不是训练出来的，而是直接按数据分布算出来的，是一个完美训练的网络能达到的极限。点平面上任意位置换一张原图 \(x_0\)，拖 \(t\)，或换一组噪声。打开页面时是文章里的那一组：\(x_0 = (0.7,\ -0.7)\)，\(\varepsilon = (-1,\ 0.5)\)。为了对上文章的手算，\(t\) 滑块用的是文章的 4 步小调度（\(\bar\alpha\) = 0.9、0.72、0.36、0.09）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="t2">步数 \(t\)</label><input id="t2" type="range" min="1" max="4" step="1" value="3"><b id="t2v">3</b></div>
+      <button class="btn" id="e2">换一组噪声</button>
+      <button class="btn" id="re2">恢复文章里的数</button>
+    </div>
+    <svg id="f2" viewBox="0 0 480 320" role="img" aria-label="原图、加噪图、真实噪声与猜测的噪声"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r2a">–</b><span>加噪图 xₜ</span></div>
+      <div class="ro warn"><b id="r2b">–</b><span>真实噪声 ε</span></div>
+      <div class="ro ok"><b id="r2c">–</b><span>最优猜测（绿）</span></div>
+      <div class="ro"><b id="r2d">–</b><span>来自左边亮的可能性</span></div>
+      <div class="ro warn"><b id="r2e">–</b><span>损失</span></div>
+    </div>
+    <p class="note">把 t 拖到 1：x₁ 离原图很近，一眼看得出来自哪一团，猜测几乎等于真实噪声，损失接近 0。拖到 4：两团都说得通，猜测变成两种猜法的平均，损失变大。</p>
+  </div>
+  <p>再真的训练一个小网络：输入 \(x_t\) 的两个数和 6 个表示 \(t\) 的数，经过两层各 32 个神经元（tanh），输出两个数作为 \(\varepsilon_\theta\)。每一步随机取 128 张训练图、128 个 \(t\)（1 到 1000，DDPM 的线性调度）和 128 组噪声，用上面的损失做梯度下降（Adam，学习率 0.003），共 1500 步。虚线是解析最优预测在同样随机抽样下的平均损失：任何网络都降不到它下面。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <button class="btn" id="tr2">开始训练 1500 步</button>
+    </div>
+    <svg id="f2b" viewBox="0 0 800 260" role="img" aria-label="小网络的训练损失曲线"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r2f">0</b><span>已训练步数</span></div>
+      <div class="ro ok"><b id="r2g">–</b><span>当前损失（滑动平均）</span></div>
+      <div class="ro"><b id="r2h">–</b><span>解析最优的损失（下限）</span></div>
+    </div>
+    <p class="note">训练完后，实验 03 可以改用这个网络去噪，和解析最优对比。它的损失停在下限上方一点：差出来的那部分是网络还没学到的。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>反向去噪：从噪声里画出点</h2>
+  <p>300 个点从纯噪声出发，每一步用猜的噪声往回走。DDPM 的一步是：</p>
+  <div class="eq">\[ x_{t-1} = \frac{1}{\sqrt{\alpha_t}}\Bigl( x_t - \frac{\beta_t}{\sqrt{1 - \bar\alpha_t}}\,\hat\varepsilon \Bigr) + \sigma_t\, z \]</div>
+  <p>DDIM 不加新噪声 \(z\)，而是先估原图 \(\hat x_0\)，再按下一个时刻的比例和同一个 \(\hat\varepsilon\) 重新混合。这里走 100 步（从 1000 每次跳 10）。拖滑块看中间任意一步，两个点画出了自己走过的路。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="k3">已走</label><input id="k3" type="range" min="0" max="100" step="1" value="100"><b id="k3v">100 步</b></div>
+      <button class="btn" id="pl3">从头播放</button>
+      <div class="ctrl"><label>方法</label><div class="seg" id="m3"><button data-v="ddpm" aria-pressed="true">DDPM</button><button data-v="ddim" aria-pressed="false">DDIM</button></div></div>
+      <div class="ctrl"><label>数据</label><div class="seg" id="ds3"><button data-v="two" aria-pressed="true">两团</button><button data-v="ring" aria-pressed="false">圆环</button></div></div>
+      <div class="ctrl"><label>猜噪声用</label><div class="seg" id="pr3"><button data-v="opt" aria-pressed="true">解析最优</button><button data-v="net" aria-pressed="false" disabled>页内训练的网络</button></div></div>
+    </div>
+    <svg id="f3" viewBox="0 0 320 330" role="img" aria-label="去噪过程中 300 个点的位置"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r3a">–</b><span>当前时刻 t</span></div>
+      <div class="ro"><b id="r3b">–</b><span>已调用网络</span></div>
+      <div class="ro ok"><b id="r3c">–</b><span>落在某一团里的比例</span></div>
+    </div>
+    <p class="note">前一半时间点只是慢慢分开，后一半才收紧成形：先定大局，再补细节。DDPM 的路是抖的（每步加新噪声），DDIM 的路是平滑的。「页内训练的网络」要先在实验 02 里训练，它只在两团上训练过。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>步数与质量</h2>
+  <p>少走几步就快几倍，但每一步要跳得更远。下面用解析最优预测、400 个点，看不同步数画出来的点。「落在某一团里」的标准是：离某一团的中心不超过 2.5 个标准差。按这个标准，真实训练数据本身约 96%。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="n4">步数</label><input id="n4" type="range" min="0" max="10" step="1" value="4"><b id="n4v">10</b></div>
+      <div class="ctrl"><label>方法</label><div class="seg" id="m4"><button data-v="ddpm" aria-pressed="false">DDPM</button><button data-v="ddim" aria-pressed="true">DDIM</button></div></div>
+      <div class="ctrl"><label>数据</label><div class="seg" id="ds4"><button data-v="two" aria-pressed="true">两团</button><button data-v="ring" aria-pressed="false">圆环</button></div></div>
+    </div>
+    <div class="row2">
+      <svg id="f4a" viewBox="0 0 320 330" role="img" aria-label="当前步数下生成的点"></svg>
+      <svg id="f4b" viewBox="0 0 400 300" role="img" aria-label="落在团里的比例随步数变化"></svg>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r4a">–</b><span>网络调用次数</span></div>
+      <div class="ro ok"><b id="r4b">–</b><span>落在某一团里的比例</span></div>
+      <div class="ro"><b id="r4c">–</b><span>真实数据的比例</span></div>
+    </div>
+    <p class="note">1 步：所有点挤在中间，那是所有训练图的平均。圆环比两团难，要多走几步才画得出来。步数太多时 DDPM 反而略高于真实数据：点比真实数据稍微收得紧一些。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>guidance scale</h2>
+  <p>同一个网络既会「有条件」地猜（知道要画左边亮还是右边亮），也会「无条件」地猜。classifier-free guidance 每一步把两种猜测按 \(s\) 组合：</p>
+  <div class="eq">\[ \tilde\varepsilon = \hat\varepsilon_\varnothing + s\,\bigl(\hat\varepsilon_c - \hat\varepsilon_\varnothing\bigr) \]</div>
+  <p>\(s = 0\) 等于不看条件，\(s = 1\) 是普通的有条件生成，\(s > 1\) 沿同一方向多推。这里两种猜测都用解析最优（无条件 = 两团一起算，有条件 = 只用那一团），DDIM 走 50 步，300 个点。虚线斜线把平面分成左边亮（右下）和右边亮（左上）两侧，虚线方框是像素的合法范围 −1 到 1。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="g5">guidance scale \(s\)</label><input id="g5" type="range" min="0" max="10" step="0.5" value="1"><b id="g5v">1</b></div>
+      <div class="ctrl"><label>条件</label><div class="seg" id="c5"><button data-v="0" aria-pressed="true">左边亮</button><button data-v="1" aria-pressed="false">右边亮</button></div></div>
+      <div class="ctrl"><label>数据</label><div class="seg" id="ds5"><button data-v="overlap" aria-pressed="true">重叠的两团</button><button data-v="two" aria-pressed="false">两团</button></div></div>
+    </div>
+    <svg id="f5" viewBox="0 0 320 330" role="img" aria-label="不同 guidance scale 下生成的点"></svg>
+    <div class="readout">
+      <div class="ro ok"><b id="r5a">–</b><span>落在条件那一侧</span></div>
+      <div class="ro"><b id="r5b">–</b><span>散布（标准差）</span></div>
+      <div class="ro warn"><b id="r5c">–</b><span>有像素超出 [−1, 1]</span></div>
+      <div class="ro"><b id="r5d">–</b><span>网络调用次数</span></div>
+    </div>
+    <p class="note">s 从 1 往上拖：点全部挪到条件那一侧，越来越挤（散布变小），也越来越往外冲出方框。真实图上，这就是更贴提示词、但更单调、颜色过饱和。拖到 0 看看不看条件时是什么样。</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2><span class="n">06</span>潜空间计算器</h2>
+  <p>潜空间扩散先用自编码器把图每个方向缩小 \(f\) 倍、每个位置存 \(C\) 个数，扩散在这张小「图」上做。如果去噪网络是 Transformer（DiT），还要把潜空间切成 \(p \times p\) 的小块，每块一个 token。</p>
+  <div class="eq">\[ \frac{H \times W \times 3}{\frac{H}{f} \times \frac{W}{f} \times C} = \frac{3 f^2}{C} \]</div>
+  <div class="eq">\[ \text{token 数} = \frac{H}{f p} \times \frac{W}{f p} \]</div>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="w6">宽</label><input id="w6" type="number" min="8" max="8192" step="8" value="512"><label for="h6">高</label><input id="h6" type="number" min="8" max="8192" step="8" value="512"></div>
+      <div class="ctrl"><label>缩小 \(f\)</label><div class="seg" id="f6"><button data-v="4" aria-pressed="false">4</button><button data-v="8" aria-pressed="true">8</button><button data-v="16" aria-pressed="false">16</button></div></div>
+      <div class="ctrl"><label>通道 \(C\)</label><div class="seg" id="ch6"><button data-v="4" aria-pressed="true">4</button><button data-v="8" aria-pressed="false">8</button><button data-v="16" aria-pressed="false">16</button></div></div>
+      <div class="ctrl"><label>切块 \(p\)</label><div class="seg" id="p6"><button data-v="1" aria-pressed="false">1</button><button data-v="2" aria-pressed="true">2</button><button data-v="4" aria-pressed="false">4</button></div></div>
+    </div>
+    <svg id="f6s" viewBox="0 0 800 250" role="img" aria-label="原图与潜空间按数的多少画成面积"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r6a">–</b><span>原图的数</span></div>
+      <div class="ro acc"><b id="r6b">–</b><span>潜空间尺寸</span></div>
+      <div class="ro acc"><b id="r6c">–</b><span>潜空间的数</span></div>
+      <div class="ro ok"><b id="r6d">–</b><span>少了几倍</span></div>
+      <div class="ro warn"><b id="r6e">–</b><span>DiT 的 token 数</span></div>
+    </div>
+    <p class="note">默认是 Stable Diffusion v1 的设置：512 × 512 → 64 × 64 × 4，少 48 倍。宽高不是 f × p 的整数倍时，按向上取整算。</p>
+  </div>
+</section>
+
+</div>
+<script src="/vendor/katex/katex.min.js"></script>
+<script src="/vendor/katex/auto-render.min.js"></script>
+<script>
+try{renderMathInElement(document.body,{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});}catch(e){}
+/*__CORE__*/
+const $ = (s) => document.querySelector(s);
+const fmt = (v, d = 3) => { let s = v.toFixed(d); if (s.includes('.')) s = s.replace(/0+$/, '').replace(/\.$/, ''); if (s === '-0') s = '0'; return s.replace('-', '−'); };
+const vtxt = (v, d = 2) => `(${fmt(v[0], d)}, ${fmt(v[1], d)})`;
+const pct = (v, d = 1) => (v * 100).toFixed(d) + '%';
+const segVal = (id) => $(id + ' [aria-pressed=true]').dataset.v;
+function seg(id, cb) { $(id).addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b || b.disabled) return; $(id).querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); cb(); }); }
+const F = (c) => `style="fill:var(--${c})"`;
+const St = (c, w = 1.5, d) => `style="fill:none;stroke:var(--${c});stroke-width:${w}${d ? ';stroke-dasharray:' + d : ''}"`;
+const T = (x, y, s, c = 'fg', size = 14, an = 'start', extra = '') => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${size}" text-anchor="${an}" ${extra} style="fill:var(--${c});paint-order:stroke;stroke:var(--paper);stroke-width:3">${s}</text>`;
+function arrow(x1, y1, x2, y2, c, w = 2.2, d) {
+  const L = Math.hypot(x2 - x1, y2 - y1); if (L < 4) return '';
+  const a = Math.atan2(y2 - y1, x2 - x1), h = 9, k = 0.42, bx = x2 - h * Math.cos(a), by = y2 - h * Math.sin(a);
+  return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" ${St(c, w, d)}/><path d="M${x2.toFixed(1)} ${y2.toFixed(1)} L${(x2 - h * Math.cos(a - k)).toFixed(1)} ${(y2 - h * Math.sin(a - k)).toFixed(1)} L${(x2 - h * Math.cos(a + k)).toFixed(1)} ${(y2 - h * Math.sin(a + k)).toFixed(1)} z" ${F(c)}/>`;
+}
+/* 左像素为横轴、右像素为纵轴的平面 */
+function plane(ox, oy, u, lim, labels = true) {
+  const L = lim * u, P = (v) => [ox + v[0] * u, oy - v[1] * u], inside = (v) => Math.abs(v[0]) <= lim && Math.abs(v[1]) <= lim;
+  let b = `<rect x="${ox - L}" y="${oy - L}" width="${2 * L}" height="${2 * L}" rx="4" ${St('line', 1)}/>`;
+  b += `<line x1="${ox - L}" y1="${oy}" x2="${ox + L}" y2="${oy}" ${St('line', 1)}/><line x1="${ox}" y1="${oy - L}" x2="${ox}" y2="${oy + L}" ${St('line', 1)}/>`;
+  if (labels) b += T(ox + L - 4, oy + 16, '左像素', 'muted', 13, 'end') + T(ox + 5, oy - L + 15, '右像素', 'muted', 13);
+  return { b, P, inside, u, ox, oy, L };
+}
+const dots = (pl, xs, c, r = 2, op = 0.6) => xs.filter(pl.inside).map((x) => { const [a, b] = pl.P(x); return `<circle cx="${a.toFixed(1)}" cy="${b.toFixed(1)}" r="${r}" style="fill:var(--${c});fill-opacity:${op}"/>`; }).join('');
+const narrow = () => document.querySelector('.wrap').clientWidth < 640;
+const LIN = DM.linear(), COS = DM.cosine();
+const SCH = { linear: LIN, cosine: COS };
+const TOYS = DM.fromAlphas([0.9, 0.8, 0.5, 0.25]);    // 文章手算用的 4 步小调度
+
+/* ———— 01 前向加噪 ———— */
+const F1 = {};
+function data1(dn) { if (!F1[dn]) { const R = DM.rng(1), x0 = DM.sampleData(DM.DISTS[dn], 300, R); F1[dn] = { x0, E: x0.map(() => [R.n(), R.n()]) }; } return F1[dn]; }
+function draw1() {
+  const t = +$('#t1').value, S = SCH[segVal('#sch1')], d = data1(segVal('#ds1')), ab = S.abar[t];
+  $('#t1v').textContent = t;
+  const pl = plane(160, 172, 50, 2.9);
+  const xs = d.x0.map((x, i) => DM.noisy(x, ab, d.E[i]));
+  $('#f1a').innerHTML = pl.b + dots(pl, xs, 'accent', 2.2, 0.6) + T(10, 18, `t = ${t}`, 'fg', 15);
+  const X0 = 50, Y0 = 250, W = 330, H = 210;
+  let b = `<line x1="${X0}" y1="${Y0}" x2="${X0 + W}" y2="${Y0}" ${St('line')}/><line x1="${X0}" y1="${Y0}" x2="${X0}" y2="${Y0 - H - 6}" ${St('line')}/>`;
+  [0, 250, 500, 750, 1000].forEach((v) => { b += T(X0 + W * v / 1000, Y0 + 20, v, 'muted', 13, 'middle'); });
+  [0, 0.5, 1].forEach((v) => { b += T(X0 - 8, Y0 - H * v + 5, v, 'muted', 13, 'end'); });
+  for (const [nm, Sx, dash] of [['linear', LIN, null], ['cosine', COS, '5 4']]) {
+    const on = nm === segVal('#sch1');
+    const pa = [], pb = []; for (let k = 0; k <= 1000; k += 10) { pa.push(`${(X0 + W * k / 1000).toFixed(1)},${(Y0 - H * Math.sqrt(Sx.abar[k])).toFixed(1)}`); pb.push(`${(X0 + W * k / 1000).toFixed(1)},${(Y0 - H * Math.sqrt(1 - Sx.abar[k])).toFixed(1)}`); }
+    b += `<polyline points="${pa.join(' ')}" ${St(on ? 'accent' : 'line', on ? 2.4 : 1.5, dash)}/><polyline points="${pb.join(' ')}" ${St(on ? 'warn' : 'line', on ? 2.4 : 1.5, dash)}/>`;
+  }
+  const xt = X0 + W * t / 1000;
+  b += `<line x1="${xt}" y1="${Y0}" x2="${xt}" y2="${Y0 - H}" ${St('muted', 1, '3 3')}/>`;
+  b += `<circle cx="${xt}" cy="${Y0 - H * Math.sqrt(ab)}" r="5" ${F('accent')}/><circle cx="${xt}" cy="${Y0 - H * Math.sqrt(1 - ab)}" r="5" ${F('warn')}/>`;
+  b += T(X0 + 8, 22, '√ᾱ', 'accent', 14) + T(X0 + 50, 22, '√(1 − ᾱ)', 'warn', 14) + T(X0 + 140, 22, segVal('#sch1') === 'linear' ? '实线：线性（虚线：余弦）' : '虚线：余弦（实线：线性）', 'muted', 13);
+  b += T(X0 + W, Y0 + 40, 't', 'muted', 14, 'end', 'font-style="italic"');
+  $('#f1b').innerHTML = b;
+  $('#r1a').textContent = fmt(Math.sqrt(ab), 4); $('#r1b').textContent = fmt(Math.sqrt(1 - ab), 4);
+  $('#r1c').textContent = ab < 1e-3 ? ab.toExponential(2).replace('e-', ' × 10^−').replace(/\^−0?(\d+)/, (m, p) => '⁻' + [...p].map((c) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[c]).join('')) : fmt(ab, 4);
+}
+$('#t1').addEventListener('input', draw1); seg('#sch1', draw1); seg('#ds1', draw1);
+
+/* ———— 02 猜噪声 ———— */
+const TWO = DM.DISTS.two;
+const st2 = { x0: [0.7, -0.7], e: [-1, 0.5], R: DM.rng(21) };
+function draw2() {
+  const t = +$('#t2').value, ab = TOYS.abar[t]; $('#t2v').textContent = t;
+  const xt = DM.noisy(st2.x0, ab, st2.e), det = DM.epsOpt(TWO, xt, ab, null, true), eh = det.eps;
+  const nw = narrow(); $('#f2').setAttribute('viewBox', nw ? '0 0 320 470' : '0 0 480 320');
+  const pl = plane(160, 160, 82, 1.7);
+  let b = pl.b;
+  if (!st2.bg) st2.bg = DM.sampleData(TWO, 200, DM.rng(1));
+  b += dots(pl, st2.bg, 'accent', 1.8, 0.25);
+  const p0 = pl.P(st2.x0), pm = pl.P([Math.sqrt(ab) * st2.x0[0], Math.sqrt(ab) * st2.x0[1]]), pt = pl.P(xt);
+  b += `<circle cx="${p0[0]}" cy="${p0[1]}" r="6" ${F('accent')}/>` + T(p0[0] + 9, p0[1] + 20, 'x₀', 'accent', 15);
+  b += arrow(p0[0], p0[1], pm[0], pm[1], 'muted', 1.6) + arrow(pm[0], pm[1], pt[0], pt[1], 'warn', 2.4);
+  b += `<circle cx="${pt[0]}" cy="${pt[1]}" r="5" ${F('fg')}/>` + T(pt[0] - 9, pt[1] - 10, 'x' + '₀₁₂₃₄'[t], 'fg', 15, 'end');
+  const q = nw ? plane(90, 392, 36, 1.9, false) : plane(392, 130, 40, 1.9, false); b += q.b;
+  const pe = q.P(st2.e), ph = q.P(eh);
+  b += arrow(q.ox, q.oy, pe[0], pe[1], 'warn', 2.4) + T(pe[0] + (pe[0] < q.ox ? -6 : 6), pe[1] - 8, 'ε', 'warn', 16, pe[0] < q.ox ? 'end' : 'start', 'font-style="italic"');
+  b += arrow(q.ox, q.oy, ph[0], ph[1], 'ok', 2.4) + T(ph[0] + 6, ph[1] + 18, 'ε', 'ok', 16, 'start', 'font-style="italic"') + T(ph[0] + 10.6, ph[1] + 11, 'ˆ', 'ok', 13, 'middle');
+  b += `<line x1="${pe[0]}" y1="${pe[1]}" x2="${ph[0]}" y2="${ph[1]}" ${St('muted', 1.3, '4 3')}/>`;
+  b += nw ? T(176, 384, '噪声（以原点为起点）', 'muted', 13) + T(176, 408, '点上面的平面换原图', 'muted', 13)
+          : T(400, 222, '噪声（以原点为起点）', 'muted', 13, 'middle') + T(400, 250, '点左边的平面换原图', 'muted', 13, 'middle');
+  $('#f2').innerHTML = b; st2.pl = pl;
+  $('#r2a').textContent = vtxt(xt); $('#r2b').textContent = vtxt(st2.e); $('#r2c').textContent = vtxt(eh, 3);
+  $('#r2d').textContent = pct(det.r[0]); $('#r2e').textContent = fmt((st2.e[0] - eh[0]) ** 2 + (st2.e[1] - eh[1]) ** 2, 3);
+}
+$('#t2').addEventListener('input', draw2);
+$('#e2').addEventListener('click', () => { st2.e = [st2.R.n(), st2.R.n()]; draw2(); });
+$('#re2').addEventListener('click', () => { st2.x0 = [0.7, -0.7]; st2.e = [-1, 0.5]; $('#t2').value = 3; draw2(); });
+$('#f2').addEventListener('click', (ev) => {
+  const svg = $('#f2'), pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+  const p = pt.matrixTransform(svg.getScreenCTM().inverse()), pl = st2.pl;
+  const v = [(p.x - pl.ox) / pl.u, (pl.oy - p.y) / pl.u];
+  if (Math.abs(v[0]) > 1.7 || Math.abs(v[1]) > 1.7) return;
+  st2.x0 = [Math.max(-1, Math.min(1, v[0])), Math.max(-1, Math.min(1, v[1]))]; draw2();
+});
+/* 页内训练 */
+const tr = { net: null, curve: [], ema: 0, step: 0, floor: DM.optLoss(TWO, LIN, 20000, DM.rng(9)), running: false };
+function draw2b() {
+  const nw = narrow(), X0 = nw ? 44 : 60, Y0 = 205, W = nw ? 416 : 700, H = 170, ymax = 1;
+  $('#f2b').setAttribute('viewBox', `0 0 ${nw ? 480 : 800} 260`);
+  let b = `<line x1="${X0}" y1="${Y0}" x2="${X0 + W}" y2="${Y0}" ${St('line')}/><line x1="${X0}" y1="${Y0}" x2="${X0}" y2="${Y0 - H - 6}" ${St('line')}/>`;
+  [0, 0.5, 1].forEach((v) => { b += T(X0 - 8, Y0 - H * v / ymax + 5, v, 'muted', 13, 'end'); });
+  [0, 500, 1000, 1500].forEach((v) => { b += T(X0 + W * v / 1500, Y0 + 20, v, 'muted', 13, 'middle'); });
+  const yf = Y0 - H * tr.floor / ymax;
+  b += `<line x1="${X0}" y1="${yf}" x2="${X0 + W}" y2="${yf}" ${St('muted', 1.2, '5 4')}/>` + T(X0 + W - 4, yf + 18, '解析最优的损失 ' + fmt(tr.floor, 3), 'muted', 13, 'end');
+  if (tr.curve.length) b += `<polyline points="${tr.curve.map(([s, v]) => `${(X0 + W * s / 1500).toFixed(1)},${(Y0 - H * Math.min(v, ymax) / ymax).toFixed(1)}`).join(' ')}" ${St('ok', 2.4)}/>`;
+  b += T(X0 + W / 2, Y0 + 42, '训练步数', 'muted', 13, 'middle');
+  $('#f2b').innerHTML = b;
+  $('#r2f').textContent = tr.step; $('#r2g').textContent = tr.step ? fmt(tr.ema / (1 - 0.95 ** tr.step), 3) : '–'; $('#r2h').textContent = fmt(tr.floor, 3);
+}
+$('#tr2').addEventListener('click', () => {
+  if (tr.running) return;
+  tr.net = DM.mlp(11); tr.R = DM.rng(5); tr.curve = []; tr.ema = 0; tr.step = 0; tr.running = true;
+  $('#tr2').disabled = true; $('#tr2').textContent = '训练中…';
+  const chunk = () => {
+    for (let i = 0; i < 25 && tr.step < 1500; i++) { tr.ema = 0.95 * tr.ema + 0.05 * tr.net.train(TWO, LIN, tr.R); tr.step++; if (tr.step % 50 === 0) tr.curve.push([tr.step, tr.ema / (1 - 0.95 ** tr.step)]); }
+    draw2b();
+    if (tr.step < 1500) setTimeout(chunk, 0);
+    else { tr.running = false; $('#tr2').disabled = false; $('#tr2').textContent = '重新训练（同一种子）'; $('#pr3 [data-v=net]').disabled = false; }
+  };
+  chunk();
+});
+
+/* ———— 03 反向去噪 ———— */
+const st3 = { cache: {} };
+function run3() {
+  const m = segVal('#m3'), dn = segVal('#ds3'), pr = segVal('#pr3'), key = [m, dn, pr, tr.step].join('|');
+  if (!st3.cache[key]) {
+    const d = DM.DISTS[dn], pred = pr === 'net' && tr.net ? (x, ab, t) => tr.net.predict(x, t, LIN.T) : (x, ab) => DM.epsOpt(d, x, ab);
+    st3.cache[key] = DM.sample({ sched: LIN, steps: 100, method: m, n: 300, seed: 7, pred, keep: true });
+  }
+  return st3.cache[key];
+}
+function draw3() {
+  if (segVal('#pr3') === 'net' && segVal('#ds3') !== 'two') { $('#pr3 [data-v=opt]').setAttribute('aria-pressed', true); $('#pr3 [data-v=net]').setAttribute('aria-pressed', false); }
+  const hist = run3(), k = +$('#k3').value, h = hist[k], d = DM.DISTS[segVal('#ds3')];
+  $('#k3v').textContent = k + ' 步';
+  const pl = plane(160, 172, 50, 2.9);
+  let b = pl.b + dots(pl, h.xs, 'ok', 2.2, 0.55);
+  [3, 42].forEach((i) => {
+    const pts = hist.slice(0, k + 1).map((g) => pl.P(g.xs[i]));
+    b += `<polyline points="${pts.map((p) => [Math.max(4, Math.min(316, p[0])).toFixed(1), Math.max(4, Math.min(326, p[1])).toFixed(1)].join(',')).join(' ')}" style="fill:none;stroke:var(--warn);stroke-width:1.3;stroke-opacity:.8"/>`;
+    const e = pts[pts.length - 1]; if (pl.inside(h.xs[i])) b += `<circle cx="${e[0].toFixed(1)}" cy="${e[1].toFixed(1)}" r="4" ${F('warn')}/>`;
+  });
+  b += T(10, 18, `t = ${h.t}`, 'fg', 15);
+  $('#f3').innerHTML = b;
+  $('#r3a').textContent = h.t; $('#r3b').textContent = k + ' 次'; $('#r3c').textContent = pct(DM.quality(d, h.xs));
+}
+$('#k3').addEventListener('input', draw3);
+seg('#m3', draw3); seg('#ds3', draw3); seg('#pr3', draw3);
+let anim3 = null;
+$('#pl3').addEventListener('click', () => { clearInterval(anim3); $('#k3').value = 0; draw3(); anim3 = setInterval(() => { const v = +$('#k3').value + 1; $('#k3').value = v; draw3(); if (v >= 100) clearInterval(anim3); }, 40); });
+
+/* ———— 04 步数与质量 ———— */
+const STEPS = [1, 2, 3, 5, 10, 20, 50, 100, 250, 500, 1000];
+const st4 = { cache: {} };
+function curve4(m, dn) {
+  const key = m + '|' + dn;
+  if (!st4.cache[key]) { const d = DM.DISTS[dn]; st4.cache[key] = STEPS.map((s) => { const xs = DM.sample({ sched: LIN, steps: s, method: m, n: 400, seed: 7, pred: (x, ab) => DM.epsOpt(d, x, ab) }); return { s, xs, q: DM.quality(d, xs) }; }); }
+  return st4.cache[key];
+}
+function draw4() {
+  const i = +$("#n4").value, m = segVal('#m4'), dn = segVal('#ds4'), cur = curve4(m, dn), other = curve4(m === 'ddpm' ? 'ddim' : 'ddpm', dn), d = DM.DISTS[dn];
+  $('#n4v').textContent = STEPS[i];
+  const pl = plane(160, 172, 90, 1.6);
+  $('#f4a').innerHTML = pl.b + dots(pl, cur[i].xs, 'ok', 2, 0.55) + T(10, 18, `${STEPS[i]} 步（${m.toUpperCase()}）`, 'fg', 15);
+  if (!st4.qt) st4.qt = {};
+  if (st4.qt[dn] == null) st4.qt[dn] = DM.quality(d, DM.sampleData(d, 4000, DM.rng(3)));
+  const X0 = 50, Y0 = 240, W = 330, H = 200, lx = (s) => X0 + W * Math.log10(s) / 3;
+  let b = `<line x1="${X0}" y1="${Y0}" x2="${X0 + W}" y2="${Y0}" ${St('line')}/><line x1="${X0}" y1="${Y0}" x2="${X0}" y2="${Y0 - H - 6}" ${St('line')}/>`;
+  [1, 10, 100, 1000].forEach((s) => { b += T(lx(s), Y0 + 20, s, 'muted', 13, 'middle'); });
+  [0, 0.5, 1].forEach((v) => { b += T(X0 - 8, Y0 - H * v + 5, (v * 100) + '%', 'muted', 13, 'end'); });
+  const yq = Y0 - H * st4.qt[dn];
+  b += `<line x1="${X0}" y1="${yq}" x2="${X0 + W}" y2="${yq}" ${St('muted', 1, '4 4')}/>` + T(X0 + W, yq + 18, '真实数据', 'muted', 13, 'end');
+  b += `<polyline points="${other.map((c) => `${lx(c.s).toFixed(1)},${(Y0 - H * c.q).toFixed(1)}`).join(' ')}" ${St('line', 1.6)}/>`;
+  b += `<polyline points="${cur.map((c) => `${lx(c.s).toFixed(1)},${(Y0 - H * c.q).toFixed(1)}`).join(' ')}" ${St('ok', 2.4)}/>`;
+  cur.forEach((c, j) => { b += `<circle cx="${lx(c.s).toFixed(1)}" cy="${(Y0 - H * c.q).toFixed(1)}" r="${j === i ? 6 : 3}" ${F(j === i ? 'warn' : 'ok')}/>`; });
+  b += T(X0 + 8, 22, m.toUpperCase(), 'ok', 14) + T(X0 + 70, 22, (m === 'ddpm' ? 'DDIM' : 'DDPM') + '（灰线）', 'muted', 13);
+  b += T(X0 + W / 2, Y0 + 44, '步数（网络调用次数）', 'muted', 13, 'middle');
+  $('#f4b').innerHTML = b;
+  $('#r4a').textContent = STEPS[i] + ' 次'; $('#r4b').textContent = pct(cur[i].q); $('#r4c').textContent = pct(st4.qt[dn]);
+}
+$("#n4").addEventListener('input', draw4); seg('#m4', draw4); seg('#ds4', draw4);
+
+/* ———— 05 guidance ———— */
+const st5 = { cache: {} };
+function draw5() {
+  const s = +$('#g5').value, c = +segVal('#c5'), dn = segVal('#ds5'), d = DM.DISTS[dn], key = [s, c, dn].join('|');
+  $('#g5v').textContent = s;
+  if (!st5.cache[key]) st5.cache[key] = DM.sample({ sched: LIN, steps: 50, method: 'ddim', n: 300, seed: 7, pred: (x, ab) => DM.epsCFG(d, x, ab, c, s) });
+  const xs = st5.cache[key], pl = plane(160, 172, 72, 2.0);
+  let b = pl.b;
+  const a = pl.P([-1, 1]);
+  b += `<rect x="${a[0]}" y="${a[1]}" width="${2 * pl.u}" height="${2 * pl.u}" ${St('muted', 1, '4 3')}/>`;
+  const l1 = pl.P([-2, -2]), l2 = pl.P([2, 2]);
+  b += `<line x1="${l1[0]}" y1="${l1[1]}" x2="${l2[0]}" y2="${l2[1]}" ${St('muted', 1, '3 3')}/>`;
+  b += dots(pl, xs, 'ok', 2.2, 0.55);
+  d.comps.forEach((k) => { const p = pl.P(k.mu); b += `<circle cx="${p[0]}" cy="${p[1]}" r="4" ${F('accent')}/>`; });
+  b += T(10, 18, `s = ${s}，条件：${c ? '右边亮' : '左边亮'}`, 'fg', 15);
+  $('#f5').innerHTML = b;
+  const side = xs.filter((x) => (c === 0 ? x[0] > x[1] : x[0] < x[1])).length / xs.length;
+  $('#r5a').textContent = pct(side); $('#r5b').textContent = fmt(DM.stats(xs).sd, 3);
+  $('#r5c').textContent = pct(xs.filter((x) => Math.abs(x[0]) > 1 || Math.abs(x[1]) > 1).length / xs.length);
+  $('#r5d').textContent = (s === 0 || s === 1 ? 50 : 100) + ' 次';
+}
+$('#g5').addEventListener('input', draw5); seg('#c5', draw5); seg('#ds5', draw5);
+
+/* ———— 06 潜空间计算器 ———— */
+function draw6() {
+  const Wd = Math.max(8, Math.min(8192, +$('#w6').value || 512)), Hd = Math.max(8, Math.min(8192, +$('#h6').value || 512));
+  const f = +segVal('#f6'), C = +segVal('#ch6'), p = +segVal('#p6');
+  const lw = Math.ceil(Wd / f), lh = Math.ceil(Hd / f), pix = Wd * Hd * 3, lat = lw * lh * C, tok = Math.ceil(lw / p) * Math.ceil(lh / p);
+  $('#r6a').textContent = pix.toLocaleString('en-US'); $('#r6b').textContent = `${lw} × ${lh} × ${C}`;
+  $('#r6c').textContent = lat.toLocaleString('en-US'); $('#r6d').textContent = fmt(pix / lat, 2) + ' 倍'; $('#r6e').textContent = tok.toLocaleString('en-US');
+  /* 按「数的多少」画成面积：原图一个大矩形，潜空间一个小矩形（面积之比 = 数之比） */
+  const nw = narrow(); $('#f6s').setAttribute('viewBox', `0 0 ${nw ? 480 : 800} ${nw ? 300 : 250}`);
+  const asp = Hd / Wd, maxW = nw ? 200 : 300, maxH = nw ? 150 : 180;
+  let w1 = maxW, h1 = w1 * asp; if (h1 > maxH) { h1 = maxH; w1 = h1 / asp; }
+  const k = Math.sqrt(lat / pix), w2 = w1 * k, h2 = h1 * k;
+  let b = `<rect x="${20}" y="${30}" width="${w1.toFixed(1)}" height="${h1.toFixed(1)}" rx="3" style="fill:var(--line);fill-opacity:.5;stroke:var(--fg);stroke-width:1.5"/>`;
+  b += T(20, 22, `原图 ${Wd} × ${Hd} × 3`, 'fg', 15);
+  const gap = nw ? 70 : 100;
+  b += arrow(20 + w1 + 12, 30 + h1 / 2, 20 + w1 + 12 + gap, 30 + h1 / 2, 'muted', 1.8) + T(20 + w1 + 12 + gap / 2, 30 + h1 / 2 - 8, '编码器', 'muted', 14, 'middle');
+  const x2 = 20 + w1 + 24 + gap, y2 = 30;
+  b += `<rect x="${x2}" y="${y2}" width="${Math.max(2, w2).toFixed(1)}" height="${Math.max(2, h2).toFixed(1)}" rx="2" style="fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5"/>`;
+  const gx = Math.ceil(lw / p), gy = Math.ceil(lh / p);
+  if (gx <= 64 && gy <= 64 && w2 / gx >= 2.5) { for (let i = 1; i < gx; i++) b += `<line x1="${(x2 + w2 * i / gx).toFixed(1)}" y1="${y2}" x2="${(x2 + w2 * i / gx).toFixed(1)}" y2="${(y2 + h2).toFixed(1)}" ${St('accent', 0.5)}/>`; for (let j = 1; j < gy; j++) b += `<line x1="${x2}" y1="${(y2 + h2 * j / gy).toFixed(1)}" x2="${(x2 + w2).toFixed(1)}" y2="${(y2 + h2 * j / gy).toFixed(1)}" ${St('accent', 0.5)}/>`; }
+  const ly = nw ? 30 + maxH + 26 : y2 + Math.max(h2, 2) + 20, lx = nw ? 20 : x2;
+  b += T(lx, ly, `潜空间 ${lw} × ${lh} × ${C}`, 'accent', 15);
+  b += T(lx, ly + 22, `切成 ${gx} × ${gy} = ${tok} 个 token`, 'warn', 15);
+  b += T(20, nw ? 290 : 240, '两个矩形的面积之比 = 两边数的个数之比', 'muted', 14);
+  $('#f6s').innerHTML = b;
+}
+['#w6', '#h6'].forEach((s) => $(s).addEventListener('input', draw6)); seg('#f6', draw6); seg('#ch6', draw6); seg('#p6', draw6);
+
+const all = () => { draw1(); draw2(); draw2b(); draw3(); draw4(); draw5(); draw6(); };
+all();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+addEventListener('resize', () => { draw2(); draw2b(); draw6(); });
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>

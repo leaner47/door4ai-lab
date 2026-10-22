@@ -41,6 +41,14 @@ export const POSTS: Record<string, PostAccess> = {
     "access": "paid",
     "series": "ai-mastery"
   },
+  "diffusion-models": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
+  "distillation": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
   "distributed-training": {
     "access": "paid",
     "series": "ai-mastery"
@@ -175,6 +183,8 @@ export const LABS: Record<string, string> = {
   "labs/browser-computer-use": "browser-computer-use",
   "labs/computer-anatomy": "computer-anatomy",
   "labs/context-window": "context-window",
+  "labs/diffusion-models": "diffusion-models",
+  "labs/distillation": "distillation",
   "labs/distributed-training": "distributed-training",
   "labs/gateway-orchestration": "gateway-orchestration",
   "labs/git-github": "git-github",
