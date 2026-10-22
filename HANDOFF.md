@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-22 11:57 America/New_York · 更新者：Claude（会话 session_01YFhhfqKLw4J3zvSgTz1aps）
+最后更新：2026-10-22 12:10 America/New_York · 更新者：Claude（会话 session_01SNn1T5c286bGhv3ALJ1Rff）
 
 ---
 
@@ -179,6 +179,7 @@ door4ai-lab/
 - [x] 模型篇补充四讲（2026-10-19）：《多头注意力与 GQA》(order 7)、《模型量化》(12)、《MoE 混合专家》(15)、《RLHF 与偏好对齐》(42)，各 6 实验 + 2 动画
 - [x] 新增《Harness 是什么：模型外面那层替它动手的程序》（order 107，Agent Loop 之后、上下文窗口之前，作为 Agent 篇总纲；5 实验 + 2 动画）；RLHF 讲末尾加「Agent 的强化学习」一节 + 实验 06（2026-10-19）
 - [x] 新增《后训练是什么：只会续写的基座模型，是怎么变成助手的》（order 41，LoRA 之后、RLHF 之前；按新标准图文写，贯穿算例「17 × 3」，7 张分镜图 + 实验 01–05；无视频）（2026-10-22）
+- [x] 新增《推理模型：为什么让模型多想一会儿，答案会更好》（order 43，RLHF 之后、模型评测之前；按新标准图文写，贯穿算例「12 个一箱 × 3 箱 − 7」，9 张分镜图 + 实验 01–06；无视频）（2026-10-22）
 - [x] 新增《Prompt 工程：怎么跟模型把话说清楚》（order 99，Agent 篇第一讲；按新标准图文写，贯穿算例「网店评论分好评 / 中评 / 差评」，8 张分镜图 + 实验 01–05；无视频）（2026-10-22）
 - [x] 新增《AI 怎么浏览网页、操作电脑：眼睛、手和权限》（order 122，MCP 之后、流式输出之前；5 实验 + 1 动画）（2026-10-19）
 - [x] 新增《向量、矩阵乘法与 softmax：读懂大模型需要的全部数学》（order 4.5，Token 讲之后、注意力讲之前；按新标准图文写，15 步、12 张分镜图、5 个「停一下」+ 6 个实验，无视频）（2026-10-22）
@@ -204,6 +205,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-22 · Claude（session_01SNn1T5c286bGhv3ALJ1Rff）** — 按本人要求用 write-lesson 写推理模型一讲。新增 `reasoning-models`（order 43）：`labs-src/reasoning-models/toy.py` 算出整讲数字、生成 9 张 SVG（Wei 2022 GSM8K 直接答 vs 思维链 / 直接答 1 次前向 vs 分步答 22 个 token 各 1 次前向 / 串行层数 32 vs 704 / k = 5 二项分布 / 投票正确率随 k（p = 0.6、0.4）/ best-of-N 四条线：上限、验证器不被骗、被骗 25%（蒙特卡洛，固定种子）、多数投票 / 固定预算下小模型 14 倍次数投票 vs 大模型（示意）/ GRPO 一组短长回答的优势 / 三种答法的 token 与等待时间），填进 `article.src.md` 写出 `src/content/blog/reasoning-models.md`。正文：思维链（每 token 约 2N FLOP、Llama-3-8B 32 层，中间结果写下来供后面读；句点对照无效）→ 自洽性（k = 3、5 手算二项分布，p < 0.5 越投越错，错答案分散时 p = 0.4 也有用）→ best-of-N（1 − (1 − p)^N 上限、会被骗的验证器极限 p / (p + (1 − p)q)）→ 测试时计算 vs 训练（Snell 2024 的 k = M + 3(M − 1)D_pre/D_inf 逐步推导，M = 14 时 R = 1、22、0.16 分别为 53、15.8、258）→ 推理模型怎么训（引用后训练讲的 RLVR/GRPO，R1-Zero 模板与规则奖励、AIME 15.6% → 71.0%、cons@64 86.7%、修订版 77.9%、aha moment 原话、语言混杂与 R1 补法；GRPO 一组手算说明长度为何变长）→ 代价（845 token/回答、每天百万次 $8,450 vs $30；想太多 2 + 3；何时不值得多想）→ 现状表（OpenAI reasoning.effort、Claude adaptive thinking + effort、Gemini thinking_level、DeepSeek thinking + reasoning_effort、百炼 enable_thinking + thinking_budget，2026-10-22 查各家文档）；4 个「停一下」。实验页 `public/labs/reasoning-models/` 由 `labs-src/reasoning-models/build.py` 拼出（模板 head/尾部脚本 + `lab.body.html` + `lab.js`）：01 直接答 vs 分步答玩具模型（每次前向一步运算，1–5 步）/ 02 多数投票计算器（二项分布精确值，错答案相同 / 各不相同）/ 03 best-of-N + 有噪声验证器（蒙特卡洛 4000 次，可抽一组看挑中谁）/ 04 思考成本计算器 / 05 固定预算取舍（示意）/ 06 GRPO 让思考变长（示意，五档长度，可加长度惩罚；数字已在 node 里跑过核对 note）。事实 2026-10-22 查证：Wei 表 1（PaLM 540B 17.9 → 56.9、GPT-3 175B 15.6 → 46.9）、Kojima 10.4 → 40.7、Wang 56.5 → 74.4、Brown 15.9% → 56%、Snell 公式与结论、o1 AIME 74 / 83 / 93、R1 v1 与修订版、Chen 2024（13 遍、1953%、92%、R1 ASDIV 845 token）。衔接：`rlhf-alignment.md` 末段改为下一讲推理模型、再下一讲评测；`model-evaluation.md` 末段补「上一讲推理模型」。本地 build 42 页通过；1512 浅色 / 390 深色文章与实验页无横向滚动、公式不溢出、无脚本错误；个人信息检索 0。
 
 - **2026-10-22 · Claude（session_01YFhhfqKLw4J3zvSgTz1aps）** — 按本人要求用 write-lesson 写预训练一讲。新增 `pretraining`（order 37）：`labs-src/pretraining/toy.py` 定义贯穿算例（7 个 token 的词表、「我爱吃米饭。」5 个位置、bigram 分数表、两句话一批、SGD 学习率 4），算出全部数字、生成 13 张 SVG，把 `article.src.md` 的 `{{figN}}` / `{{n:名字}}` 填好写到 `src/content/blog/pretraining.md`；**实验页也由脚本生成**：`lab.src.html` + `charlm.js`（字符级 bigram / 小 MLP：手写前向、交叉熵、反向、AdamW，种子固定）+ `corpus.txt`（自编约 670 字中文小语料，最后一句作验证集）→ `public/labs/pretraining/index.html`；`run_lab.mjs` 在 node 里用同一份代码训练，文章里的损失曲线与生成文本表来自它，Chromium 里跑出的结果逐字一致。正文：拆样本（n − 1）→ 因果遮罩 → softmax 一个位置 → 从整句概率连乘推到 −ln p 取平均 → 困惑度 = 几何平均的倒数 → 一个训练步（数值微分验证 p − y、「米」行梯度表、更新后「粥」升「饭」几乎不动）→ 损失下限 2 ln 2 / 10 → 数据来源 / FineWeb 清洗流程 / Jaccard + MinHash 证明 + 14×8 分桶曲线 / GPT-3 配比表与 Llama 3 配比、退火 → warmup + cosine（Adam 第一步 = ±η 的推导；带噪声碗的稳态方差 V = ησ²/(a(2 − ηa)) 推导）→ 页内小模型（MLP 验证损失第 225 步最低后上升 = 背原文）→ 学到了什么、为什么只会续写。实验：01 拆样本 + 遮罩 / 02 交叉熵计算器 / 03 bigram 一个训练步 / 04 真实训练（模型、调度、峰值学习率可选，可从任意开头生成）/ 05 学习率调度 + 带噪声碗恒定 vs 余弦 / 06 GPT-3 与 Llama 3 配比。事实 2026-10-22 查证：Llama 3 报告第 3 节（15.6 T token、清洗与三层去重、50/25/17/8 配比、退火 24.0% / 6.4%、405B 峰值 8e-5、预热 8000 步、余弦到 8e-7、120 万步、batch 4M→8M→16M）、FineWeb 论文（96 快照、36 T → 20 T → 15 T、MinHash 5-gram 112 哈希 14×8、全局去重仅剩约 4 T 反而更差、FineWeb-Edu 1.3 T）、GPT-3 表 2.2。衔接：`layernorm.md` 末段改为下一讲预训练；`lora.md` 两处改指预训练；`post-training`（article.src.md 重跑）开头与交叉熵处改指预训练一讲。本地 build 45 页通过；1512 浅色 / 390 深色无横向滚动、KaTeX 公式无溢出、无脚本错误（仅本地静态服务下 /api/me 等 404）；个人信息检索 0。
 
@@ -396,7 +399,7 @@ door4ai-lab/
    - 基础篇：`ai-coding-tools` 3.8 AI Coding 入门（Claude Code / Codex 怎么用，接 Resource 页）
    - 模型篇：`backpropagation` 30 反向传播 · `layernorm` 35 LayerNorm · `lora` 40 LoRA · `model-evaluation` 45 模型评测
    - Agent 篇：`tool-calling` 100 工具调用 · `agent-loop` 105 Agent Loop 与 ReAct · `context-window` 110 上下文与记忆 · `rag-embedding` 115 Embedding 与 RAG · `mcp` 120 MCP · `streaming` 125 流式输出（SSE）· `trace-eval` 130 Trace 与 Eval · `gateway-orchestration` 135 多模型网关与多 Agent 编排 · `agent-frameworks` 140 框架全景（纯文字）
-   - 补充（2026-10-22）：`post-training` 41 后训练总览 · `pretraining` 37 预训练 · `positional-encoding` 6 位置编码与 RoPE
+   - 补充（2026-10-22）：`post-training` 41 后训练总览 · `pretraining` 37 预训练 · `positional-encoding` 6 位置编码与 RoPE · `reasoning-models` 43 推理模型
    - 补充（2026-10-22）：`prompt-engineering` 99 Prompt 工程（Agent 篇第一讲）
    - 补充（2026-10-22 已写）：`vision-tokens` 48 模型怎么看图
    - 补充（2026-10-22 已写）：`vectors-softmax` 4.5 向量、矩阵乘法与 softmax（数学讲）

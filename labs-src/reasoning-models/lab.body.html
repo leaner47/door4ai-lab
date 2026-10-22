@@ -1,0 +1,148 @@
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">思维链 · 自洽性 · 测试时计算 · 推理模型</div>
+  <h1>推理模型实验室</h1>
+  <p class="lede">同一道「12 个一箱，买 3 箱，吃掉 7 个」，直接答、分步答、多答几次投票、让验证器挑、训练模型想更久。概率和成本都在页面里真实算出来，标了「示意」的是玩具模型。</p>
+</header>
+
+<section id="s1">
+  <h2><span class="n">01</span>直接答与分步答（示意）</h2>
+  <p>这是一个玩具模型，只有一条规则：<b>每生成一个 token 做一次前向计算，一次前向计算最多做一步运算</b>，而且只能用已经写在纸面上（题目里或前面写出来的 token 里）的数。真实模型一次前向能做的事多得多，但同样有上限：层数是固定的。</p>
+  <p>直接答时，答案是读完题后的第一个 token，只有一次计算，只来得及做第一步，后面几步来不及做。分步答时，每一步的结果先写出来，下一步从纸面上读它。拖「步数」把题目变长，点「下一个 token」一个一个生成。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>答法</label><div class="seg" id="mode1"><button aria-pressed="false" data-m="direct">直接答</button><button aria-pressed="true" data-m="cot">分步答</button></div></div>
+      <div class="ctrl"><label for="st1">步数</label><input id="st1" type="range" min="1" max="5" step="1" value="2"><b id="st1v">2</b></div>
+      <button class="btn" id="next1">下一个 token</button>
+      <button class="btn" id="all1">全部生成</button>
+      <button class="btn" id="reset1">重来</button>
+    </div>
+    <p class="sum" id="q1"></p>
+    <svg id="fig1" viewBox="0 0 800 200" role="img" aria-label="生成的 token，以及每个 token 下面的一次前向计算"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r1a">0</b><span>前向计算次数</span></div>
+      <div class="ro"><b id="r1b">0</b><span>最多串行层数（每次 32 层）</span></div>
+      <div class="ro" id="r1cbox"><b id="r1c">–</b><span>答案</span></div>
+    </div>
+    <p class="note">直接答在 1 步的题上没问题；从 2 步开始，答案只来得及做完第一步。分步答写下的蓝色数字，就是后面那次计算要读的「草稿」。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>多数投票计算器</h2>
+  <p>同一道题采样 \(k\) 条推理，每条答对的概率是 \(p\)，各条互相独立。\(k\) 条里恰好 \(i\) 条答对的概率是二项分布：</p>
+  <div class="eq">\[ P(i) = \binom{k}{i}\, p^{i}\,(1-p)^{k-i} \]</div>
+  <p>「错答案都相同」是最坏情况：只有对、错两种答案，答对的条数超过一半就赢，正好一半抛硬币。「错答案各不相同」时，对的答案只要出现 2 次以上就是最多的；只出现 1 次时所有答案各 1 票，随机挑中对的概率是 \(1/k\)。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="p2">单条答对率 p</label><input id="p2" type="range" min="0.05" max="0.95" step="0.05" value="0.6"><b id="p2v">0.60</b></div>
+      <div class="ctrl"><label for="k2">采样条数 k</label><input id="k2" type="range" min="1" max="61" step="1" value="5"><b id="k2v">5</b></div>
+      <div class="ctrl"><label>错答案</label><div class="seg" id="w2"><button aria-pressed="true" data-m="same">都相同</button><button aria-pressed="false" data-m="diff">各不相同</button></div></div>
+    </div>
+    <svg id="fig2" viewBox="0 0 800 260" role="img" aria-label="答对条数的分布，以及投票正确率随采样条数的变化"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r2a">–</b><span>只采 1 条</span></div>
+      <div class="ro ok"><b id="r2b">–</b><span>采 k 条投票</span></div>
+      <div class="ro"><b id="r2c">–</b><span>至少一条对（上限）</span></div>
+    </div>
+    <p class="note">p = 0.6、k = 5：绿色柱子是 0.3456 + 0.2592 + 0.0778 = 0.6826。把 p 拖到 0.4 以下再看「都相同」：越投越错。切到「各不相同」，同样的 p 投票却有用了。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>best-of-N 与有噪声的验证器</h2>
+  <p>采样 \(N\) 个回答，每个答对的概率是 \(p\)。验证器给每个回答打分，选分最高的。这里的验证器模型：看起来对的回答平均得 \(d\) 分，看起来错的平均得 0 分，再加上标准正态噪声。\(d\) 越大，验证器越分得清。另外，错答案里有比例 \(q\) 看起来也对（验证器被骗），同样平均得 \(d\) 分。</p>
+  <p>曲线是蒙特卡洛模拟（每个点 4000 次，种子固定）。点「抽一组」看一次具体的挑选：每个点是一个回答，横坐标是验证器给的分。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="p3">单个答对率 p</label><input id="p3" type="range" min="0.05" max="0.95" step="0.05" value="0.6"><b id="p3v">0.60</b></div>
+      <div class="ctrl"><label for="d3">区分度 d</label><input id="d3" type="range" min="0" max="4" step="0.25" value="2"><b id="d3v">2.00</b></div>
+      <div class="ctrl"><label for="q3">被骗比例 q</label><input id="q3" type="range" min="0" max="0.6" step="0.05" value="0.25"><b id="q3v">0.25</b></div>
+      <div class="ctrl"><label>N</label><div class="seg" id="n3"></div></div>
+      <button class="btn" id="draw3">抽一组</button>
+    </div>
+    <svg id="fig3a" viewBox="0 0 800 110" role="img" aria-label="一组回答在验证器分数轴上的位置"></svg>
+    <svg id="fig3" viewBox="0 0 800 280" role="img" aria-label="四种挑法的准确率随回答个数的变化"></svg>
+    <div class="legend" id="leg3"></div>
+    <div class="readout">
+      <div class="ro"><b id="r3a">–</b><span>至少一个对（上限）</span></div>
+      <div class="ro ok"><b id="r3b">–</b><span>验证器挑中对的</span></div>
+      <div class="ro warn"><b id="r3c">–</b><span>多数投票（最坏情况）</span></div>
+      <div class="ro"><b id="r3d">–</b><span>N 很大时验证器的极限</span></div>
+    </div>
+    <p class="note">q = 0 时，绿线贴着虚线（上限）走。q 调大以后绿线早早变平，停在 p / (p + (1 − p) q)：回答越多，混进「骗过验证器的错答案」也越多。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>思考的成本</h2>
+  <p>思考 token 和回答 token 一样按输出 token 计费，一样要一个一个生成。每次费用 = 输入 token × 输入价 + （思考 token + 回答 token）× 输出价；等待时间 = 首个 token 前的等待 + （思考 token + 回答 token）÷ 生成速度。价格按每百万 token 计，默认值是示意，按你用的模型改。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>预设</label><div class="seg" id="pre4"><button data-t="0" data-a="3">直接答</button><button data-t="0" data-a="22">分步答</button><button data-t="830" data-a="15" aria-pressed="true">推理模型</button><button data-t="10000" data-a="15">想很久</button></div></div>
+    </div>
+    <div class="grid4">
+      <label>思考 token<input id="t4" type="number" min="0" step="1" value="830"></label>
+      <label>回答 token<input id="a4" type="number" min="0" step="1" value="15"></label>
+      <label>输入 token<input id="i4" type="number" min="0" step="1" value="40"></label>
+      <label>输入价（$ / 百万）<input id="ip4" type="number" min="0" step="0.1" value="2"></label>
+      <label>输出价（$ / 百万）<input id="op4" type="number" min="0" step="0.1" value="10"></label>
+      <label>生成速度（token/s）<input id="sp4" type="number" min="1" step="1" value="100"></label>
+      <label>首 token 等待（s）<input id="ft4" type="number" min="0" step="0.1" value="0.5"></label>
+      <label>每天请求数<input id="n4" type="number" min="0" step="1000" value="1000000"></label>
+    </div>
+    <svg id="fig4" viewBox="0 0 800 120" role="img" aria-label="一次请求的费用构成与时间构成"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r4a">–</b><span>每次费用</span></div>
+      <div class="ro warn"><b id="r4b">–</b><span>每天费用</span></div>
+      <div class="ro"><b id="r4c">–</b><span>等多久</span></div>
+      <div class="ro"><b id="r4d">–</b><span>思考占费用</span></div>
+    </div>
+    <p class="note">「推理模型」预设的 830 + 15 = 845 个输出 token，是 DeepSeek-R1 在一套小学应用题上平均每个回答的长度。和「直接答」比，费用和时间都是两个数量级的差别。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>固定预算：大模型少想，还是小模型多想（示意）</h2>
+  <p>大模型的参数是小模型的 \(M\) 倍，生成一个 token 的钱也是 \(M\) 倍。预算用「够大模型答几次」来量：预算 \(b\) 时，大模型答 \(b\) 次投票，小模型答 \(Mb\) 次投票。两个模型的单次答对率是你设的（示意），投票正确率用实验 02 的二项分布真算（错答案都相同的最坏情况）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="ps5">小模型单次</label><input id="ps5" type="range" min="0.05" max="0.95" step="0.05" value="0.6"><b id="ps5v">0.60</b></div>
+      <div class="ctrl"><label for="pb5">大模型单次</label><input id="pb5" type="range" min="0.05" max="0.95" step="0.05" value="0.75"><b id="pb5v">0.75</b></div>
+      <div class="ctrl"><label for="m5">参数倍数 M</label><input id="m5" type="range" min="2" max="30" step="1" value="14"><b id="m5v">14</b></div>
+      <div class="ctrl"><label>题目</label><div class="seg" id="pre5"><button data-s="0.6" data-b="0.75" aria-pressed="true">容易</button><button data-s="0.35" data-b="0.6">难</button><button data-s="0.05" data-b="0.15">太难</button></div></div>
+    </div>
+    <svg id="fig5" viewBox="0 0 800 260" role="img" aria-label="预算从 1 到 10 时两种花法的准确率"></svg>
+    <div class="legend"><span><i style="background:var(--accent)"></i>小模型 · 答 M × b 次投票</span><span><i style="background:var(--fg)"></i>大模型 · 答 b 次投票</span></div>
+    <div class="readout">
+      <div class="ro"><b id="r5a">–</b><span>预算 1：小模型投票</span></div>
+      <div class="ro"><b id="r5b">–</b><span>预算 1：大模型</span></div>
+      <div class="ro ok"><b id="r5c">–</b><span>更划算的花法</span></div>
+    </div>
+    <p class="note">小模型单次答对率过了一半，多想就有用；不到一半，投票只会越投越错。「太难」那一档两条线都起不来：多想和换稍大的模型都救不了。</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2><span class="n">06</span>强化学习让思考变长（示意）</h2>
+  <p>把模型的「思考长度」简化成 5 档：200、400、800、1600、3200 个 token。想得越长越容易答对，但收益递减（下面第一行数字，示意）。模型一开始偏爱短的。每一步训练：出 16 道题，每道采样一组 8 个回答，答对奖励 1、答错 0，再减去长度惩罚 \(\lambda \times\) 长度 / 3200；组内算优势 \(A_i = (r_i - \bar r)/\sigma\)，按后训练那一讲的 GRPO 更新：</p>
+  <div class="eq">\[ z_k \leftarrow z_k + \eta \cdot \frac{1}{G}\sum_{i} A_i\,\big([\,y_i = k\,] - p_k\big) \]</div>
+  <p>奖励里从没提过「要想得长」。点「训练 50 步」，看平均长度和正确率怎么变。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>题目</label><div class="seg" id="lv6"><button data-l="easy">容易</button><button data-l="mid" aria-pressed="true">中等</button><button data-l="hard">很难</button></div></div>
+      <div class="ctrl"><label for="lam6">长度惩罚 λ</label><input id="lam6" type="range" min="0" max="0.5" step="0.05" value="0"><b id="lam6v">0.00</b></div>
+      <button class="btn" id="go6">训练 50 步</button>
+      <button class="btn" id="reset6">重置</button>
+    </div>
+    <svg id="fig6" viewBox="0 0 800 300" role="img" aria-label="五档思考长度的概率，以及平均长度和正确率随训练步数的变化"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r6a">0</b><span>训练步数</span></div>
+      <div class="ro"><b id="r6b">–</b><span>平均思考长度（token）</span></div>
+      <div class="ro ok"><b id="r6c">–</b><span>平均正确率</span></div>
+    </div>
+    <p class="note">中等难度、不加惩罚：50 步之内平均长度从约 660 涨到 3000 以上。把长度惩罚设成 0.3，它停在 1600：从 1600 到 3200 只多对 10 个百分点，抵不上多出来的 0.15 惩罚。「容易」和「很难」两档长度涨得慢得多：容易的题长短都对，很难的题长短都错，一组里多数是全对或全错，没有学习信号。</p>
+  </div>
+</section>
+
+</div>
