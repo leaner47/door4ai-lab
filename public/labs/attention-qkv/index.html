@@ -136,18 +136,17 @@ svg text{font-family:var(--sans)}
   <h2><span class="n">03</span>点积：查询和键对上了没有</h2>
   <p>打分用点积：两个向量对应位置的数相乘，再全部加起来。两个方向越一致，点积越大；方向垂直时为 0；方向相反时为负。</p>
   <div class="eq">\[ \begin{aligned} q\cdot k &= q_1k_1 + q_2k_2 + \cdots + q_dk_d \\ &= \lVert q\rVert\,\lVert k\rVert\cos\theta \end{aligned} \]</div>
-  <p>下面把向量压到二维来看。橙色是「小米」的 \(q\)，蓝色是每个词的 \(k\)。转动 \(q\)，看谁的分数最高。</p>
+  <p>下面用文章里的算例（4 个 token，每个向量 2 个数）。橙色是「小米」的 \(q = (1.0,\ -0.6)\)，蓝色是每个词的 \(k\)。转动 \(q\)（长度不变），看谁的分数最高。</p>
   <div class="lab">
     <div class="ctrls">
-      <div class="ctrl"><label>句子</label><div class="seg q" id="seg3"></div></div>
-      <div class="ctrl"><label for="th3">转动 \(q\)</label><input id="th3" type="range" min="0" max="359" step="1" value="22"><b id="th3v">22°</b></div>
+            <div class="ctrl"><label for="th3">转动 \(q\)</label><input id="th3" type="range" min="0" max="359" step="1" value="329"><b id="th3v">329°</b></div>
     </div>
     <svg id="svg3" viewBox="0 0 800 340" role="img" aria-label="二维平面里的 q 与各词的 k，以及点积"></svg>
     <div class="readout">
       <div class="ro warn"><b id="r3top">—</b><span>分数最高的词</span></div>
       <div class="ro"><b id="r3dot">—</b><span>它的点积</span></div>
     </div>
-    <p class="note">二维向量是手工设定的示意。默认角度下「粮油」和「数码」都和 \(q\) 方向接近：两个店名的 \(k\) 都在说"我是场所类别"，所以都被找到。它们真正的区别不在 \(k\) 里，而在下面要讲的 \(v\) 里。</p>
+    <p class="note">数字和文章第三、四步相同：默认角度下四个分数是 粮油 1.6、小米 1.0、店 0.48、买了 0.08。把 \(q\) 转到别的方向，第一名会换人，这就是训练调 \(W_Q\) 时在做的事。</p>
   </div>
 </section>
 
@@ -158,7 +157,7 @@ svg text{font-family:var(--sans)}
   <p>既然要找最相关的词，为什么不干脆把 100% 都给分数最高的那个？有两个原因。第一，线索常常不止一个：「粮油」和「店」合起来才说明是粮油店。第二，训练靠梯度：把某个分数调大一点，份额要跟着变大一点，模型才知道往哪调。只给第一名的话，分数小小地变化，结果纹丝不动，梯度是 0。</p>
   <div class="lab">
     <div class="ctrls">
-      <div class="ctrl"><label for="s4">「店」的分数 \(s\)</label><input id="s4" type="range" min="-3" max="5" step="0.05" value="1.2"><b id="s4v">1.20</b></div>
+      <div class="ctrl"><label for="s4">「店」的分数 \(s\)</label><input id="s4" type="range" min="-1" max="3" step="0.02" value="0.48"><b id="s4v">0.48</b></div>
     </div>
     <svg id="svg4" viewBox="0 0 800 300" role="img" aria-label="「店」的份额随分数变化：softmax 平滑上升，只取最高分则是台阶"></svg>
     <div class="readout">
@@ -167,7 +166,7 @@ svg text{font-family:var(--sans)}
       <div class="ro ok"><b id="r4c">—</b><span>softmax 的斜率（梯度）</span></div>
       <div class="ro"><b id="r4d">0</b><span>只给第一名时的梯度</span></div>
     </div>
-    <p class="note">其余分数固定为实验 03 默认角度下的值（乘了常数 4）。拖动滑块：softmax 曲线处处有坡度，台阶只在跳变的那一点变化，其余地方是平的。</p>
+    <p class="note">其余分数是文章算例里的值：粮油 1.6、买了 0.08、小米 1.0。「店」默认 0.48，份额 15.6%；拖到 0.58 是 16.9%，和文章第五步一致。softmax 曲线处处有坡度，台阶只在跳变的那一点变化，其余地方是平的。</p>
   </div>
 </section>
 
@@ -214,11 +213,10 @@ svg text{font-family:var(--sans)}
   <div class="eq">\[ \Delta x = \sum_{j} w_j\,v_j \qquad x' = x + \Delta x \]</div>
   <div class="lab">
     <div class="ctrls">
-      <div class="ctrl"><label>句子</label><div class="seg q" id="seg6"></div></div>
-    </div>
+          </div>
     <svg id="svg6" viewBox="0 0 800 360" role="img" aria-label="原向量加上加权的 v 得到新向量"></svg>
     <div class="sum" id="sum6"></div>
-    <p class="note">二维示意：横轴"像手机"，纵轴"像粮食"。灰色是查表得到的 \(x\)，两种意思各占一半；蓝色小箭头是各词的 \(w_jv_j\)，首尾相接；橙色是加完之后的 \(x'\)。份额用的是实验 03 默认角度下的值。</p>
+    <p class="note">数字和文章第七、八步相同：横轴「像手机」，纵轴「像粮食」。灰色是 \(x = (0.5,\ 0.5)\)；蓝色是各词的 \(w_j v_j\)，首尾相接；橙色是加完之后的 \(x' \approx (0.74,\ 1.66)\)。份额是除以 \(\sqrt{2}\) 之后的那组。在实验 03 里转动 \(q\)，这里的份额和 \(x'\) 会跟着变。</p>
   </div>
 </section>
 
@@ -359,12 +357,11 @@ function draw2(){
 seg('seg2',[P[0].a.sent,P[0].b.sent],0,i=>{s2=i;draw2();});
 document.getElementById('qdiff').textContent=String(P[0].q_identical_layer1_maxdiff);
 
-/* 03：二维示意向量（手工设定） */
-const T3=[
- {t:['我在','粮油','店','买了','两','斤','小米'],k:[[-0.7,-0.5],[0.86,0.42],[0.62,0.12],[0.1,-0.86],[-0.5,0.6],[0.2,0.72],[-0.3,0.25]]},
- {t:['我在','数码','店','买','了一','部','小米'],k:[[-0.7,-0.5],[0.9,0.33],[0.62,0.12],[0.05,-0.86],[-0.55,0.55],[0.25,0.66],[-0.3,0.25]]}];
-let s3=0,th3=22;
-const qv=th=>[Math.cos(th*Math.PI/180),Math.sin(th*Math.PI/180)];
+/* 03：文章算例（labs-src/attention-qkv/toy.py 的同一组数） */
+const T3=[{t:['粮油','店','买了','小米'],k:[[1,-1],[0.6,0.2],[0.2,0.2],[1,0]]}];
+let s3=0,th3=329;
+const QL=Math.hypot(1,-0.6);
+const qv=th=>[QL*Math.cos(th*Math.PI/180),QL*Math.sin(th*Math.PI/180)];
 const dots=(s,th)=>{const q=qv(th);return T3[s].k.map(k=>q[0]*k[0]+q[1]*k[1]);};
 function draw3(){
  const svg=document.getElementById('svg3');const w=W(svg,w3h());
@@ -373,17 +370,17 @@ function draw3(){
  const narrow=w<620;const R=narrow?Math.min(120,w/2-60):125,cx=narrow?w/2:175,cy=170;
  E('circle',{cx,cy,r:R+8,fill:'none',stroke:line},svg);
  E('line',{x1:cx-R-20,y1:cy,x2:cx+R+20,y2:cy,stroke:line},svg);E('line',{x1:cx,y1:cy-R-20,x2:cx,y2:cy+R+20,stroke:line},svg);
- const d=dots(s3,th3);const top=d.slice(0,-1).reduce((b,v,i)=>v>d[b]?i:b,0);
- T3[s3].k.forEach((k,j)=>{const x=cx+k[0]*R,y=cy-k[1]*R;
+ const d=dots(s3,th3);const top=d.reduce((b,v,i)=>v>d[b]?i:b,0);const SC=R/1.5;
+ T3[s3].k.forEach((k,j)=>{const x=cx+k[0]*SC,y=cy-k[1]*SC;const kl=Math.hypot(k[0],k[1]);
   E('line',{x1:cx,y1:cy,x2:x,y2:y,stroke:acc,'stroke-width':j===top?3:1.6,opacity:j===top?1:.6,'marker-end':'url(#a3k)'},svg);
-  const lx=cx+k[0]*(R+16),ly=cy-k[1]*(R+16);
+  const lx=x+k[0]/kl*16,ly=y-k[1]/kl*16;
   E('text',{x:lx,y:ly,fill:fg,'font-size':13,'text-anchor':k[0]>0.2?'start':(k[0]<-0.2?'end':'middle'),'dominant-baseline':'central'},svg,T3[s3].t[j]);});
- const q=qv(th3);E('line',{x1:cx,y1:cy,x2:cx+q[0]*R*.85,y2:cy-q[1]*R*.85,stroke:warn,'stroke-width':4,'marker-end':'url(#a3q)'},svg);
- mt(svg,cx+q[0]*R*.85+(q[0]>=0?8:-8),cy-q[1]*R*.85-8,[['q','i']],{fill:warn,'font-size':17,'text-anchor':q[0]>=0?'start':'end','font-weight':600});
+ const q=qv(th3);E('line',{x1:cx,y1:cy,x2:cx+q[0]*SC,y2:cy-q[1]*SC,stroke:warn,'stroke-width':4,'marker-end':'url(#a3q)'},svg);
+ mt(svg,cx+q[0]*SC+(q[0]>=0?8:-8),cy-q[1]*SC-8,[['q','i']],{fill:warn,'font-size':17,'text-anchor':q[0]>=0?'start':'end','font-weight':600});
  /* 右侧（窄屏在下方）：点积条 */
- const bx=narrow?10:400,by=narrow?cy+R+48:34,bw=(narrow?w-20:w-bx-20),lab=56,mid=bx+lab+(bw-lab)*0.42,sc=(bw-lab)*0.5;
+ const bx=narrow?10:400,by=narrow?cy+R+48:34,bw=(narrow?w-20:w-bx-20),lab=56,mid=bx+lab+(bw-lab)*0.42,sc=(bw-lab)*0.5/1.7;
  mt(svg,bx,by-8,[['q','i'],[' · ',''],['k','i'],['j','sub'],['  对每个词的点积','']],{fill:mu,'font-size':13});
- E('line',{x1:mid,y1:by,x2:mid,y2:by+7*30,stroke:line},svg);
+ E('line',{x1:mid,y1:by,x2:mid,y2:by+T3[s3].t.length*30,stroke:line},svg);
  d.forEach((v,j)=>{const y=by+6+j*30;const x=v>=0?mid:mid+v*sc,ww=Math.abs(v)*sc;
   E('text',{x:bx,y:y+10,fill:j===top?warn:fg,'font-size':13,'font-weight':j===top?600:400,'dominant-baseline':'central'},svg,T3[s3].t[j]);
   E('rect',{x,y,width:Math.max(1,ww),height:20,rx:3,fill:v>=0?warn:acc,opacity:j===top?1:.5},svg);
@@ -391,17 +388,16 @@ function draw3(){
  document.getElementById('r3top').textContent=T3[s3].t[top];
  document.getElementById('r3dot').textContent=d[top].toFixed(2);
 }
-function w3h(){const s=document.getElementById('svg3');const w=s.getBoundingClientRect().width||800;return w<620?560:340;}
-seg('seg3',[P[0].a.sent,P[0].b.sent],0,i=>{s3=i;draw3();});
-document.getElementById('th3').oninput=e=>{th3=+e.target.value;document.getElementById('th3v').textContent=th3+'°';draw3();};
+function w3h(){const s=document.getElementById('svg3');const w=s.getBoundingClientRect().width||800;return w<620?470:340;}
+document.getElementById('th3').oninput=e=>{th3=+e.target.value;document.getElementById('th3v').textContent=th3+'°';draw3();draw6();};
 
 /* 04 */
-const base4=dots(0,22).map(v=>4*v);
-let s4=1.2;
+const base4=dots(0,329);
+let s4=0.48;
 function draw4(){
  const svg=document.getElementById('svg4');const w=W(svg,300);
  const warn=css('--warn'),acc=css('--accent'),ok=css('--ok'),line=css('--line'),fg=css('--fg'),mu=css('--muted');
- const idx=2,lo=-3,hi=5;
+ const idx=1,lo=-1,hi=3;
  const share=s=>{const a=[...base4];a[idx]=s;return softmax(a)[idx];};
  const others=Math.max(...base4.filter((_,i)=>i!==idx));
  const hard=s=>s>others?1:0;
@@ -471,21 +467,19 @@ seg('seg5b',D5.map(String),3,i=>{d5i=i;draw5b();});
 document.getElementById('sc5b').onchange=draw5b;
 document.getElementById('re5b').onclick=()=>{seed5++;draw5b();};
 
-/* 06 二维示意：横轴像手机，纵轴像粮食 */
-const V6=[
- {x:[0.45,0.45],v:[[0.04,0.02],[-0.12,0.95],[0.08,0.1],[0.02,-0.04],[0.0,0.12],[-0.05,0.25],[0.06,0.06]]},
- {x:[0.45,0.45],v:[[0.04,0.02],[0.95,-0.12],[0.08,0.1],[0.02,-0.04],[0.05,-0.02],[0.3,-0.06],[0.06,0.06]]}];
+/* 06：文章算例，横轴像手机，纵轴像粮食；v = W_V x，W_V = diag(1, 2) */
+const V6=[{x:[0.5,0.5],v:[[0,2],[0.4,0.4],[0.2,0],[0.5,1]]}];
 let s6=0;
 function draw6(){
  const svg=document.getElementById('svg6');const w=W(svg,360);
  const acc=css('--accent'),warn=css('--warn'),line=css('--line'),fg=css('--fg'),mu=css('--muted');
  marker(svg,'a6g',mu);marker(svg,'a6b',acc);marker(svg,'a6o',warn);
- const R=Math.min(270,w-110),ox=Math.max(50,(w-R)/2-10),oy=325,G=0.55;
- const Pp=v=>[ox+v[0]*R,oy-v[1]*R];
+ const R=Math.min(270,w-110),ox=Math.max(50,(w-R)/2-10),oy=325,G=1,U=R/1.8;
+ const Pp=v=>[ox+v[0]*U,oy-v[1]*U];
  E('line',{x1:ox,y1:oy,x2:ox+R+20,y2:oy,stroke:line,'marker-end':'url(#a6g)'},svg);E('line',{x1:ox,y1:oy,x2:ox,y2:oy-R-20,stroke:line,'marker-end':'url(#a6g)'},svg);
  E('text',{x:ox+R+20,y:oy+20,fill:mu,'font-size':13,'text-anchor':'end'},svg,'像手机 →');
  E('text',{x:ox-8,y:oy-R-26,fill:mu,'font-size':13,'text-anchor':'start'},svg,'↑ 像粮食');
- const wts=softmax(dots(s6,22).map(v=>4*v));const x=V6[s6].x;
+ const wts=softmax(dots(s6,th3).map(v=>v/Math.SQRT2));const x=V6[s6].x;
  const [ax,ay]=Pp(x);E('line',{x1:ox,y1:oy,x2:ax,y2:ay,stroke:mu,'stroke-width':3,'marker-end':'url(#a6g)'},svg);
  mt(svg,ax+10,ay+18,[['x','i'],['「小米」','']],{fill:mu,'font-size':14});
  let cur=[...x];const parts=[];
@@ -497,7 +491,6 @@ function draw6(){
  const K=window.katex;const f=s=>K?K.renderToString(s,{throwOnError:false}):s;
  document.getElementById('sum6').innerHTML='新的「小米」 '+f("x' = x")+' + '+parts.slice(0,4).map(o=>pct(o.p)+' × '+f('v')+'「'+t[o.j]+'」').join(' + ')+' + …';
 }
-seg('seg6',[P[0].a.sent,P[0].b.sent],0,i=>{s6=i;draw6();});
 
 /* 07 真实模型 */
 let p7=0,s7=0,l7=1,h7=11,tsel=1;

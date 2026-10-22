@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-21 23:32 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
+最后更新：2026-10-21 23:58 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
 
 ---
 
@@ -84,7 +84,7 @@ door4ai-lab/
 ```
 
 ### 写一篇新文章的标准流程
-**本人提出一个问题要写成教材时，按项目 skill `.claude/skills/write-lesson/SKILL.md` 做**（文章 + 实验页 + Manim 动画 + 上线 + 更新本文件）。下面是简版：
+**本人提出一个问题要写成教材时，按项目 skill `.claude/skills/write-lesson/SKILL.md` 做**（一小步一小步的图文讲解 + 实验页 + 上线 + 更新本文件；不做视频）。样板：注意力一讲——`labs-src/<slug>/toy.py` 算出贯穿全文的小例子、生成静态 SVG 图，并把 `article.src.md` 里的 `{{figN}}` 填好写到 `src/content/blog/<slug>.md`；改文章改 `article.src.md` 后重跑 `python3 labs-src/<slug>/toy.py`，不要直接改生成的 .md。实验页的玩具实验用同一组数字。下面是简版：
 1. 实验页：写成单文件 HTML（内联 CSS/JS，可用 cdnjs 等 CDN 加载库），放到 `public/labs/<slug>/index.html`。
 2. 文章：`src/content/blog/<slug>.md`，frontmatter 写 `lab: /labs/<slug>/`；属于课程的写 `series: ai-mastery` 和 `order: <数字>`（10、20、30… 留空隙便于插入）。不写 series 的文章不会出现在课程目录里。
    - 加资源：编辑 `src/data/resources.ts`，不需要新建页面。**Resource 页只放本人明确指定的条目，AI 不得自行添加。**
@@ -155,7 +155,7 @@ door4ai-lab/
 
 ## 5. 当前状态
 
-- [ ] **按新标准改写现有各讲**（2026-10-21 本人反馈：步骤不够细、需要读者自行推演的地方多；不要视频）：逐讲把视频换成静态分镜图、补齐推导步骤与数字算例。范围与顺序待本人确认。
+- [ ] **按新标准改写现有各讲**（2026-10-21 本人反馈：步骤不够细、需要读者自行推演的地方多；不要视频）：本人定为全部、按课程顺序逐讲改。样板「注意力 Q、K、V」已完成（2026-10-21），**等本人看过样板再改其余各讲**；其余约 24 讲仍有 `figure class="clip"` 视频与 `manim-src/` 源，改到哪讲删哪讲的。
 
 - [x] 仓库、Pages、域名、首篇文章全部上线（2026-10-13）
 - [x] 本机 `~/Documents/Agents/door4ai-lab` 已与 GitHub 同步
@@ -197,6 +197,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-21 · Claude（session_01QvBhNRgUqPZf8fhAnjTAx7）** — 按新标准重写样板讲 `attention-qkv`：新增 `labs-src/attention-qkv/toy.py`（贯穿全文的四词小例子「粮油 店 买了 小米」，二维 x、W_Q/W_K/W_V、分数 1.6/0.48/0.08/1.0、softmax 47.8/15.6/10.4/26.2 %、÷√2 后 40.8/18.5/13.9/26.7 %、x′≈(0.74, 1.66)；生成 6 张 SVG 图）与 `article.src.md`（八步：缩小问题 → q → k → 点积 → softmax → 除以 √d_k（方差推导 + Qwen 实测）→ v → 加权求和与残差，每步手算表格 + 3 个「停一下」），生成 `src/content/blog/attention-qkv.md`。实验 03/04/06 改用同一组数字（去掉原来的缩放系数 G=0.55）。删除 `public/videos/attention-qkv/` 与 `manim-src/attention-qkv/`。skill 第 5 节补「标准做法」与 `<summary>` 里不能用 `$…$`。本地 build 通过；1512 浅色 / 390 深色无横向滚动、表格不溢出、无脚本错误。
 
 - **2026-10-21 · Claude** — 按本人纠正改写 skill `write-lesson`：去掉「Manim 视频」，改为图文（静态分镜 SVG，与实验同一套画法）；新增第 4 节「一小步一小步讲清楚」写作规范（8 条）；新增 `templates/figure.svg` 示范图，更新文章与实验页模板。`Base.astro` 补 `--warn/--ok` 主题色（原来只有实验页有），加 `.prose figure.fig` 与 `details.pause` 样式。用临时文章验证 1512 / 390 宽、深浅两色显示正常后删除。
 
