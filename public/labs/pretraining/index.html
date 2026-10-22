@@ -1,0 +1,520 @@
+<!doctype html>
+<!-- 本页由 labs-src/pretraining/toy.py 从 lab.src.html 生成。改实验请改 lab.src.html（模型代码改 charlm.js、语料改 corpus.txt）再运行脚本。 -->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>预训练实验室</title>
+<link rel="stylesheet" href="/vendor/katex/katex.min.css">
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(18px,9vw - 16px,200px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+p code,li code{font-size:.88em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+.eq{margin:18px 0;overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.eq .katex-display{margin:0}
+.katex{font-size:1.08em}
+.eq .katex-display>.katex{font-size:1.22em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl input[type=range]{width:min(180px,40vw)}
+.ctrl input[type=text]{font:inherit;font-size:16px;padding:4px 8px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);width:min(260px,60vw)}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer}
+.btn.primary{border-color:var(--accent);color:var(--accent)}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn b{color:var(--warn)} .ro.ok b{color:var(--ok)} .ro.acc b{color:var(--accent)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.num{text-align:right}
+.tw{overflow-x:auto}
+.gen{font-size:16px;line-height:1.9;background:var(--bg);border-radius:6px;padding:10px 12px;margin-top:12px;word-break:break-all;min-height:2em}
+.gen .pre{color:var(--accent)}
+.snap td:first-child{color:var(--muted);white-space:nowrap;width:4em}
+.snap td{word-break:break-all}
+.sliders5{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 18px;margin-bottom:12px;font-size:14px}
+.sliders5 label{display:flex;align-items:center;gap:8px;color:var(--muted)}
+.sliders5 input{flex:1;min-width:60px}
+.sliders5 b{color:var(--fg);font-weight:600;min-width:3em;font-variant-numeric:tabular-nums}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">预训练 · 下一个 token · 交叉熵 · 学习率 · 数据</div>
+  <h1>预训练是什么：模型是怎么从一大堆文字里学会说话的</h1>
+  <p class="lede">给前文，猜下一个 token。一句话拆成训练样本，交叉熵把「猜得多差」变成一个数，一个训练步把前面几讲拼成一条线；最后在页面里真的训一个中文小模型。</p>
+</header>
+
+<section id="s1">
+  <h2><span class="n">01</span>一句话拆成训练样本</h2>
+  <p>预训练的题目是「读前面，猜下一个」。一段 \(n\) 个 token 的文字，每个位置都是一道题：读前 \(i\) 个，猜第 \(i+1\) 个。第一个 token 前面没有东西可读，所以一共 \(n-1\) 道题。这里每个字、每个标点算一个 token（真实分词器会把常见词合成一个 token，Token 那一讲讲过）。</p>
+  <p>右边是因果遮罩：把整句话一次送进模型，第 \(i\) 行是第 \(i\) 个位置能看到的字。实心格能看到，虚线格看不到，所以每一行看到的正好是它那道题允许看的前文。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="t1">句子</label><input id="t1" type="text" value="我爱吃米饭。" maxlength="12"></div>
+    </div>
+    <svg id="fig1" role="img" aria-label="一句话拆成的训练样本和因果遮罩"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r1n">–</b><span>token 数</span></div>
+      <div class="ro acc"><b id="r1s">–</b><span>训练样本数</span></div>
+      <div class="ro"><b>8191</b><span>一条 8192 token 的序列</span></div>
+    </div>
+    <p class="note">注意看蓝色那一格：每个样本要猜的字，在遮罩里正好是这一行看不到的第一格。最多显示 12 个字。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>交叉熵计算器</h2>
+  <p>「我爱吃米饭。」的 5 道题，每道题模型给正确答案一个概率 \(p\)。整句话的概率是 5 个 \(p\) 相乘；取对数变成相加；加负号、取平均，就是交叉熵损失：</p>
+  <div class="eq">\[ L = \frac{1}{5}\sum_{i=1}^{5} \bigl(-\ln p_i\bigr) \qquad \mathrm{PPL} = e^{L} \]</div>
+  <p>默认值是文章第三步那张表。拖动任一个概率，看它的点在 \(-\ln p\) 曲线上怎么走、平均损失和困惑度怎么变。</p>
+  <div class="lab">
+    <div class="sliders5" id="sl2"></div>
+    <svg id="fig2" role="img" aria-label="负对数曲线上的五个位置和它们的损失"></svg>
+    <div class="readout">
+      <div class="ro warn"><b id="r2l">–</b><span>平均损失 L</span></div>
+      <div class="ro"><b id="r2p">–</b><span>整句概率（5 个 p 相乘）</span></div>
+      <div class="ro acc"><b id="r2x">–</b><span>困惑度 PPL</span></div>
+    </div>
+    <p class="note">把某一个 \(p\) 拖到 0.01，平均损失会被它一个拉高很多：交叉熵对「猜得很差」的位置罚得最重。5 个都拖到 1/7 ≈ 0.143（7 个候选平均分），困惑度正好是 7。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>一个训练步</h2>
+  <p>bigram 模型只看上一个字，参数是一张 7 × 7 的分数表。左图是每一行做完 softmax 后的概率（第「米」行就是「上一个字是米时，下一个字的概率」），颜色越深概率越大。这一批是两句话「我爱吃米饭。」「我爱吃米粥。」，共 10 道题。</p>
+  <p>每走一步：查表得到 10 个概率（前向）→ 10 个 \(-\ln p\) 取平均（交叉熵）→ 每道题的梯度是 \(p - y\)，同一行的加起来除以 10（反向）→ 每个分数减去 \(\eta \times\) 梯度（更新）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>学习率 η</label><div class="seg" id="eta3"><button data-v="1">1</button><button data-v="2">2</button><button data-v="4" aria-pressed="true">4</button><button data-v="8">8</button></div></div>
+      <div class="ctrl"><button class="btn primary" id="step3">走一步</button><button class="btn" id="step3x">走 10 步</button><button class="btn" id="reset3">重置</button></div>
+    </div>
+    <svg id="fig3" role="img" aria-label="bigram 概率表和损失曲线"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r3t">0</b><span>已走步数</span></div>
+      <div class="ro warn"><b id="r3l">–</b><span>这一批的平均损失</span></div>
+      <div class="ro acc"><b id="r3f">–</b><span>p(饭 | 米)</span></div>
+      <div class="ro acc"><b id="r3z">–</b><span>p(粥 | 米)</span></div>
+      <div class="ro ok"><b id="r3m">–</b><span>损失下限 2 ln 2 / 10</span></div>
+    </div>
+    <div class="tw"><table id="tab3"></table></div>
+    <p class="note">第一步之后「粥」明显升了，「饭」几乎不动：这一批里「米」后面一半是饭、一半是粥，训练把两者推向各 50%。损失因此停在绿线附近，降不到 0。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>在中文小语料上真实训练</h2>
+  <p>页面里有一段自编的中文小语料（六百多个字），最后一句留出来不给模型看，用来算验证损失。词表是语料里出现过的字，再加一个表示「开头」的特殊 token。两种模型：</p>
+  <p><b>bigram</b> 是一张分数表，只看上一个字。<b>小 MLP</b> 看前 4 个字：每个字查一个 24 维向量，4 个拼起来过一个 64 个神经元的 tanh 隐藏层，再输出每个字的分数。每一步随机取 32 个位置，前向、交叉熵、手写的反向传播、AdamW 更新，共 2000 步。下面的曲线和文字都是你的浏览器此刻真实算出来的。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>模型</label><div class="seg" id="kind4"><button data-v="bigram">bigram</button><button data-v="mlp" aria-pressed="true">小 MLP</button></div></div>
+      <div class="ctrl"><label>学习率调度</label><div class="seg" id="sch4"><button data-v="cos" aria-pressed="true">预热 + 余弦</button><button data-v="const">恒定</button></div></div>
+      <div class="ctrl"><label>峰值学习率</label><div class="seg" id="lr4"><button data-v="0.3">× 0.3</button><button data-v="1" aria-pressed="true">× 1</button><button data-v="3">× 3</button></div></div>
+      <div class="ctrl"><button class="btn primary" id="run4">开始训练</button><button class="btn" id="reset4">重置</button></div>
+    </div>
+    <svg id="fig4" role="img" aria-label="训练损失和验证损失曲线"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r4t">0</b><span>步数 / 2000</span></div>
+      <div class="ro warn"><b id="r4a">–</b><span>训练损失</span></div>
+      <div class="ro acc"><b id="r4v">–</b><span>验证损失</span></div>
+      <div class="ro"><b id="r4p">–</b><span>训练困惑度</span></div>
+      <div class="ro"><b id="r4n">–</b><span>参数个数</span></div>
+    </div>
+    <div class="tw"><table class="snap" id="snap4"></table></div>
+    <div class="ctrls" style="margin-top:14px;margin-bottom:0">
+      <div class="ctrl"><label for="pre4">从这里往下写</label><input id="pre4" type="text" value="今天" maxlength="10"></div>
+      <div class="ctrl"><label for="tmp4">温度</label><input id="tmp4" type="range" min="0.3" max="1.5" step="0.1" value="1"><b id="tmp4v">1.0</b></div>
+      <div class="ctrl"><button class="btn" id="gen4">写 40 个字</button></div>
+    </div>
+    <div class="gen" id="out4"></div>
+    <p class="note">表格里是固定在第 0、50、100、200、500、2000 步从「我」开始写的 30 个字（默认设置下与文章里的表一致）。小 MLP 的验证损失先降后升：语料太少，它开始背原文。换成「恒定」学习率，最后的训练损失会高一截。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>学习率调度</h2>
+  <p>先预热：前 \(T_w\) 步从 0 线性升到峰值 \(\eta_{\max}\)。再衰减：之后沿余弦曲线降到 \(\eta_{\min}\)。默认是 Llama 3 405B 的设置：峰值 \(8\times10^{-5}\)，预热 8000 步，降到峰值的 1%，共 120 万步。</p>
+  <div class="eq">\[ \begin{aligned} \eta(t) &= \eta_{\min} + \frac{\eta_{\max}-\eta_{\min}}{2} \\ &\quad \times \left(1+\cos\frac{\pi (t-T_w)}{T-T_w}\right) \end{aligned} \]</div>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="w5">预热步数</label><input id="w5" type="range" min="0" max="120000" step="2000" value="8000"><b id="w5v">8000</b></div>
+      <div class="ctrl"><label for="f5">衰减到峰值的</label><input id="f5" type="range" min="0" max="1" step="0.01" value="0.01"><b id="f5v">1%</b></div>
+      <div class="ctrl"><label>横轴</label><div class="seg" id="zoom5"><button data-v="all" aria-pressed="true">全程</button><button data-v="head">前 2 万步</button></div></div>
+    </div>
+    <svg id="fig5a" role="img" aria-label="学习率随训练步数变化的曲线"></svg>
+    <div class="readout">
+      <div class="ro acc"><b id="r5h">–</b><span>正中间那一步的学习率</span></div>
+      <div class="ro"><b id="r5w">–</b><span>预热占全程</span></div>
+    </div>
+    <p>为什么最后要降下来：在碗 \(L=\tfrac12 a x^2\) 上走带噪声的梯度下降（每步梯度加一个方差为 1 的随机数），参数会在谷底附近一直晃。文章推过，晃动的方差稳定在 \(V = \eta\sigma^2 / \bigl(a(2-\eta a)\bigr)\)，和学习率成正比。下面 200 条路线同时从 \(x=3\) 出发走 400 步，比较学习率保持 0.1 和从 0.1 余弦衰减到 0.001。</p>
+    <div class="ctrls">
+      <div class="ctrl"><button class="btn primary" id="run5">重新抽一组噪声</button></div>
+    </div>
+    <svg id="fig5b" role="img" aria-label="带噪声的梯度下降：恒定学习率与余弦衰减的平均平方距离"></svg>
+    <div class="readout">
+      <div class="ro warn"><b id="r5c">–</b><span>恒定 0.1：最后 50 步平均 x²</span></div>
+      <div class="ro acc"><b id="r5o">–</b><span>余弦衰减：最后 50 步平均 x²</span></div>
+      <div class="ro"><b>0.0526</b><span>公式算的恒定 0.1 时的 V</span></div>
+    </div>
+    <p class="note">两条线前一百多步几乎重合：大学习率负责快速下山。之后恒定那条一直在 0.05 附近晃（和公式算的 0.0526 一致），衰减那条随学习率变小越停越稳。</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2><span class="n">06</span>数据配比</h2>
+  <p>数据清洗、去重之后，每种数据有多少就是多少；训练时从哪里抽、抽多少，是另一个决定。GPT-3 论文（表 2.2）给了每个数据源的 token 数、抽样比例和训练 3000 亿 token 时各读了几遍；Llama 3 报告给了按内容类别的最终配比。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><div class="seg" id="mix6"><button data-v="gpt3" aria-pressed="true">GPT-3（2020）</button><button data-v="llama3">Llama 3（2024）</button></div></div>
+    </div>
+    <svg id="fig6" role="img" aria-label="训练数据配比"></svg>
+    <div class="tw"><table id="tab6"></table></div>
+    <p class="note" id="note6"></p>
+  </div>
+</section>
+</div>
+
+<script id="corpus" type="text/plain">
+我爱吃米饭。我爱吃米粥。妈妈说，早上喝一碗米粥，中午吃一碗米饭。
+小猫在门口晒太阳。小狗在院子里跑来跑去。小鸟在树上唱歌。
+春天来了，花开了，草绿了，小河里的水也变暖了。
+夏天的中午很热，我们在树下乘凉，吃西瓜，听知了叫。
+秋天到了，树叶黄了，一片一片落下来。农民伯伯在田里收稻子。
+冬天下雪了，我们在雪地里堆雪人，打雪仗，玩得很开心。
+早上七点，我起床，刷牙，洗脸，吃早饭，然后去上学。
+学校里有很多同学。上课的时候，我们认真听老师讲课。
+下课了，同学们在操场上跳绳，踢球，跑步。
+放学回家，我先写作业，再看一会儿书。
+晚上，爸爸做饭，妈妈洗碗，我帮忙擦桌子。
+吃完晚饭，我们一家人出去散步。天上的星星一闪一闪的。
+星期天，我和爸爸去公园。公园里有一个大湖，湖里有很多鱼。
+我们在湖边坐了很久，看小船在水上慢慢地走。
+奶奶家在乡下。奶奶家的门前有一棵大树，树下有一口井。
+奶奶养了三只鸡和一头牛。每天早上，鸡都会咯咯地叫。
+我喜欢去奶奶家，因为奶奶做的饭最好吃。
+下雨了，我打着伞去上学。路上的小水坑里映着灰色的天。
+雨停了，太阳出来了，天边挂着一道彩虹。
+我问妈妈，彩虹是从哪里来的？妈妈说，是太阳光照在小水珠上变出来的。
+图书馆里很安静，大家都在看书。我借了一本讲星星的书。
+书上说，天上的星星很远很远，有的星星比太阳还大。
+晚上睡觉前，妈妈给我讲故事。故事讲完了，我也睡着了。
+明天还要上学，我要早点睡觉。
+今天天气很好，我们去公园。今天天气不好，我们在家看书。
+我爱吃米饭，也爱吃面条。妈妈做的面条又长又香。
+老师说，多看书，多思考，每天进步一点点。
+小狗在门口晒太阳。小猫在树下睡着了。
+</script>
+<script id="charlm">
+// 字符级小语言模型：bigram 表 或 小 MLP（看前 C 个字）。前向、交叉熵、手写反向、AdamW。
+// 实验页 04 里的 <script id="charlm"> 与本文件逐字相同（toy.py 运行时检查）；node 里用 test.mjs 跑同一份代码。
+function makeRng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function makeLM(text, opt) {
+  const kind = opt.kind, C = kind === 'bigram' ? 1 : (opt.ctx || 4), D = opt.emb || 24, H = opt.hidden || 128;
+  const chars = ['␂', ...Array.from(new Set(text))]; const V = chars.length; const id = {}; chars.forEach((c, i) => id[c] = i);
+  const ids = Array.from(text, (c) => id[c]);
+  const rng = makeRng(opt.seed || 1); const gauss = () => { let u = 0, v = 0; while (!u) u = rng(); v = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  const P = {}; const shapes = kind === 'bigram' ? { T: V * V } : { E: V * D, W1: C * D * H, b1: H, W2: H * V, b2: V };
+  for (const k in shapes) P[k] = new Float32Array(shapes[k]);
+  if (kind !== 'bigram') {
+    for (let i = 0; i < P.E.length; i++) P.E[i] = gauss() * 0.5;
+    const s1 = 1 / Math.sqrt(C * D); for (let i = 0; i < P.W1.length; i++) P.W1[i] = gauss() * s1;
+    const s2 = 0.3 / Math.sqrt(H); for (let i = 0; i < P.W2.length; i++) P.W2[i] = gauss() * s2;
+  }
+  const G = {}, M = {}, S = {}; for (const k in P) { G[k] = new Float32Array(P[k].length); M[k] = new Float32Array(P[k].length); S[k] = new Float32Array(P[k].length); }
+  let nParams = 0; for (const k in P) nParams += P[k].length;
+  const ctxAt = (arr, t) => { const c = new Array(C); for (let j = 0; j < C; j++) { const p = t - C + j; c[j] = p >= 0 ? arr[p] : 0; } return c; };
+  const logits = new Float32Array(V), h = new Float32Array(H), x = new Float32Array(C * D), dh = new Float32Array(H);
+  function forward(ctx) {
+    if (kind === 'bigram') { const r = ctx[C - 1] * V; for (let v = 0; v < V; v++) logits[v] = P.T[r + v]; return; }
+    for (let j = 0; j < C; j++) for (let d = 0; d < D; d++) x[j * D + d] = P.E[ctx[j] * D + d];
+    for (let k = 0; k < H; k++) { let s = P.b1[k]; for (let i = 0; i < C * D; i++) s += x[i] * P.W1[i * H + k]; h[k] = Math.tanh(s); }
+    for (let v = 0; v < V; v++) logits[v] = P.b2[v];
+    for (let k = 0; k < H; k++) { const hk = h[k], o = k * V; for (let v = 0; v < V; v++) logits[v] += hk * P.W2[o + v]; }
+  }
+  function softmaxInPlace(z, temp = 1) { let m = -1e9; for (let v = 0; v < V; v++) m = Math.max(m, z[v] / temp); let s = 0; for (let v = 0; v < V; v++) { z[v] = Math.exp(z[v] / temp - m); s += z[v]; } for (let v = 0; v < V; v++) z[v] /= s; }
+  // 一个训练步：取 B 个位置 → 前向 → 交叉熵 → 反向 → AdamW
+  let step = 0;
+  function trainStep(B, lr, trainIds) {
+    for (const k in G) G[k].fill(0);
+    let loss = 0;
+    for (let b = 0; b < B; b++) {
+      const t = 1 + Math.floor(rng() * (trainIds.length - 1)); const ctx = ctxAt(trainIds, t), y = trainIds[t];
+      forward(ctx); softmaxInPlace(logits); loss += -Math.log(Math.max(logits[y], 1e-12));
+      logits[y] -= 1; // ∂L/∂z = p − y
+      if (kind === 'bigram') { const r = ctx[C - 1] * V; for (let v = 0; v < V; v++) G.T[r + v] += logits[v] / B; continue; }
+      for (let v = 0; v < V; v++) G.b2[v] += logits[v] / B;
+      for (let k = 0; k < H; k++) { const o = k * V; let s = 0; for (let v = 0; v < V; v++) { G.W2[o + v] += h[k] * logits[v] / B; s += P.W2[o + v] * logits[v]; } dh[k] = s * (1 - h[k] * h[k]) / B; }
+      for (let k = 0; k < H; k++) G.b1[k] += dh[k];
+      for (let i = 0; i < C * D; i++) { let s = 0; const xi = x[i], o = i * H; for (let k = 0; k < H; k++) { G.W1[o + k] += xi * dh[k]; s += P.W1[o + k] * dh[k]; } G.E[ctx[Math.floor(i / D)] * D + (i % D)] += s; }
+    }
+    step++; const b1 = 0.9, b2 = 0.99, eps = 1e-8, wd = kind === 'bigram' ? 0 : 0.01;
+    const c1 = 1 - Math.pow(b1, step), c2 = 1 - Math.pow(b2, step);
+    for (const k in P) { const p = P[k], g = G[k], m = M[k], s = S[k];
+      for (let i = 0; i < p.length; i++) { m[i] = b1 * m[i] + (1 - b1) * g[i]; s[i] = b2 * s[i] + (1 - b2) * g[i] * g[i]; p[i] -= lr * ((m[i] / c1) / (Math.sqrt(s[i] / c2) + eps) + wd * p[i]); } }
+    return loss / B;
+  }
+  function evalLoss(arr) { let L = 0, n = 0; for (let t = 1; t < arr.length; t++) { forward(ctxAt(arr, t)); softmaxInPlace(logits); L += -Math.log(Math.max(logits[arr[t]], 1e-12)); n++; } return L / n; }
+  function sample(n, temp, seed, prefix = '') { const r = makeRng(seed); const out = prefix ? Array.from(prefix, (c) => id[c] ?? 0) : []; const arr = [0, ...out];
+    for (let i = 0; i < n; i++) { forward(ctxAt(arr, arr.length)); softmaxInPlace(logits, temp); let u = r(), v = 0; for (; v < V - 1; v++) { u -= logits[v]; if (u <= 0) break; } if (v === 0) v = 1; arr.push(v); }
+    return arr.slice(1).map((v) => chars[v]).join(''); }
+  function probsAfter(prefix) { const arr = [0, ...Array.from(prefix, (c) => id[c] ?? 0)]; forward(ctxAt(arr, arr.length)); const z = Float32Array.from(logits); softmaxInPlace(z); return z; }
+  return { V, C, chars, id, ids, nParams, trainStep, evalLoss, sample, probsAfter, get step() { return step; } };
+}
+function lrAt(t, T, peak, warm, floorRatio, kind) {
+  if (kind === 'const') return peak;
+  if (t < warm) return peak * (t + 1) / warm;
+  const q = Math.min(1, (t - warm) / Math.max(1, T - warm));
+  return peak * floorRatio + 0.5 * peak * (1 - floorRatio) * (1 + Math.cos(Math.PI * q));
+}
+</script>
+<script src="/vendor/katex/katex.min.js"></script>
+<script src="/vendor/katex/auto-render.min.js"></script>
+<script>
+try{renderMathInElement(document.body,{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});}catch(e){}
+const TOY = {"voc": ["我", "爱", "吃", "米", "饭", "粥", "。"], "s1": "我爱吃米饭。", "s2": "我爱吃米粥。", "z0": {"我": [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0], "爱": [0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0], "吃": [0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0], "米": [0.0, 0.0, 0.0, 0.0, 2.0, 1.5, 0.5], "饭": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.5], "粥": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "。": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]}, "eta": 4.0, "peak": 8e-05, "warm": 8000, "total": 1200000, "low": 8e-07, "gpt3": [["Common Crawl（过滤后）", 410, 60, 0.44], ["WebText2", 19, 22, 2.9], ["Books1", 12, 8, 1.9], ["Books2", 55, 8, 0.43], ["Wikipedia", 3, 3, 3.4]], "llama3": [["通用知识", 50], ["数学与推理", 25], ["代码", 17], ["多语言", 8]]};
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const T = (x, y, s, o = {}) => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${o.size || 14}" text-anchor="${o.a || 'start'}" fill="${o.c || css('--fg')}"${o.w ? ` font-weight="${o.w}"` : ''}${o.i ? ' font-style="italic"' : ''}>${o.raw ? s : esc(s)}</text>`;
+const R = (x, y, w, h, fill, o = {}) => `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(w, 0.5).toFixed(1)}" height="${h.toFixed(1)}" rx="${o.rx ?? 4}" fill="${fill}"${o.stroke ? ` stroke="${o.stroke}" stroke-width="${o.sw || 1.5}"` : ''}${o.dash ? ` stroke-dasharray="${o.dash}"` : ''}${o.op != null ? ` fill-opacity="${o.op}"` : ''}/>`;
+const Ln = (x1, y1, x2, y2, c, w = 1.5, dash) => `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${c}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash}"` : ''}/>`;
+const PL = (pts, c, w = 2.5, dash) => `<polyline fill="none" stroke="${c}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash}"` : ''} points="${pts.map(([x, y]) => x.toFixed(1) + ',' + y.toFixed(1)).join(' ')}"/>`;
+const widthOf = (svg) => Math.max(300, Math.round(svg.parentElement.clientWidth - 2));
+function setVB(svg, W, H) { svg.setAttribute('viewBox', `0 0 ${W} ${H}`); }
+function seg(id, cb) { const el = $(id); el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; el.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); cb(b.dataset.v); }); return () => el.querySelector('[aria-pressed=true]').dataset.v; }
+function axes(x0, y0, w, h, xt, yt, xl, yl) { // 坐标轴：xt / yt = [[值像素, 标签]]
+  const m = css('--muted'), l = css('--line'); let s = Ln(x0, y0, x0 + w + 6, y0, l) + Ln(x0, y0, x0, y0 - h - 6, l);
+  xt.forEach(([px, lab]) => s += T(px, y0 + 18, lab, { c: m, size: 13, a: 'middle' }));
+  yt.forEach(([py, lab]) => s += T(x0 - 7, py + 4, lab, { c: m, size: 13, a: 'end' }));
+  if (xl) s += T(x0 + w + 4, y0 - 7, xl, { c: m, size: 13, a: 'end' });
+  if (yl) s += T(x0 + 6, y0 - h - 2, yl, { c: m, size: 13 });
+  return s;
+}
+
+/* ———— 01 拆样本 + 因果遮罩 ———— */
+function draw1() {
+  const svg = $('#fig1'); const W = widthOf(svg);
+  const s = Array.from($('#t1').value || '').slice(0, 12); const n = s.length;
+  $('#r1n').textContent = n; $('#r1s').textContent = Math.max(0, n - 1);
+  const acc = css('--accent'), m = css('--muted'), l = css('--line'), fg = css('--fg'), soft = css('--accent-soft');
+  const two = W >= 640; const cw = Math.min(30, Math.max(18, ((two ? W / 2 : W) - 70) / Math.max(n, 1) - 4)); const rh = cw + 6;
+  let out = '';
+  // 左：样本列表
+  for (let i = 1; i < n; i++) { const y = 6 + (i - 1) * rh; out += T(4, y + cw * 0.72, `${i}`, { c: m, size: 13 });
+    for (let j = 0; j <= i; j++) { const x = 26 + j * (cw + 4); const tgt = j === i;
+      out += R(x, y, cw, cw, 'none', { stroke: tgt ? acc : l, sw: tgt ? 2.2 : 1.3, rx: 5 }) + T(x + cw / 2, y + cw * 0.7, s[j], { c: tgt ? acc : fg, size: Math.min(16, cw * 0.6), a: 'middle', w: tgt ? 600 : null }); } }
+  const leftH = 6 + Math.max(0, n - 1) * rh;
+  // 右（或下）：遮罩
+  const ox = two ? W / 2 + 40 : 40, oy0 = two ? 22 : leftH + 34; const cs = cw + 4;
+  for (let j = 0; j < n; j++) out += T(ox + j * cs + cs / 2, oy0 - 6, s[j], { c: m, size: Math.min(15, cw * 0.55), a: 'middle' });
+  for (let i = 0; i < n; i++) { const y = oy0 + i * cs; out += T(ox - 8, y + cs * 0.68, s[i], { c: fg, size: Math.min(15, cw * 0.55), a: 'end' });
+    for (let j = 0; j < n; j++) { const x = ox + j * cs; out += j <= i ? R(x + 2, y + 2, cs - 4, cs - 4, soft, { stroke: acc, sw: 1.1, rx: 3 }) : R(x + 2, y + 2, cs - 4, cs - 4, 'none', { stroke: l, sw: 1.1, rx: 3, dash: '3 3' }); }
+    if (i + 1 < n) out += T(ox + n * cs + 8, y + cs * 0.68, '→ ' + s[i + 1], { c: acc, size: Math.min(15, cw * 0.55) }); }
+  const H = Math.max(two ? Math.max(leftH, oy0 + n * cs) : oy0 + n * cs, 40) + 8;
+  setVB(svg, W, H); svg.innerHTML = out;
+}
+$('#t1').addEventListener('input', draw1);
+
+/* ———— 02 交叉熵计算器 ———— */
+const S1 = TOY.s1, P0 = (() => { const sm = (z) => { const e = z.map(Math.exp), s = e.reduce((a, b) => a + b); return e.map((v) => v / s); }; return Array.from(S1).slice(0, 5).map((a, i) => sm(TOY.z0[a])[TOY.voc.indexOf(S1[i + 1])]); })();
+$('#sl2').innerHTML = P0.map((p, i) => `<label>猜「${S1[i + 1]}」<input type="range" min="0.01" max="1" step="0.001" value="${p.toFixed(3)}" data-i="${i}"><b id="p2v${i}">${p.toFixed(3)}</b></label>`).join('');
+$('#sl2').addEventListener('input', draw2);
+function draw2() {
+  const svg = $('#fig2'); const W = widthOf(svg), H = 250; setVB(svg, W, H);
+  const ps = [...document.querySelectorAll('#sl2 input')].map((e) => +e.value); ps.forEach((p, i) => $('#p2v' + i).textContent = p.toFixed(3));
+  const Ls = ps.map((p) => -Math.log(p)), L = Ls.reduce((a, b) => a + b) / 5;
+  $('#r2l').textContent = L.toFixed(3); $('#r2p').textContent = ps.reduce((a, b) => a * b).toPrecision(3); $('#r2x').textContent = Math.exp(L).toFixed(2);
+  const two = W >= 600; const cw = two ? W * 0.58 : W; const x0 = 42, y0 = 210, w = cw - x0 - 20, h = 180, ymax = 4.7;
+  const X = (p) => x0 + p * w, Y = (v) => y0 - Math.min(v, ymax) / ymax * h;
+  const warn = css('--warn'), acc = css('--accent'), m = css('--muted'), fg = css('--fg');
+  let s = axes(x0, y0, w, h, [[X(0), '0'], [X(0.5), '0.5'], [X(1), '1']], [[Y(1), '1'], [Y(2), '2'], [Y(3), '3'], [Y(4), '4']], 'p', '−ln p');
+  const pts = []; for (let i = 0; i <= 200; i++) { const p = 0.01 + 0.99 * i / 200; pts.push([X(p), Y(-Math.log(p))]); } s += PL(pts, warn);
+  ps.forEach((p, i) => { s += `<circle cx="${X(p).toFixed(1)}" cy="${Y(Ls[i]).toFixed(1)}" r="5.5" fill="${acc}"/>` + T(X(p) + (p > 0.85 ? -8 : (i % 2 ? -8 : 8)), Y(Ls[i]) + (i % 2 ? 20 : -9), S1[i + 1], { c: acc, size: 14, a: p > 0.85 || i % 2 ? 'end' : 'start' }); });
+  if (two) { // 右侧柱状：每个位置的损失和平均线
+    const bx = cw + 20, bw = (W - bx - 10) / 5; const mx = Math.max(...Ls, 1.6);
+    Ls.forEach((v, i) => { const hh = 160 * v / mx; s += R(bx + i * bw + 4, y0 - hh, bw - 8, hh, warn, { rx: 3 }) + T(bx + i * bw + bw / 2, y0 - hh - 6, v.toFixed(2), { c: warn, size: 13, a: 'middle' }) + T(bx + i * bw + bw / 2, y0 + 18, S1[i + 1], { c: m, size: 13, a: 'middle' }); });
+    const ym = y0 - 160 * L / mx; s += Ln(bx, ym, W - 6, ym, fg, 1.5, '6 4') + T(W - 6, ym - 6, '平均 ' + L.toFixed(3), { c: fg, size: 13, a: 'end' });
+  }
+  svg.innerHTML = s;
+}
+
+/* ———— 03 一个训练步（bigram 7 × 7） ———— */
+const V3 = TOY.voc; let Z3, hist3, t3; const B3 = [TOY.s1, TOY.s2];
+const sm = (z) => { const m = Math.max(...z), e = z.map((v) => Math.exp(v - m)), s = e.reduce((a, b) => a + b); return e.map((v) => v / s); };
+const pairs = (s) => Array.from(s).slice(0, -1).map((a, i) => [a, s[i + 1]]);
+function loss3(Z) { let L = 0, n = 0; for (const s of B3) for (const [a, b] of pairs(s)) { L += -Math.log(sm(Z[a])[V3.indexOf(b)]); n++; } return L / n; }
+function step3once() { const eta = +getEta3(); const G = {}; V3.forEach((r) => G[r] = Array(7).fill(0)); let n = 0; for (const s of B3) n += s.length - 1;
+  for (const s of B3) for (const [a, b] of pairs(s)) { const p = sm(Z3[a]); for (let k = 0; k < 7; k++) G[a][k] += (p[k] - (V3[k] === b ? 1 : 0)) / n; }
+  V3.forEach((r) => { for (let k = 0; k < 7; k++) Z3[r][k] -= eta * G[r][k]; }); t3++; hist3.push(loss3(Z3)); }
+function reset3() { Z3 = JSON.parse(JSON.stringify(TOY.z0)); t3 = 0; hist3 = [loss3(Z3)]; draw3(); }
+const getEta3 = seg('#eta3', () => reset3());
+$('#step3').onclick = () => { step3once(); draw3(); }; $('#step3x').onclick = () => { for (let i = 0; i < 10; i++) step3once(); draw3(); }; $('#reset3').onclick = reset3;
+function draw3() {
+  const svg = $('#fig3'); const W = widthOf(svg); const acc = css('--accent'), m = css('--muted'), fg = css('--fg'), warn = css('--warn'), ok = css('--ok'), l = css('--line');
+  const two = W >= 620; const gw = two ? Math.min(W * 0.48, 340) : Math.min(W - 10, 340); const cs = (gw - 36) / 7;
+  let s = '';
+  V3.forEach((c, j) => s += T(36 + j * cs + cs / 2, 16, c, { c: m, size: 14, a: 'middle' }));
+  V3.forEach((r, i) => { const p = sm(Z3[r]); const y = 24 + i * cs; const used = '我爱吃米饭粥'.includes(r);
+    s += T(26, y + cs * 0.64, r, { c: r === '米' ? acc : (used ? fg : m), size: 14, a: 'end', w: r === '米' ? 600 : null });
+    p.forEach((v, j) => { s += R(36 + j * cs + 1.5, y + 1.5, cs - 3, cs - 3, acc, { op: Math.min(1, v * 1.15).toFixed(3), rx: 3 }); s += R(36 + j * cs + 1.5, y + 1.5, cs - 3, cs - 3, 'none', { stroke: l, sw: 0.8, rx: 3 });
+      if (cs > 30) s += T(36 + j * cs + cs / 2, y + cs * 0.62, v.toFixed(2), { c: v > 0.5 ? '#fff' : m, size: cs > 42 ? 12 : 10, a: 'middle' }); });
+    if (r === '米') s += R(34, y, 7 * cs + 4, cs, 'none', { stroke: acc, sw: 2, rx: 4 }); });
+  const gh = 24 + 7 * cs;
+  // 损失曲线
+  const cx0 = two ? gw + 70 : 46, cy0 = two ? gh - 10 : gh + 210, cw = (two ? W - gw - 70 : W - 46) - 20, ch = two ? gh - 50 : 170;
+  const N = Math.max(40, hist3.length - 1), X = (t) => cx0 + t / N * cw, Y = (v) => cy0 - v / 1.2 * ch, floor = 2 * Math.log(2) / 10;
+  s += axes(cx0, cy0, cw, ch, [[X(0), '0'], [X(N), String(N)]], [[Y(0.4), '0.4'], [Y(0.8), '0.8'], [Y(1.2), '1.2']], '步数', '平均损失');
+  s += Ln(cx0, Y(floor), cx0 + cw, Y(floor), ok, 1.5, '6 4') + T(cx0 + cw, Y(floor) - 6, '下限 ' + floor.toFixed(3), { c: ok, size: 13, a: 'end' });
+  s += PL(hist3.map((v, t) => [X(t), Y(v)]), warn); s += `<circle cx="${X(hist3.length - 1).toFixed(1)}" cy="${Y(hist3.at(-1)).toFixed(1)}" r="5" fill="${warn}"/>`;
+  setVB(svg, W, two ? gh + 10 : gh + 240); svg.innerHTML = s;
+  const pm = sm(Z3['米']); $('#r3t').textContent = t3; $('#r3l').textContent = hist3.at(-1).toFixed(3); $('#r3f').textContent = (pm[4] * 100).toFixed(1) + '%'; $('#r3z').textContent = (pm[5] * 100).toFixed(1) + '%'; $('#r3m').textContent = floor.toFixed(3);
+  // 10 道题的概率与梯度（下一步要用的）
+  let rows = '<tr><th>题</th><th>读到</th><th>要猜</th><th class="num">p</th><th class="num">−ln p</th></tr>'; let k = 0;
+  for (const s2 of B3) for (const [a, b] of pairs(s2)) { k++; const p = sm(Z3[a])[V3.indexOf(b)]; rows += `<tr><td>${k}</td><td>…${a}</td><td>${b}</td><td class="num">${p.toFixed(3)}</td><td class="num">${(-Math.log(p)).toFixed(3)}</td></tr>`; }
+  $('#tab3').innerHTML = rows;
+}
+
+/* ———— 04 真实训练 ———— */
+const CORPUS = $('#corpus').textContent.trim().split('\n'); const TEXT = CORPUS.join(''), VALTXT = CORPUS.at(-1);
+const PEAK4 = { bigram: 0.1, mlp: 0.01 }, SNAP = [0, 50, 100, 200, 500, 2000], STEPS = 2000;
+let lm, tr4, va4, curve4, snaps4, running = false, raf = 0;
+const getKind = seg('#kind4', () => reset4()), getSch = seg('#sch4', () => reset4()), getLr = seg('#lr4', () => reset4());
+function reset4() { cancelAnimationFrame(raf); running = false; $('#run4').textContent = '开始训练';
+  lm = makeLM(TEXT, { kind: getKind(), seed: 7, hidden: 64 }); const n = TEXT.length - VALTXT.length; tr4 = lm.ids.slice(0, n); va4 = lm.ids.slice(n - lm.C);
+  curve4 = []; snaps4 = []; record4(); $('#r4n').textContent = lm.nParams.toLocaleString('en-US'); draw4(); gen4(); }
+function record4() { const t = lm.step; if (t % 25 === 0) curve4.push([t, lm.evalLoss(tr4), lm.evalLoss(va4)]); if (SNAP.includes(t)) snaps4.push([t, lm.sample(30, 1, 3, '我')]); }
+function tick4() { if (!running) return; const kind = getKind(), per = kind === 'mlp' ? 12 : 40, t0 = performance.now();
+  while (lm.step < STEPS && performance.now() - t0 < 30) { for (let i = 0; i < per && lm.step < STEPS; i++) { lm.trainStep(32, lrAt(lm.step, STEPS, PEAK4[kind] * +getLr(), 100, 0.1, getSch()), tr4); record4(); } }
+  draw4(); if (lm.step >= STEPS) { running = false; $('#run4').textContent = '训练完成'; gen4(); return; } raf = requestAnimationFrame(tick4); }
+$('#run4').onclick = () => { if (lm.step >= STEPS) return; running = !running; $('#run4').textContent = running ? '暂停' : '继续训练'; if (running) raf = requestAnimationFrame(tick4); };
+$('#reset4').onclick = reset4;
+function draw4() {
+  const svg = $('#fig4'); const W = widthOf(svg), H = 240; setVB(svg, W, H);
+  const x0 = 40, y0 = 210, w = W - x0 - 24, h = 185, X = (t) => x0 + t / STEPS * w, Y = (v) => y0 - Math.min(v, 6.5) / 6.5 * h;
+  const warn = css('--warn'), acc = css('--accent'), m = css('--muted');
+  let s = axes(x0, y0, w, h, [[X(0), '0'], [X(1000), '1000'], [X(2000), '2000']], [[Y(2), '2'], [Y(4), '4'], [Y(6), '6']], '步数', '平均损失');
+  s += PL(curve4.map(([t, a]) => [X(t), Y(a)]), warn) + PL(curve4.map(([t, , v]) => [X(t), Y(v)]), acc, 2.5, '6 4');
+  const last = curve4.at(-1); s += T(x0 + w - 4, 24, '— 训练', { c: warn, size: 13, a: 'end' }) + T(x0 + w - 4, 42, '- - 验证', { c: acc, size: 13, a: 'end' });
+  svg.innerHTML = s;
+  $('#r4t').textContent = lm.step; $('#r4a').textContent = last[1].toFixed(3); $('#r4v').textContent = last[2].toFixed(3); $('#r4p').textContent = Math.exp(last[1]).toFixed(1);
+  $('#snap4').innerHTML = '<tr><th>步数</th><th>从「我」开始写 30 个字</th></tr>' + snaps4.map(([t, s2]) => `<tr><td>${t}</td><td>${esc(s2)}</td></tr>`).join('');
+}
+let genSeed = 11;
+function gen4() { const pre = Array.from($('#pre4').value).filter((c) => lm.id[c] != null).join(''); const out = lm.sample(40, +$('#tmp4').value, genSeed++, pre);
+  $('#out4').innerHTML = `<span class="pre">${esc(pre)}</span>${esc(out.slice(pre.length))}`; }
+$('#gen4').onclick = gen4; $('#tmp4').addEventListener('input', () => $('#tmp4v').textContent = (+$('#tmp4').value).toFixed(1));
+
+/* ———— 05 学习率调度 ———— */
+const getZoom = seg('#zoom5', draw5a);
+['#w5', '#f5'].forEach((id) => $(id).addEventListener('input', draw5a));
+function lr5(t, warm, fr) { const pk = TOY.peak, Tt = TOY.total; if (t < warm) return pk * t / warm; const q = (t - warm) / (Tt - warm); return pk * fr + 0.5 * pk * (1 - fr) * (1 + Math.cos(Math.PI * q)); }
+function draw5a() {
+  const svg = $('#fig5a'); const W = widthOf(svg), H = 220; setVB(svg, W, H);
+  const warm = +$('#w5').value, fr = +$('#f5').value; $('#w5v').textContent = warm.toLocaleString('en-US'); $('#f5v').textContent = Math.round(fr * 100) + '%';
+  const head = getZoom() === 'head', Tt = TOY.total, tmax = head ? 20000 : Tt;
+  const x0 = 64, y0 = 190, w = W - x0 - 24, h = 160, X = (t) => x0 + t / tmax * w, Y = (v) => y0 - v / TOY.peak * h;
+  const acc = css('--accent'), m = css('--muted'), warn = css('--warn');
+  const xt = head ? [[X(0), '0'], [X(10000), '1 万'], [X(20000), '2 万']] : [[X(0), '0'], [X(600000), '60 万'], [X(1200000), '120 万']];
+  let s = axes(x0, y0, w, h, xt, [[Y(0), '0'], [Y(TOY.peak / 2), '4×10⁻⁵'], [Y(TOY.peak), '8×10⁻⁵']], '步数', '');
+  const pts = []; for (let i = 0; i <= 400; i++) { const t = tmax * i / 400; pts.push([X(t), Y(lr5(t, warm, fr))]); } s += PL(pts, acc);
+  if (warm > 0 && warm <= tmax) s += Ln(X(warm), y0, X(warm), Y(TOY.peak), m, 1.2, '4 4') + T(X(warm) + 6, Y(TOY.peak * 0.1), '预热结束', { c: warn, size: 13 });
+  svg.innerHTML = s;
+  $('#r5h').textContent = lr5(Tt / 2, warm, fr).toExponential(2).replace('e-', '×10⁻').replace(/⁻(\d)$/, (a, d) => '⁻' + '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]);
+  $('#r5w').textContent = (warm / Tt * 100).toFixed(2) + '%';
+}
+let curves5;
+function run5() { // 200 条路线，同一组噪声，两种学习率
+  const R = 200, S = 400, rng = makeRng(Math.floor(Math.random() * 1e9)); const g = () => { let u = 0; while (!u) u = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng()); };
+  const ec = new Float64Array(S + 1), eo = new Float64Array(S + 1);
+  for (let r = 0; r < R; r++) { let xc = 3, xo = 3; ec[0] += 9; eo[0] += 9;
+    for (let t = 0; t < S; t++) { const e = g(); const ho = 0.001 + 0.5 * (0.1 - 0.001) * (1 + Math.cos(Math.PI * t / S));
+      xc = xc - 0.1 * (xc + e); xo = xo - ho * (xo + e); ec[t + 1] += xc * xc; eo[t + 1] += xo * xo; } }
+  curves5 = [Array.from(ec, (v) => v / R), Array.from(eo, (v) => v / R)]; draw5b(); }
+$('#run5').onclick = run5;
+function draw5b() {
+  const svg = $('#fig5b'); const W = widthOf(svg), H = 220; setVB(svg, W, H);
+  const x0 = 48, y0 = 190, w = W - x0 - 24, h = 160, S = 400, X = (t) => x0 + t / S * w, Y = (v) => y0 - Math.min(v, 0.25) / 0.25 * h;
+  const acc = css('--accent'), warn = css('--warn'), m = css('--muted');
+  let s = axes(x0, y0, w, h, [[X(0), '0'], [X(200), '200'], [X(400), '400']], [[Y(0.1), '0.1'], [Y(0.2), '0.2']], '步数', '平均 x²');
+  s += Ln(x0, Y(0.0526), x0 + w, Y(0.0526), m, 1.2, '4 4');
+  s += PL(curves5[0].map((v, t) => [X(t), Y(v)]), warn) + PL(curves5[1].map((v, t) => [X(t), Y(v)]), acc);
+  s += T(x0 + w - 4, Y(0.0526) - 8, '恒定 0.1', { c: warn, size: 13, a: 'end' }) + T(x0 + w - 4, Y(0.0526) + 24, '余弦衰减', { c: acc, size: 13, a: 'end' });
+  svg.innerHTML = s;
+  const tail = (a) => a.slice(-50).reduce((x, y) => x + y) / 50; $('#r5c').textContent = tail(curves5[0]).toFixed(4); $('#r5o').textContent = tail(curves5[1]).toFixed(4);
+}
+
+/* ———— 06 数据配比 ———— */
+const getMix = seg('#mix6', draw6);
+function arcs(cx, cy, r0, r1, items, cols) { let a = -Math.PI / 2, s = ''; const tot = items.reduce((x, y) => x + y, 0);
+  items.forEach((v, i) => { const da = v / tot * 2 * Math.PI, a2 = a + da, lg = da > Math.PI ? 1 : 0; const p = (r, t) => [cx + r * Math.cos(t), cy + r * Math.sin(t)];
+    const [x1, y1] = p(r1, a), [x2, y2] = p(r1, a2), [x3, y3] = p(r0, a2), [x4, y4] = p(r0, a);
+    s += `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} A${r1} ${r1} 0 ${lg} 1 ${x2.toFixed(1)} ${y2.toFixed(1)} L${x3.toFixed(1)} ${y3.toFixed(1)} A${r0} ${r0} 0 ${lg} 0 ${x4.toFixed(1)} ${y4.toFixed(1)} z" fill="${cols[i][0]}" fill-opacity="${cols[i][1]}" stroke="${css('--paper')}" stroke-width="2"/>`; a = a2; });
+  return s; }
+function draw6() {
+  const svg = $('#fig6'); const W = widthOf(svg); const g = getMix() === 'gpt3'; const m = css('--muted'), fg = css('--fg');
+  const cols = [[css('--accent'), 1], [css('--warn'), 1], [css('--ok'), 1], [css('--accent'), 0.4], [css('--muted'), 1]];
+  let s = '', H;
+  if (g) { const rows = TOY.gpt3; const tot = rows.reduce((a, r) => a + r[1], 0); const two = W >= 560; const r1 = Math.min(90, (two ? W / 2 : W) / 2 - 20), r0 = r1 * 0.55;
+    const c1 = two ? [W / 4, r1 + 30] : [W / 2, r1 + 30], c2 = two ? [W * 3 / 4, r1 + 30] : [W / 2, 3 * r1 + 100];
+    s += arcs(...c1, r0, r1, rows.map((r) => r[1]), cols) + arcs(...c2, r0, r1, rows.map((r) => r[2]), cols);
+    s += T(c1[0], c1[1] + 5, '数据量', { c: m, size: 14, a: 'middle' }) + T(c2[0], c2[1] + 5, '抽样比例', { c: m, size: 14, a: 'middle' });
+    H = (two ? 2 * r1 + 50 : 4 * r1 + 120);
+    const ly = H; rows.forEach((r, i) => { const x = 10 + (i % 3) * (W - 20) / 3, y = ly + Math.floor(i / 3) * 24; s += R(x, y, 14, 14, cols[i][0], { op: cols[i][1], rx: 3 }) + T(x + 20, y + 12, r[0].replace('（过滤后）', ''), { c: fg, size: 13 }); });
+    H = ly + 54;
+    $('#tab6').innerHTML = '<tr><th>数据源</th><th class="num">token 数</th><th class="num">占数据量</th><th class="num">抽样比例</th><th class="num">读了几遍</th></tr>' + rows.map((r) => `<tr><td>${r[0]}</td><td class="num">${r[1]} B</td><td class="num">${(r[1] / tot * 100).toFixed(1)}%</td><td class="num">${r[2]}%</td><td class="num">${r[3]}</td></tr>`).join('');
+    $('#note6').textContent = '维基百科只占数据量的 0.6%，抽样比例却是 3%，训练中读了 3.4 遍；Common Crawl 占 82.2%，只抽 60%，连一遍都没读完。质量越高的数据抽得越多。（抽样比例按论文原表，加起来是 101%，是四舍五入造成的。）';
+  } else { const rows = TOY.llama3; const r1 = Math.min(100, W / 2 - 30), r0 = r1 * 0.55; s += arcs(W / 2, r1 + 20, r0, r1, rows.map((r) => r[1]), cols);
+    H = 2 * r1 + 40; rows.forEach((r, i) => { const x = 10 + (i % 2) * (W - 20) / 2, y = H + Math.floor(i / 2) * 24; s += R(x, y, 14, 14, cols[i][0], { op: cols[i][1], rx: 3 }) + T(x + 20, y + 12, `${r[0]} ${r[1]}%`, { c: fg, size: 13 }); }); H += 54;
+    $('#tab6').innerHTML = '<tr><th>类别</th><th class="num">占全部训练 token</th></tr>' + rows.map((r) => `<tr><td>${r[0]}</td><td class="num">约 ${r[1]}%</td></tr>`).join('');
+    $('#note6').textContent = '数学与推理、代码两类加起来占 42%，远高于它们在网页里的自然比例。报告还写到，训练最后阶段会再加大高质量代码与数学数据的比例，同时把学习率降到 0（退火）。'; }
+  setVB(svg, W, H); svg.innerHTML = s;
+}
+
+/* ———— 启动与重画 ———— */
+reset3(); reset4(); run5();
+const all = () => { draw1(); draw2(); draw3(); draw4(); draw5a(); draw5b(); draw6(); };
+all();
+let rz = 0; addEventListener('resize', () => { cancelAnimationFrame(rz); rz = requestAnimationFrame(all); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>
