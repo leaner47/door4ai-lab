@@ -129,6 +129,10 @@ export const POSTS: Record<string, PostAccess> = {
     "access": "paid",
     "series": "ai-mastery"
   },
+  "vectors-softmax": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
   "vision-tokens": {
     "access": "paid",
     "series": "ai-mastery"
@@ -169,6 +173,7 @@ export const LABS: Record<string, string> = {
   "labs/tokenizer-llm": "tokenizer-llm",
   "labs/tool-calling": "tool-calling",
   "labs/trace-eval": "trace-eval",
+  "labs/vectors-softmax": "vectors-softmax",
   "labs/vision-tokens": "vision-tokens",
   "labs/weight-quantization": "weight-quantization"
 };

@@ -1,0 +1,156 @@
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">向量 · 点积 · 矩阵乘法 · softmax · 对数</div>
+  <h1>向量、矩阵乘法与 softmax</h1>
+  <p class="lede">读懂大模型需要的全部数学，用 4 个 token、每个 2 个数从头算到尾。下面每个实验都在页面里真实计算。</p>
+</header>
+
+<section id="s1">
+  <h2><span class="n">01</span>两支箭头：点积、长度和夹角</h2>
+  <p>一个 2 维向量 \((a_1,\ a_2)\) 就是一支箭头：从原点出发，向右走 \(a_1\)，向上走 \(a_2\)。拖动两支箭头的尖端（蓝色是 \(a\)，灰色是 \(b\)），下面实时算出：</p>
+  <ul>
+    <li>点积 \(a \cdot b = a_1 b_1 + a_2 b_2\)：逐项相乘再相加。</li>
+    <li>长度 \(\lVert a \rVert = \sqrt{a_1^2 + a_2^2}\)：勾股定理。</li>
+    <li>余弦相似度 \(\cos\theta = \dfrac{a \cdot b}{\lVert a \rVert\,\lVert b \rVert}\)：把长度除掉，只看方向。</li>
+  </ul>
+  <p>橙色粗线是 \(a\) 在 \(b\) 方向上的投影。点积 = \(b\) 的长度 × 投影（投影朝 \(b\) 的反方向时算负数）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>预设</label><div class="seg" id="seg1">
+        <button data-v="ly" aria-pressed="true">小米 · 粮油</button><button data-v="d">小米 · 店</button><button data-v="same">同向</button><button data-v="perp">垂直</button><button data-v="opp">反向</button></div></div>
+    </div>
+    <div class="figw"><svg id="fig1" viewBox="0 0 480 360" role="img" aria-label="可拖动的两支二维箭头，以及投影和夹角" style="touch-action:none"></svg></div>
+    <div class="eq" id="calc1"></div>
+    <div class="readout">
+      <div class="ro warn"><b id="r1dot">–</b><span>点积 a·b</span></div>
+      <div class="ro"><b id="r1la">–</b><span>长度 ‖a‖</span></div>
+      <div class="ro"><b id="r1lb">–</b><span>长度 ‖b‖</span></div>
+      <div class="ro"><b id="r1cos">–</b><span>余弦相似度</span></div>
+      <div class="ro"><b id="r1ang">–</b><span>夹角 θ</span></div>
+    </div>
+    <p class="note">只拉长 \(b\)、不转方向：点积跟着变大，余弦相似度和夹角纹丝不动。把 \(b\) 转到和 \(a\) 垂直，点积正好是 0；再转过去，点积变成负数。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>矩阵乘向量：一行一行做点积</h2>
+  <p>矩阵乘向量的算法只有一句话：<b>拿矩阵的每一行和向量做一次点积，得到结果的一个数</b>。默认的数字是文章里的 \(W_Q\) 和「小米」的 \(x = (0.5,\ 0.5)\)。</p>
+  <p>点「下一行」一行一行走：先高亮第 1 行，算出结果的第 1 个数；再高亮第 2 行，算出第 2 个数。旁边的平面上，蓝色箭头是 \(x\)，橙色箭头是乘出来的 \(y = Wx\)。矩阵和向量里的数都可以改。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>矩阵 W</label>
+        <span class="mat"><input id="w11" type="number" step="0.1" value="1"><input id="w12" type="number" step="0.1" value="1"><input id="w21" type="number" step="0.1" value="0"><input id="w22" type="number" step="0.1" value="-1.2"></span></div>
+      <div class="ctrl"><label>向量 x</label>
+        <span class="vec"><input id="x1" type="number" step="0.1" value="0.5"><input id="x2" type="number" step="0.1" value="0.5"></span></div>
+      <div class="ctrl"><button class="btn" id="step2">下一行</button><button class="btn" id="reset2">重来</button><button class="btn" id="def2">恢复默认</button></div>
+    </div>
+    <div class="duo">
+      <svg id="fig2a" viewBox="0 0 480 150" role="img" aria-label="矩阵、向量和结果，当前行高亮"></svg>
+      <svg id="fig2b" viewBox="0 0 480 330" role="img" aria-label="输入向量和输出向量画在平面上"></svg>
+    </div>
+    <div class="eq" id="calc2"></div>
+    <div class="readout">
+      <div class="ro warn"><b id="r2y">–</b><span>结果 y = Wx</span></div>
+      <div class="ro"><b id="r2lx">–</b><span>‖x‖</span></div>
+      <div class="ro"><b id="r2ly">–</b><span>‖y‖</span></div>
+    </div>
+    <p class="note">把矩阵改成 \(\begin{pmatrix}1&0\\0&1\end{pmatrix}\)：每一行只挑出 \(x\) 的一个数，\(y\) 和 \(x\) 完全一样（单位矩阵）。改成 \(\begin{pmatrix}0&-1\\1&0\end{pmatrix}\)：箭头长度不变，逆时针转了 90°。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>形状检查器：中间那一维必须对上</h2>
+  <p>矩阵乘向量 \((m \times n)(n) \to (m)\)：矩阵每一行有 \(n\) 个数，要和向量逐项相乘，所以向量也必须是 \(n\) 个数；每一行出一个数，所以结果有 \(m\) 个数。矩阵乘矩阵 \((m \times n)(n \times p) \to (m \times p)\)：左边对右边的每一列各做一次矩阵乘向量。</p>
+  <p>随便填两个形状，看能不能乘、乘出来是什么形状。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>左边 A</label><input class="num" id="am" type="number" min="1" max="999999" value="4"> × <input class="num" id="an" type="number" min="1" max="999999" value="2"></div>
+      <div class="ctrl"><label>右边 B</label><div class="seg" id="seg3"><button data-v="vec" aria-pressed="true">向量</button><button data-v="mat">矩阵</button></div>
+        <input class="num" id="bp" type="number" min="1" max="999999" value="2"><span id="bxq"> × <input class="num" id="bq" type="number" min="1" max="999999" value="3"></span></div>
+    </div>
+    <div class="figw narrow"><svg id="fig3" viewBox="0 0 480 190" role="img" aria-label="两个形状的方块示意和乘出来的形状"></svg></div>
+    <p class="verdict" id="verdict3"></p>
+  </div>
+  <p>线性层 \(y = Wx + b\) 的 \(W\) 是 \(m \times n\)（输入 \(n\) 维、输出 \(m\) 维），\(b\) 有 \(m\) 个数，参数量是 \(m \times n + m\)。不带偏置就是 \(m \times n\)。下面的预设是真实模型的公开形状。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>预设</label><div class="seg" id="seg3b">
+        <button data-v="toy" aria-pressed="true">文中小例子</button><button data-v="gpt2">GPT-2 FFN 第一层</button><button data-v="l3q">Llama-3-8B 的 W<sub>Q</sub></button><button data-v="l3o">Llama-3-8B 输出投影</button></div></div>
+    </div>
+    <div class="ctrls">
+      <div class="ctrl"><label>输入维度 n</label><input class="num" id="ln" type="number" min="1" max="999999" value="2"></div>
+      <div class="ctrl"><label>输出维度 m</label><input class="num" id="lm" type="number" min="1" max="999999" value="2"></div>
+      <label class="toggle"><input type="checkbox" id="lb" checked>带偏置 b</label>
+    </div>
+    <div class="eq" id="calc3"></div>
+    <div class="readout">
+      <div class="ro warn"><b id="r3p">–</b><span>参数量</span></div>
+      <div class="ro"><b id="r3mem">–</b><span>按 BF16（每个 2 字节）存</span></div>
+      <div class="ro"><b id="r3mul">–</b><span>处理一个 token 要做的乘法次数</span></div>
+    </div>
+    <p class="note">输出投影的 \(m\) 是词表大小：每个 token 一个分数。Llama-3-8B 光这一层就有 5 亿多参数，占整个模型的 6.5% 左右。乘法次数等于 \(m \times n\)：每个参数在处理一个 token 时恰好用一次。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>softmax 与温度：分数怎么变成概率</h2>
+  <p>softmax 分两步：每个分数取指数 \(e^{s}\)（一定变成正数，差距被拉大），再除以总和（加起来等于 1）。温度 \(T\) 在最前面插一步：先把分数除以 \(T\)。</p>
+  <div class="eq">\[ p_i = \frac{e^{s_i / T}}{\sum_j e^{s_j / T}} \]</div>
+  <p>默认是文章里的 4 个分数 \((1.6,\ 0.48,\ 0.08,\ 1.0)\)、\(T = 1\)。表格里每一列都是真实算出来的；最右一列是「直接除以总和」的对照，分数出现负数时它就坏了。</p>
+  <div class="lab">
+    <div class="ctrls" id="sl4"></div>
+    <div class="ctrls">
+      <div class="ctrl"><label>温度 T</label><input type="range" id="t4" min="0.05" max="3" step="0.01" value="1"><b id="t4v">1.00</b></div>
+      <div class="ctrl"><button class="btn" id="def4">恢复默认</button><button class="btn" id="minus4">都减去 1</button><button class="btn" id="samp4">按概率抽 100 次</button></div>
+    </div>
+    <div class="figw"><svg id="fig4" viewBox="0 0 480 230" role="img" aria-label="四个 token 的概率柱子和抽样结果"></svg></div>
+    <div class="tw"><table id="tab4"></table></div>
+    <div class="readout">
+      <div class="ro warn"><b id="r4top">–</b><span>第一名的概率</span></div>
+      <div class="ro"><b id="r4sum">–</b><span>概率之和</span></div>
+      <div class="ro"><b id="r4samp">–</b><span>抽 100 次，第一名被抽中</span></div>
+    </div>
+    <p class="note">点「都减去 1」：softmax 的概率一点不变，「直接除以总和」那一列却出现负数。温度拉到 0.1，第一名接近 100%；拉到 3，四个越来越接近 25%。温度调到 1.41（\(\sqrt{2} \approx 1.414\)），粮油约 40.9%（取 \(\sqrt{2}\) 的精确值是 40.8%），下一讲会再见到这个数。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>数值稳定性：先减去最大值</h2>
+  <p>计算机存一个数的位数有限：float32 最大约 \(3.4 \times 10^{38}\)，所以 \(e^{s}\) 在 \(s > 88.72\) 时存不下，变成无穷大（Infinity）；float16 最大 65,504，\(s > 11.09\) 就溢出。无穷大除以无穷大得到 NaN（不是一个数）。</p>
+  <p>因为 softmax 只看分数之间的差，所有分数先减去最大值，结果不变，而最大的那个变成 \(e^{0} = 1\)，再也不会溢出。下面把文章里的 4 个分数乘一个倍数，在三种精度下对照两种算法（float32、float16 的每一步运算都按该精度舍入）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>分数放大</label><input type="range" id="k5" min="1" max="300" step="1" value="1"><b id="k5v">× 1</b></div>
+      <div class="ctrl"><label>精度</label><div class="seg q" id="seg5"><button data-v="f64">float64</button><button data-v="f32" aria-pressed="true">float32</button><button data-v="f16">float16</button></div></div>
+    </div>
+    <div class="tw"><table id="tab5"></table></div>
+    <div class="readout">
+      <div class="ro" id="ro5a"><b id="r5a">–</b><span>直接取指数</span></div>
+      <div class="ro ok"><b id="r5b">–</b><span>先减最大值</span></div>
+      <div class="ro"><b id="r5lim">–</b><span>这种精度下 e^s 的溢出点</span></div>
+    </div>
+    <p class="note">float32 下把倍数拉到 56（粮油的分数 1.6 × 56 = 89.6，超过 88.72），直接取指数那一列马上出现 Infinity 和 NaN；先减最大值那一列始终正常。float16 下倍数 7（1.6 × 7 = 11.2）就溢出了。</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2><span class="n">06</span>对数：把乘法变成加法</h2>
+  <p>一句话的概率是每个 token 的概率连乘。概率都小于 1，乘得越多越小，很快小到计算机存不下，变成 0。对数把乘法变成加法：</p>
+  <div class="eq">\[ \begin{aligned} &\ln(p_1 \times p_2 \times \cdots \times p_N) \\ &= \ln p_1 + \ln p_2 + \cdots + \ln p_N \end{aligned} \]</div>
+  <p>假设每个 token 的概率都是 \(p\)，连续生成 \(N\) 个。灰线是在 float32 里先连乘、最后取对数；橙线是一直把对数相加。两条线本该重合。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>每个 token 的概率 p</label><input type="range" id="p6" min="0.01" max="0.99" step="0.001" value="0.478"><b id="p6v">0.478</b></div>
+      <div class="ctrl"><label>token 数 N</label><input type="range" id="n6" min="1" max="400" step="1" value="200"><b id="n6v">200</b></div>
+    </div>
+    <div class="figw"><svg id="fig6" viewBox="0 0 480 280" role="img" aria-label="连乘后取对数与对数相加两条曲线"></svg></div>
+    <div class="readout">
+      <div class="ro"><b id="r6prod">–</b><span>float32 里连乘 N 次</span></div>
+      <div class="ro"><b id="r6zero">–</b><span>第几次乘成 0</span></div>
+      <div class="ro warn"><b id="r6log">–</b><span>对数相加 N ln p</span></div>
+      <div class="ro"><b id="r6ce">–</b><span>−ln p（交叉熵，后面会讲）</span></div>
+    </div>
+    <p class="note">\(p = 0.478\) 时，float32 连乘到第 141 次变成 0，灰线断掉；对数相加的橙线一直是一条普通的直线。\(-\ln p\) 是训练时常用的损失：正确答案概率越接近 1，它越接近 0。</p>
+  </div>
+</section>
+</div>

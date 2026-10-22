@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-22 12:05 America/New_York · 更新者：Claude（会话 session_01BU4u8x4TdPeBZqiM9RuSf3）
+最后更新：2026-10-22 12:10 America/New_York · 更新者：Claude（会话 session_017Fwc1rzTkWkiTuLbPY9ZSq）
 
 ---
 
@@ -140,6 +140,7 @@ door4ai-lab/
 - 课程顺序：网络讲（internet-basics，order 2.5）放在硬件讲之后、Git 讲之前：先懂电脑，再懂电脑怎么连网，再讲 Git/GitHub。order 可以用小数插队。
 - 网络讲的 DNS 污染部分直接点名「防火长城」（2026-10-15 本人决定），只讲原理和可观察的现象，不提供翻墙教程。
 - 课程顺序：Token 讲（tokenizer-llm，order 4）放在硬件讲（2）和注意力讲（5）之间：先知道文字怎么变成 token、模型整体怎么跑，再拆开注意力。
+- 课程顺序：数学讲（vectors-softmax，order 4.5）放在 Token 讲与注意力讲之间（2026-10-22 本人指定）：给没学过线性代数和概率的读者补齐点积、矩阵形状、softmax。**它的贯穿算例与注意力讲 `labs-src/attention-qkv/toy.py` 完全相同**（4 个 token、x、W_Q、W_K，分数 1.6 / 0.48 / 0.08 / 1.0，T = √2 即注意力的 ÷√d_k），改其中一讲的数字时两讲要一起改。
 - 需要大数据表的实验（如分词器词表）把打包好的 JS 放在实验页同目录（`public/labs/<slug>/xxx.js`），同源、受同样的门禁保护；不依赖外部 CDN，国内访问更稳。
 - 课程顺序：注意力 QKV（order 5）在前，KV Cache（order 10）在后，因为 KV cache 建立在 Q/K/V 概念上。
 - 课程顺序：残差连接（order 25）紧接梯度下降（20）：讲深网络为什么训不动。
@@ -180,6 +181,7 @@ door4ai-lab/
 - [x] 新增《后训练是什么：只会续写的基座模型，是怎么变成助手的》（order 41，LoRA 之后、RLHF 之前；按新标准图文写，贯穿算例「17 × 3」，7 张分镜图 + 实验 01–05；无视频）（2026-10-22）
 - [x] 新增《Prompt 工程：怎么跟模型把话说清楚》（order 99，Agent 篇第一讲；按新标准图文写，贯穿算例「网店评论分好评 / 中评 / 差评」，8 张分镜图 + 实验 01–05；无视频）（2026-10-22）
 - [x] 新增《AI 怎么浏览网页、操作电脑：眼睛、手和权限》（order 122，MCP 之后、流式输出之前；5 实验 + 1 动画）（2026-10-19）
+- [x] 新增《向量、矩阵乘法与 softmax：读懂大模型需要的全部数学》（order 4.5，Token 讲之后、注意力讲之前；按新标准图文写，15 步、12 张分镜图、5 个「停一下」+ 6 个实验，无视频）（2026-10-22）
 - [x] 新增《模型是怎么看图的：一张图怎样变成一串 token》（order 48，模型篇最后一讲；按新标准图文写，10 张分镜图 + 6 个实验，无视频）（2026-10-22）
 - [x] 新增《位置编码与 RoPE：注意力怎么知道谁在前谁在后》（order 6，注意力讲之后、多头 GQA 讲之前；按新标准图文写，沿用注意力讲的四个 token，11 张分镜图 + 实验 01–05；无视频）（2026-10-22）
 - [ ] 待补查（写手凭记忆、未找到原文出处）：RLHF 讲里 GPT-3 预训练 300 B token、InstructGPT 每题 4–9 个回答排序、Llama 2 双奖励模型与四档评分；量化讲的困惑度表来自单作者预印本（arXiv 2601.14277），如需更强出处可删
@@ -201,6 +203,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-22 · Claude（session_017Fwc1rzTkWkiTuLbPY9ZSq）** — 按本人要求用 write-lesson 写数学讲。新增 `vectors-softmax`（order 4.5，模型篇第一讲）：`labs-src/vectors-softmax/toy.py` 定义贯穿算例（**与注意力讲同一组数**：粮油 (0, 1)、店 (0.4, 0.2)、买了 (0.2, 0)、小米 (0.5, 0.5)；W_Q x = (1.0, −0.6)；W_K 乘 2 × 4 的 X 得 K；K 乘 (1.0, −0.6) 得分数 1.6 / 0.48 / 0.08 / 1.0；softmax 47.8 / 15.6 / 10.4 / 26.2 %；T = 0.5 / 2 / √2；线性层 b = (0.2, 0.4)），生成 12 张 SVG 并把 `article.src.md` 的 `{{figN}}`、`{{n:名字}}` 填好写到 `src/content/blog/vectors-softmax.md`。正文 15 步：向量 → 箭头与长度 → 点积 → 投影与 ‖a‖‖b‖cos θ → 余弦相似度 → 矩阵乘向量（逐行点积）→ 形状规则 (m × n)(n) → (m) → 矩阵乘矩阵与转置 → 线性层 y = Wx + b 与参数量（GPT-2 FFN 768 → 3072 带偏置 2,362,368；Llama-3-8B 输出投影 128,256 × 4096 = 525,336,576）→ 为什么不能直接除以总和 → 指数 → softmax → 温度 → 减最大值（float32 溢出点 88.72、float16 11.09）→ 对数（0.478 在 float32 里连乘第 141 次变 0、log-softmax、交叉熵只点到）；5 个「停一下」。实验页由 `labs-src/vectors-softmax/build.py` 拼出（模板样式 + `lab.body.html` + `lab.script.js`）：01 拖两支箭头（点积、投影、夹角）/ 02 矩阵乘向量逐行高亮 / 03 形状检查器 + 线性层参数量（四个真实预设）/ 04 softmax + 温度 + 直接除以总和对照 + 抽 100 次 / 05 float64 / float32 / float16 下直接取指数 vs 先减最大值（每步按精度舍入，float16 用自写舍入）/ 06 float32 连乘与对数相加。衔接：`attention-qkv` 的 `article.src.md` 加三处「见上一讲」（矩阵乘向量、softmax、÷√2 = 温度 √2）并改「和前后两讲的关系」，重跑 toy.py（只有这几处变化）；`tokenizer-llm.md` 末段改为先接本讲。本地 build 42 页通过；1512 浅色 / 390 深色无横向滚动、KaTeX 无报错、无脚本错误，390 宽长公式已拆行；实验关键读数（56 倍 float32 溢出、7 倍 float16 溢出、第 141 次变 0）在 Chromium 里核对；个人信息检索 0。
 
 - **2026-10-22 · Claude（session_01BU4u8x4TdPeBZqiM9RuSf3）** — 本人要求写 Prompt 工程一讲。新增 `prompt-engineering`（order 99，Agent 篇第一讲，工具调用之前）；`src/data/course.ts` 模型篇 `until` 100 → 99（课程目录已确认它排在 Agent 篇第一位），第 4 节「Agent 篇 order ≥ 100」同步改为 ≥ 99。`labs-src/prompt-engineering/toy.py` 定义贯穿算例（耳机网店评论分类，第一条评论「快递第二天就到了……左耳就没声了」应判差评），token 数由 `count_tokens.mjs` 调同源 `/labs/tokenizer-llm/tiktoken.js`（o200k）在 node 里真实计数（好版本 ChatML 整串 227 = 5 特殊 + 6 角色名 + 2 换行 + 系统提示 184 + 用户 30；系统提示四块 30/25/87/42），生成 8 张 SVG 并由 `article.src.md` 生成文章（4 个「停一下」）。正文七节：消息列表 → 对话模板（ChatML / Llama 3 / Harmony 对照表，Harmony 角色优先级）→ 系统提示四块（角色、任务、规则、输出格式）与「给理由」→ 少样本（示意偏差模型 z = s + α·n/k + β·[最后一个]，四种示例安排，同样 3 个示例只换顺序答案就变；过度模仿）→ 结构化输出（JSON Schema、六种常见格式错误、各家 API 参数表、受约束解码手算 0.46/0.72 = 0.639）→ 先分析再回答（字段顺序 reason 在前）与提示链 → 三个坑（指令冲突、Lost in the Middle、否定指令）→ 10 道测试题两版对比（示例数据，标准误 0.095，McNemar p = 0.375，放大到 100 题 2.4 × 10⁻⁵）。**实验页由 toy.py 生成**：skill 模板的头尾 + `labs-src/prompt-engineering/lab.body.html`，并把 `toy.json` 写成页内 TOY 常量（改实验页改 lab.body.html 后重跑脚本）。实验：01 对话模板拼装器（三种模板，o200k 逐段计数，可带前一轮）/ 02 检查清单（页内规则，标明不是 AI 评分）/ 03 少样本偏差示意（追加 / 删除 / 打乱示例，枚举全部顺序看几种判对）/ 04 JSON 解析 + schema 校验（六种错误一键切换）+ 受约束解码屏蔽与 1000 次抽样 / 05 10 题对比表（示例数据，点格子改结果，题目放大 ×3 / ×10）。事实 2026-10-22 查证：Anthropic `output_config.format`（GA，`output_format` 已弃用，beta 头 `structured-outputs-2025-11-13`）、OpenAI Responses `text.format` + `strict`、Gemini Interactions API `response_format`（`mime_type` + `schema`）、Qwen3 ChatML 模板、Llama 3 格式、Harmony 特殊 token 与优先级、Anthropic 提示文档（正面指令、给理由、3–5 个示例、长文档放前面最多 30%、4.6 起不支持 prefill）、Kojima 2022（17.7% → 78.7%，10.4% → 40.7%）、Wei 2022（PaLM 540B GSM8K 58%）。衔接：`tool-calling.md`「和前后两讲的关系」改为承接本讲。本地 build 42 页通过；1512 浅色 / 390 深色无横向滚动、KaTeX 无报错、无脚本错误，五个实验逐项点过；个人信息检索 0。
 
@@ -392,6 +396,7 @@ door4ai-lab/
    - 补充（2026-10-22）：`post-training` 41 后训练总览 · `positional-encoding` 6 位置编码与 RoPE
    - 补充（2026-10-22）：`prompt-engineering` 99 Prompt 工程（Agent 篇第一讲）
    - 补充（2026-10-22 已写）：`vision-tokens` 48 模型怎么看图
+   - 补充（2026-10-22 已写）：`vectors-softmax` 4.5 向量、矩阵乘法与 softmax（数学讲）
    - 补充（2026-10-19 已写）：`multihead-gqa` 7 · `weight-quantization` 12 · `mixture-of-experts` 15 · `rlhf-alignment` 42 · `agent-harness` 107 · `browser-computer-use` 122
 2. 给文章列表加按 tag 过滤。
 3. 加 Cloudflare Web Analytics。
