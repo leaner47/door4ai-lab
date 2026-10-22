@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-22 10:57 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
+最后更新：2026-10-22 11:12 America/New_York · 更新者：Claude（会话 session_01NAqoDkgqfsGCL6jcYnjuSJ）
 
 ---
 
@@ -177,6 +177,7 @@ door4ai-lab/
 - [x] 课程规划 14 讲全部上线（2026-10-19）：最后一批《AI 写代码是怎么回事》(3.8，5 实验 + 1 动画)、《多模型网关与多 Agent 编排》(135，6 实验 + 2 动画)、《Agent 框架全景》(140，纯文字)
 - [x] 模型篇补充四讲（2026-10-19）：《多头注意力与 GQA》(order 7)、《模型量化》(12)、《MoE 混合专家》(15)、《RLHF 与偏好对齐》(42)，各 6 实验 + 2 动画
 - [x] 新增《Harness 是什么：模型外面那层替它动手的程序》（order 107，Agent Loop 之后、上下文窗口之前，作为 Agent 篇总纲；5 实验 + 2 动画）；RLHF 讲末尾加「Agent 的强化学习」一节 + 实验 06（2026-10-19）
+- [x] 新增《后训练是什么：只会续写的基座模型，是怎么变成助手的》（order 41，LoRA 之后、RLHF 之前；按新标准图文写，贯穿算例「17 × 3」，7 张分镜图 + 实验 01–05；无视频）（2026-10-22）
 - [x] 新增《AI 怎么浏览网页、操作电脑：眼睛、手和权限》（order 122，MCP 之后、流式输出之前；5 实验 + 1 动画）（2026-10-19）
 - [ ] 待补查（写手凭记忆、未找到原文出处）：RLHF 讲里 GPT-3 预训练 300 B token、InstructGPT 每题 4–9 个回答排序、Llama 2 双奖励模型与四档评分；量化讲的困惑度表来自单作者预印本（arXiv 2601.14277），如需更强出处可删
 - [ ] 本人自学时发现缺口再补
@@ -197,6 +198,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-22 · Claude（session_01NAqoDkgqfsGCL6jcYnjuSJ）** — 本人问「什么是后训练」后要求写成教材。新增 `post-training`（order 41）：`labs-src/post-training/toy.py` 算出整讲数字并生成 7 张 SVG（基座模型下一个 token 分布 / 对话模板 token 串 / SFT 一步前后 / 逐 token 损失与遮罩 / GRPO 一组的奖励与优势 / GRPO 一步前后 / 四个模型的流水线），把 `article.src.md` 里的 `{{figN}}` 与 `{{n:名字}}`（数字占位符，新做法）填好写到 `src/content/blog/post-training.md`。正文八步：基座只会续写 → ChatML 对话模板 → SFT 交叉熵与梯度 p − y 推导 + 手算一步 → 损失遮罩（提问占全部损失 80.1%）→ LIMA 与遗忘 → 偏好对齐（指向下一讲）→ RLVR/GRPO（组内优势、∑A = 0 让梯度只剩第一项、手算一步 35.0% → 51.9%、全对全错组 p^G + (1 − p)^G）→ InstructGPT / Llama 3 / Tülu 3 / DeepSeek-R1 流水线；3 个「停一下」。实验页 `public/labs/post-training/`：01 SFT 走步 / 02 损失遮罩（可逐 token 切换）/ 03 GRPO 一组（真实采样，第一组固定为文中的 51、41、51、54）/ 04 三道难度不同的题做 200 步 GRPO + p^G + (1 − p)^G 曲线 / 05 四条流水线；画布宽度随容器变（窄屏改为上下排）。事实 2026-10-22 查证：Tülu 3 SFT 939,344 个 prompt、DPO 354,192 对、RLVR 用 GSM8K/MATH/IFEval；Llama 3 预训练约 15 T token、后训练 6 轮；DeepSeek-R1 冷启动数千条、重新 SFT 约 60 万 + 20 万条 2 epoch。衔接：`lora.md` 末段改为下一讲后训练，`rlhf-alignment.md` 开头与「和前后两讲的关系」改为承接本讲。本地 build 40 页通过；1512 浅色 / 390 深色无横向滚动、公式不溢出、无脚本错误；个人信息检索 0。
 
 - **2026-10-22 · Claude（session_01QvBhNRgUqPZf8fhAnjTAx7）** — 本人反馈左右页边距很糟糕（大屏上只有 40px，一行一千四百多 px）。正文与实验页边距由 `clamp(16px,3vw,40px)` 改为 `clamp(18px,9vw - 16px,200px)`（390 宽 ≈ 19px，1512 宽 ≈ 120px，1920 宽 ≈ 157px）：`Base.astro` 页眉 / main / 页脚 / `.post-body` / 资源页，全部 28 个实验页 `.wrap`，skill 与实验页模板。本地检查 1512、1920、390 宽：实验标题与正文左边缘对齐，无横向滚动。随后本人要求顶部和底部不需要这么大的页边距：页眉 `header.site`、页脚 `footer.site` 改回 `clamp(16px,3vw,40px)`。
 
@@ -377,6 +380,7 @@ door4ai-lab/
    - 基础篇：`ai-coding-tools` 3.8 AI Coding 入门（Claude Code / Codex 怎么用，接 Resource 页）
    - 模型篇：`backpropagation` 30 反向传播 · `layernorm` 35 LayerNorm · `lora` 40 LoRA · `model-evaluation` 45 模型评测
    - Agent 篇：`tool-calling` 100 工具调用 · `agent-loop` 105 Agent Loop 与 ReAct · `context-window` 110 上下文与记忆 · `rag-embedding` 115 Embedding 与 RAG · `mcp` 120 MCP · `streaming` 125 流式输出（SSE）· `trace-eval` 130 Trace 与 Eval · `gateway-orchestration` 135 多模型网关与多 Agent 编排 · `agent-frameworks` 140 框架全景（纯文字）
+   - 补充（2026-10-22）：`post-training` 41 后训练总览
    - 补充（2026-10-19 已写）：`multihead-gqa` 7 · `weight-quantization` 12 · `mixture-of-experts` 15 · `rlhf-alignment` 42 · `agent-harness` 107 · `browser-computer-use` 122
 2. 给文章列表加按 tag 过滤。
 3. 加 Cloudflare Web Analytics。

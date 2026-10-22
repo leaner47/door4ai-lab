@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>后训练实验室</title>
+<link rel="stylesheet" href="/vendor/katex/katex.min.css">
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(18px,9vw - 16px,200px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+p code,li code{font-size:.88em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+ul,ol{padding-left:1.2em}
+.aside{border-left:3px solid var(--accent);padding:4px 0 4px 16px;margin:16px 0;font-size:15.5px}
+.aside b{display:block;margin-bottom:2px}
+.eq{margin:18px 0;overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.eq .katex-display{margin:0}
+.katex{font-size:1.08em}
+.eq .katex-display>.katex{font-size:1.22em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+.seg.q button[aria-pressed=true]{background:var(--warn)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px}
+.toggle input{accent-color:var(--warn)}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn b{color:var(--warn)} .ro.ok b{color:var(--ok)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.sum{font-size:15px;margin-top:10px;line-height:1.9}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.num{text-align:right}
+.tw{overflow-x:auto}
+.key{margin-top:40px;border-top:1px solid var(--line);padding-top:20px}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 14px}
+.chip{font:inherit;font-size:14px;padding:4px 9px;border-radius:6px;border:1.5px solid var(--line);background:none;color:var(--muted);cursor:pointer;white-space:nowrap}
+.chip.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.stages{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
+.stage{flex:1 1 180px;border-radius:8px;padding:12px 14px;background:var(--bg);border:1.5px solid var(--line)}
+.stage b{display:block;font-size:17px;margin-bottom:4px}
+.stage .d{font-size:14px;color:var(--muted);line-height:1.7}
+.stage .k{font-size:20px;font-weight:600;margin-top:6px;font-variant-numeric:tabular-nums}
+.stage.accent{border-color:var(--accent)} .stage.accent b,.stage.accent .k{color:var(--accent)}
+.stage.warn{border-color:var(--warn)} .stage.warn b,.stage.warn .k{color:var(--warn)}
+.stage.ok{border-color:var(--ok)} .stage.ok b,.stage.ok .k{color:var(--ok)}
+.stage.loop{border-style:dashed}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:14px;height:4px;border-radius:2px;vertical-align:middle;margin-right:6px}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">后训练 · SFT · 损失遮罩 · GRPO</div>
+  <h1>后训练实验室</h1>
+  <p class="lede">同一道「17 × 3 等于多少？」，从照着示范学，到自己做题、对了加强。每个数字都在页面里真实算出来。</p>
+</header>
+
+<section id="s1">
+  <h2><span class="n">01</span>SFT 一步一步走</h2>
+  <p>基座模型读完题目，下一个 token 有 4 个候选，每个有一个分数 \(z\)。示范回答要求下一个 token 是「51」。损失是 \(L = -\ln p(51)\)，每个分数的梯度是 \(p_k - y_k\)：模型给的概率减去正确答案（正确的那个 \(y = 1\)，其余 \(y = 0\)）。每走一步，分数减去学习率乘梯度：\(z_k \leftarrow z_k - \eta\,(p_k - y_k)\)。</p>
+  <p>点「走一步」，看三样东西怎么变：左边每个候选的概率（条形）和这一步的梯度（数字），右边是损失随步数的曲线。也可以换一个示范要求的 token。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>示范要求</label><div class="seg" id="tg1"></div></div>
+      <div class="ctrl"><label for="eta1">学习率 η</label><input id="eta1" type="range" min="0.1" max="3" step="0.1" value="1"><b id="eta1v">1.0</b></div>
+      <button class="btn" id="step1">走一步</button>
+      <button class="btn" id="run1">走 10 步</button>
+      <button class="btn" id="reset1">重置</button>
+    </div>
+    <svg id="fig1" viewBox="0 0 800 250" role="img" aria-label="四个候选的概率与梯度，以及损失曲线"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r1a">0</b><span>已走步数</span></div>
+      <div class="ro ok"><b id="r1b">–</b><span>示范 token 的概率</span></div>
+      <div class="ro warn"><b id="r1c">–</b><span>损失 −ln p</span></div>
+    </div>
+    <p class="note">学习率 1、示范「51」：第 1 步之后「问」仍以 37.0% 略高于「51」的 35.2%，第 2 步「51」才成为第一。把学习率拖到 3，第一步就把「51」推过「问」。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>损失遮罩：只对回答算</h2>
+  <p>一条 SFT 样本按对话模板写成 12 个 token：前 9 个是提问（包括角色标记），后 3 个是回答。每个位置的损失是模型给「这个位置真正出现的 token」的概率取负对数。下面的概率是示意数字，「51」那一格和实验 01 的起点相同。</p>
+  <p>切换两种算法，看平均损失和提问部分占多少。也可以点任意 token，单独决定它算不算。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>算哪些</label><div class="seg" id="mode2"><button aria-pressed="false" data-m="all">全部都算</button><button aria-pressed="true" data-m="ans">只算回答</button></div></div>
+    </div>
+    <div class="chips" id="chips2"></div>
+    <svg id="fig2" viewBox="0 0 800 250" role="img" aria-label="每个 token 的损失，计入的为蓝色"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r2a">–</b><span>计入的 token 数</span></div>
+      <div class="ro warn"><b id="r2b">–</b><span>平均损失</span></div>
+      <div class="ro"><b id="r2c">–</b><span>提问部分在损失里占</span></div>
+    </div>
+    <p class="note">全部都算时，提问部分占损失的约 80%：训练的大部分力气会花在「猜用户会问什么」上。回答里最大的一格是末尾的 &lt;|im_end|&gt;，基座模型不知道答完要停。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>GRPO 的一组</h2>
+  <p>SFT 之后，模型会按格式回答了，但给出的数不一定对：4 个答案 51、41、54、21 的分数是 \(0.4,\ 0.2,\ 0,\ -0.6\)。只有 51 是对的，程序判对得 1、错得 0。</p>
+  <p>GRPO 对同一道题采样一组 \(G\) 个回答，每个回答的优势是它的奖励减去组内平均、再除以组内标准差：</p>
+  <div class="eq">\[ A_i = \frac{r_i - \bar r}{\sigma} \]</div>
+  <p>更新时，每个回答的优势记到它自己的答案上，再除以 \(G\)，乘学习率加到分数上（\([\,y_i = k\,]\) 在第 \(i\) 个回答是答案 \(k\) 时为 1，否则为 0）：</p>
+  <div class="eq">\[ z_k \leftarrow z_k + \eta \cdot \frac{1}{G}\sum_{i} A_i\,[\,y_i = k\,] \]</div>
+  <p>一组全对或全错时 \(\sigma = 0\)，优势记为 0，这一组不改任何东西。</p>
+  <p>第一组固定为文章里的 51、41、51、54；之后每点一次「采样」，就从当前概率里真实抽一组。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="g3">组大小 G</label><input id="g3" type="range" min="2" max="16" step="1" value="4"><b id="g3v">4</b></div>
+      <div class="ctrl"><label for="eta3">学习率 η</label><input id="eta3" type="range" min="0.1" max="3" step="0.1" value="1"><b id="eta3v">1.0</b></div>
+      <button class="btn" id="samp3">采样</button>
+      <button class="btn" id="upd3">更新</button>
+      <button class="btn" id="auto3">采样并更新 × 10</button>
+      <button class="btn" id="reset3">重置</button>
+    </div>
+    <svg id="fig3a" viewBox="0 0 800 220" role="img" aria-label="这一组回答的奖励与优势"></svg>
+    <svg id="fig3b" viewBox="0 0 800 190" role="img" aria-label="四个答案的概率，更新前后"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r3a">–</b><span>组内平均 r̄</span></div>
+      <div class="ro"><b id="r3b">–</b><span>组内标准差 σ</span></div>
+      <div class="ro ok"><b id="r3c">–</b><span>答对的概率 p(51)</span></div>
+      <div class="ro warn"><b id="r3d">–</b><span>已更新步数</span></div>
+    </div>
+    <p class="note">第一组更新后，p(51) 从 35.0% 升到 51.9%。没被采到的答案分数不变，概率仍会变，因为分母变了。多点几次「采样」，遇到全对或全错的组，「更新」不会改变任何东西。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>难度与学习信号</h2>
+  <p>把每道题简化成「对 / 错」两种结果，模型做对的概率是 \(p\)。三道题同时做 GRPO：难题一开始 \(p = 0.02\)，中等题 \(p = 0.35\)（就是实验 03 的起点），简单题 \(p = 0.98\)。每一步各采一组 \(G\) 个回答，算优势、更新，一共 200 步。</p>
+  <p>一组全对或全错就没有学习信号，这件事的概率是 \(p^{G} + (1-p)^{G}\)。下面第二张图画的就是它随 \(p\) 的变化。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="g4">组大小 G</label><input id="g4" type="range" min="2" max="32" step="1" value="4"><b id="g4v">4</b></div>
+      <div class="ctrl"><label for="eta4">学习率 η</label><input id="eta4" type="range" min="0.1" max="2" step="0.1" value="0.5"><b id="eta4v">0.5</b></div>
+      <button class="btn" id="rerun4">换一组随机数再跑</button>
+    </div>
+    <svg id="fig4a" viewBox="0 0 800 260" role="img" aria-label="三道题答对概率随训练步数的变化"></svg>
+    <div class="legend"><span><i style="background:var(--warn)"></i>难题</span><span><i style="background:var(--accent)"></i>中等题</span><span><i style="background:var(--ok)"></i>简单题</span></div>
+    <svg id="fig4b" viewBox="0 0 800 220" role="img" aria-label="一组全对或全错的概率随 p 的变化"></svg>
+    <div class="readout">
+      <div class="ro warn"><b id="r4a">–</b><span>难题：200 步后 p</span></div>
+      <div class="ro"><b id="r4b">–</b><span>中等题：200 步后 p</span></div>
+      <div class="ro ok"><b id="r4c">–</b><span>简单题：200 步后 p</span></div>
+      <div class="ro warn"><b id="r4d">–</b><span>难题：白做的组占比</span></div>
+    </div>
+    <p class="note">看橙色的难题：开头很长一段贴着底走，因为一组 4 个几乎全错（第二张图：92.2%），优势全是 0；直到某一组碰巧有一个做对，曲线才开始往上。什么时候碰到全看运气，点「换一组随机数再跑」对比几次，再把 G 拖大，等待会变短。简单题本来就会，几乎每组全对，曲线一直是平的。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>四条流水线</h2>
+  <p>四个公开了做法的模型，每个阶段用什么数据、有多少。灰框是起点，蓝是 SFT，橙是用偏好数据的一步，绿是用可验证奖励的强化学习；虚线框表示前面几步要重复。数字取自各自的论文或技术报告。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><div class="seg" id="m5"></div></div>
+    </div>
+    <div class="stages" id="stages5"></div>
+    <p class="note" id="note5"></p>
+  </div>
+</section>
+
+</div>
+<script src="/vendor/katex/katex.min.js"></script>
+<script src="/vendor/katex/auto-render.min.js"></script>
+<script>
+try{renderMathInElement(document.body,{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});}catch(e){}
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const pc = (v, d = 1) => (v * 100).toFixed(d) + '%';
+const num = (v, d = 3) => (v < 0 ? '−' : '') + Math.abs(v).toFixed(d);
+const softmax = (z) => { const m = Math.max(...z); const e = z.map(v => Math.exp(v - m)); const s = e.reduce((a, b) => a + b, 0); return e.map(v => v / s); };
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const T = (x, y, s, o = {}) => `<text x="${x}" y="${y}" font-size="${o.size || 16}" text-anchor="${o.anchor || 'start'}" fill="${o.fill || css('--fg')}"${o.weight ? ` font-weight="${o.weight}"` : ''}${o.italic ? ' font-style="italic"' : ''}>${esc(s)}</text>`;
+
+/* 与文章同一组数（labs-src/post-training/toy.py → toy.json） */
+const TOY = {
+  cand: ['问', '51', '17', '。'], z0: [2.0, 0.5, 1.0, 0.0],
+  seq: [['<|im_start|>user', 0.01, false], ['17', 0.02, false], [' ×', 0.10, false], [' 3', 0.08, false], [' 等于', 0.25, false], ['多少', 0.55, false], ['？', 0.70, false], ['<|im_end|>', 0.04, false], ['<|im_start|>assistant', 0.03, false], ['51', 0.12925004855316277, true], ['。', 0.60, true], ['<|im_end|>', 0.05, true]],
+  answers: ['51', '41', '54', '21'], za: [0.4, 0.2, 0.0, -0.6], group: ['51', '41', '51', '54'],
+};
+
+/* ———— 01 SFT ———— */
+const s1 = { z: TOY.z0.slice(), target: 1, hist: [], grad: null };
+function s1loss() { return -Math.log(softmax(s1.z)[s1.target]); }
+function s1reset() { s1.z = TOY.z0.slice(); s1.hist = [s1loss()]; s1.grad = null; draw1(); }
+function s1step() {
+  const eta = +$('#eta1').value, p = softmax(s1.z);
+  s1.grad = p.map((v, k) => v - (k === s1.target ? 1 : 0));
+  s1.z = s1.z.map((v, k) => v - eta * s1.grad[k]);
+  s1.hist.push(s1loss()); draw1();
+}
+$('#tg1').innerHTML = TOY.cand.map((c, i) => `<button data-i="${i}" aria-pressed="${i === 1}">${esc(c)}</button>`).join('');
+$('#tg1').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; s1.target = +b.dataset.i; [...$('#tg1').children].forEach(x => x.setAttribute('aria-pressed', x === b)); s1reset(); });
+/* 画布宽度跟着容器走：手机上用窄的布局，字号保持可读 */
+const vw = (id) => { const lab = document.getElementById(id).closest('.lab'); return Math.max(320, Math.min(800, (lab ? lab.clientWidth - 36 : 800))); };
+function draw1() {
+  $('#eta1v').textContent = (+$('#eta1').value).toFixed(1);
+  const W = vw('fig1'), narrow = W < 600, p = softmax(s1.z), steps = s1.hist.length - 1;
+  const BW = narrow ? W : 340, gx = BW - 10, barMax = BW - 150;
+  let s = T(60, 22, '概率', { fill: css('--muted'), size: 15 }) + T(gx, 22, '梯度 p − y', { fill: css('--muted'), size: 15, anchor: 'end' });
+  const cur = s1.grad || p.map((v, k) => v - (k === s1.target ? 1 : 0));
+  TOY.cand.forEach((c, i) => {
+    const y = 40 + i * 50, w = barMax * p[i], hi = i === s1.target;
+    s += T(48, y + 20, c, { anchor: 'end', size: 17, weight: hi ? 600 : null });
+    s += `<rect x="60" y="${y}" width="${Math.max(w, 1)}" height="28" rx="4" fill="${hi ? css('--ok') : css('--line')}"/>`;
+    s += T(60 + w + 6, y + 20, pc(p[i]), { fill: hi ? css('--ok') : css('--muted') });
+    s += T(gx, y + 20, num(cur[i]), { anchor: 'end', fill: cur[i] < 0 ? css('--ok') : css('--warn'), size: 15 });
+  });
+  // 损失曲线：宽屏在右边，窄屏在下面
+  const X0 = narrow ? 50 : 400, X1 = W - 20, Y1 = narrow ? 280 : 40, Y0 = narrow ? 430 : 210;
+  const H = narrow ? 470 : 250; $('#fig1').setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const n = Math.max(10, steps), Lmax = Math.max(...s1.hist, 1);
+  s += `<line x1="${X0}" y1="${Y0}" x2="${X1}" y2="${Y0}" stroke="${css('--line')}"/><line x1="${X0}" y1="${Y0}" x2="${X0}" y2="${Y1 - 6}" stroke="${css('--line')}"/>`;
+  s += T(X0 + 8, Y1 - 14, '损失', { fill: css('--muted'), size: 15 }) + T(X1, Y0 + 24, `步数（共 ${steps}）`, { fill: css('--muted'), size: 15, anchor: 'end' });
+  const px = (i) => (X0 + (X1 - X0) * i / n).toFixed(1), py = (L) => (Y0 - (Y0 - Y1) * L / Lmax).toFixed(1);
+  s += `<polyline points="${s1.hist.map((L, i) => px(i) + ',' + py(L)).join(' ')}" fill="none" stroke="${css('--warn')}" stroke-width="2.5"/>`;
+  s += `<circle cx="${px(steps)}" cy="${py(s1.hist[steps])}" r="5" fill="${css('--warn')}"/>`;
+  s += T(X0 - 6, +py(Lmax) + 5, Lmax.toFixed(1), { anchor: 'end', size: 13, fill: css('--muted') }) + T(X0 - 6, Y0 + 5, '0', { anchor: 'end', size: 13, fill: css('--muted') });
+  $('#fig1').innerHTML = s;
+  $('#r1a').textContent = steps; $('#r1b').textContent = pc(p[s1.target]); $('#r1c').textContent = s1loss().toFixed(3);
+}
+$('#step1').onclick = s1step;
+$('#run1').onclick = () => { for (let i = 0; i < 10; i++) s1step(); };
+$('#reset1').onclick = s1reset;
+$('#eta1').addEventListener('input', () => { $('#eta1v').textContent = (+$('#eta1').value).toFixed(1); });
+
+/* ———— 02 损失遮罩 ———— */
+const s2 = { on: TOY.seq.map(t => t[2]) };
+const short = (t) => ({ '<|im_start|>user': 'user', '<|im_end|>': 'end', '<|im_start|>assistant': 'asst' }[t] || t.trim());
+function draw2() {
+  const L = TOY.seq.map(t => -Math.log(t[1]));
+  $('#chips2').innerHTML = TOY.seq.map((t, i) => `<button class="chip${s2.on[i] ? ' on' : ''}" data-i="${i}" title="${esc(t[2] ? '回答' : '提问')}">${esc(t[0])}</button>`).join('');
+  const W = vw('fig2'), narrow = W < 600, fs = narrow ? 11 : 13, n = L.length, slot = (W - 20) / n, bw = slot * 0.72, base = 200, mx = Math.max(...L);
+  $('#fig2').setAttribute('viewBox', `0 0 ${W} 250`);
+  let s = '';
+  L.forEach((l, i) => {
+    const x = 10 + i * slot + (slot - bw) / 2, h = 150 * l / mx, on = s2.on[i];
+    s += `<rect x="${x}" y="${base - h}" width="${bw}" height="${h}" rx="3" fill="${on ? css('--accent') : css('--line')}"/>`;
+    s += T(x + bw / 2, base - h - 6, l.toFixed(narrow ? 1 : 2), { anchor: 'middle', size: fs, fill: on ? css('--accent') : css('--muted') });
+    s += T(x + bw / 2, base + 18, short(TOY.seq[i][0]), { anchor: 'middle', size: fs, fill: on ? css('--accent') : css('--muted') });
+  });
+  const xa = 10 + 9 * slot;
+  s += `<line x1="${xa}" y1="24" x2="${xa}" y2="${base + 26}" stroke="${css('--muted')}" stroke-dasharray="4 4"/>`;
+  s += T(xa - 8, 16, '提问', { anchor: 'end', size: 14, fill: css('--muted') }) + T(xa + 8, 16, '回答', { size: 14, fill: css('--muted') });
+  s += T(10, 244, '柱高 = 这个位置的损失 −ln p；蓝色计入平均', { size: 13, fill: css('--muted') });
+  $('#fig2').innerHTML = s;
+  const idx = L.map((_, i) => i).filter(i => s2.on[i]);
+  const sum = idx.reduce((a, i) => a + L[i], 0), sp = idx.filter(i => !TOY.seq[i][2]).reduce((a, i) => a + L[i], 0);
+  $('#r2a').textContent = `${idx.length} / ${n}`;
+  $('#r2b').textContent = idx.length ? (sum / idx.length).toFixed(3) : '–';
+  $('#r2c').textContent = idx.length ? pc(sp / sum) : '–';
+  const m = s2.on.every(v => v) ? 'all' : s2.on.every((v, i) => v === TOY.seq[i][2]) ? 'ans' : '';
+  [...$('#mode2').children].forEach(b => b.setAttribute('aria-pressed', b.dataset.m === m));
+}
+$('#mode2').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; s2.on = TOY.seq.map(t => b.dataset.m === 'all' ? true : t[2]); draw2(); });
+$('#chips2').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const i = +b.dataset.i; s2.on[i] = !s2.on[i]; draw2(); });
+
+/* ———— 03 GRPO 一组 ———— */
+const s3 = { z: TOY.za.slice(), group: null, prev: null, steps: 0, rand: rng(7), first: true };
+function s3sample() {
+  const G = +$('#g3').value, p = softmax(s3.z);
+  if (s3.first && G === 4) s3.group = TOY.group.map(a => TOY.answers.indexOf(a));
+  else s3.group = Array.from({ length: G }, () => { let u = s3.rand(), k = 0; while (k < 3 && u >= p[k]) { u -= p[k]; k++; } return k; });
+  s3.first = false; s3.prev = null; draw3();
+}
+function s3stats() {
+  const r = s3.group.map(k => k === 0 ? 1 : 0), G = r.length, m = r.reduce((a, b) => a + b, 0) / G;
+  const sd = Math.sqrt(r.reduce((a, v) => a + (v - m) ** 2, 0) / G);
+  const A = r.map(v => sd > 0 ? (v - m) / sd : 0);
+  const u = [0, 0, 0, 0]; s3.group.forEach((k, i) => { u[k] += A[i] / G; });
+  return { r, m, sd, A, u };
+}
+function s3update() {
+  if (!s3.group) s3sample();
+  const { u } = s3stats(), eta = +$('#eta3').value;
+  s3.prev = softmax(s3.z); s3.z = s3.z.map((v, k) => v + eta * u[k]); s3.steps++; draw3();
+}
+function draw3() {
+  $('#g3v').textContent = $('#g3').value; $('#eta3v').textContent = (+$('#eta3').value).toFixed(1);
+  const W = vw('fig3a'), narrow = W < 600;
+  const xr = narrow ? W * 0.30 : 150, cx = narrow ? W * 0.68 : 380, aw = narrow ? W * 0.16 : 50, ux = narrow ? 10 : 560;
+  const listH = 34 + 16 * 13 + 10, H = narrow ? listH + 4 * 30 + 70 : 260;
+  $('#fig3a').setAttribute('viewBox', `0 0 ${W} ${H}`);
+  let s = '';
+  if (s3.group) {
+    const { r, m, sd, A, u } = s3stats(), G = r.length, rowH = Math.min(36, 208 / G), fs = G > 8 ? 13 : 15;
+    s += T(10, 20, '回答', { fill: css('--muted'), size: 15 }) + T(xr, 20, '奖励', { fill: css('--muted'), size: 15 }) + T(cx - aw, 20, '优势 A', { fill: css('--muted'), size: 15 });
+    r.forEach((v, i) => {
+      const y = 34 + i * rowH, col = v ? css('--ok') : css('--warn');
+      s += T(10, y + rowH * .65, `${i + 1}：${TOY.answers[s3.group[i]]}`, { size: fs });
+      s += T(xr, y + rowH * .65, v ? '1 对' : '0 错', { size: fs, fill: col });
+      const w = aw * Math.abs(A[i]) / 1.8;
+      if (w > 0) s += `<rect x="${A[i] >= 0 ? cx : cx - w}" y="${y + rowH * .18}" width="${w}" height="${rowH * .6}" rx="3" fill="${A[i] > 0 ? css('--ok') : css('--warn')}"/>`;
+      s += T(A[i] >= 0 ? cx + w + 6 : cx - w - 6, y + rowH * .65, num(A[i], 2), { size: fs, anchor: A[i] >= 0 ? 'start' : 'end', fill: A[i] > 0 ? css('--ok') : A[i] < 0 ? css('--warn') : css('--muted') });
+    });
+    s += `<line x1="${cx}" y1="30" x2="${cx}" y2="${34 + G * rowH}" stroke="${css('--muted')}"/>`;
+    const uy = narrow ? listH + 20 : 20;
+    s += T(ux, uy, '记到答案上（÷ G）', { fill: css('--muted'), size: 15 });
+    TOY.answers.forEach((a, k) => { s += T(ux, uy + 34 + k * 30, `${a}：${u[k] >= 0 ? '+' : ''}${num(u[k])}`, { size: 15, fill: u[k] > 0 ? css('--ok') : u[k] < 0 ? css('--warn') : css('--muted') }); });
+    if (sd === 0) s += T(ux, uy + 34 + 4 * 30, '全对或全错：这一组不改', { size: 15, fill: css('--warn') });
+    $('#r3a').textContent = m.toFixed(3); $('#r3b').textContent = sd.toFixed(3);
+  } else {
+    s += T(10, 40, '点「采样」抽一组回答', { fill: css('--muted') });
+    $('#r3a').textContent = '–'; $('#r3b').textContent = '–';
+  }
+  $('#fig3a').innerHTML = s;
+  // 概率：更新前 / 更新后；窄屏上下排
+  const p = softmax(s3.z), prev = s3.prev;
+  const cols = prev ? [['更新前', prev], ['更新后', p]] : [['当前概率', p]];
+  const colW = narrow ? W : W / 2, blockH = 34 + 4 * 38;
+  $('#fig3b').setAttribute('viewBox', `0 0 ${W} ${narrow ? blockH * cols.length + 6 : blockH + 6}`);
+  let t = '';
+  cols.forEach(([name, q], c) => {
+    const ox = narrow ? 0 : c * colW, oy = narrow ? c * blockH : 0, bmax = colW - 140;
+    t += T(ox + 70, oy + 20, name, { fill: css('--muted'), size: 15 });
+    TOY.answers.forEach((a, k) => {
+      const y = oy + 34 + k * 38, hi = k === 0, w = bmax * q[k];
+      t += T(ox + 56, y + 19, a, { anchor: 'end', size: 16, weight: hi ? 600 : null });
+      t += `<rect x="${ox + 70}" y="${y}" width="${Math.max(w, 1)}" height="26" rx="4" fill="${hi ? css('--ok') : css('--line')}"/>` + T(ox + 70 + w + 6, y + 19, pc(q[k]), { size: 15, fill: hi ? css('--ok') : css('--muted') });
+    });
+  });
+  $('#fig3b').innerHTML = t;
+  $('#r3c').textContent = pc(p[0]); $('#r3d').textContent = s3.steps;
+}
+$('#samp3').onclick = s3sample; $('#upd3').onclick = s3update;
+$('#auto3').onclick = () => { for (let i = 0; i < 10; i++) { s3sample(); s3update(); } };
+$('#reset3').onclick = () => { Object.assign(s3, { z: TOY.za.slice(), group: null, prev: null, steps: 0, rand: rng(7), first: true }); draw3(); };
+$('#g3').addEventListener('input', () => { s3.group = null; s3.prev = null; draw3(); });
+$('#eta3').addEventListener('input', () => { $('#eta3v').textContent = (+$('#eta3').value).toFixed(1); });
+
+/* ———— 04 难度 ———— */
+let seed4 = 11;
+const P4 = [0.02, 0.35, 0.98], C4 = ['--warn', '--accent', '--ok'], STEPS = 200;
+function run4() {
+  const G = +$('#g4').value, eta = +$('#eta4').value;
+  return P4.map((p0, j) => {
+    const rand = rng(seed4 * 31 + j); let th = Math.log(p0 / (1 - p0)); const ps = [p0]; let dead = 0;
+    for (let t = 0; t < STEPS; t++) {
+      const p = 1 / (1 + Math.exp(-th));
+      const r = Array.from({ length: G }, () => rand() < p ? 1 : 0), m = r.reduce((a, b) => a + b, 0) / G;
+      const sd = Math.sqrt(r.reduce((a, v) => a + (v - m) ** 2, 0) / G);
+      if (sd === 0) dead++;
+      else th += eta * r.reduce((a, v) => a + (v - m) / sd * (v - p), 0) / G;
+      ps.push(1 / (1 + Math.exp(-th)));
+    }
+    return { ps, dead };
+  });
+}
+function draw4() {
+  const G = +$('#g4').value; $('#g4v').textContent = G; $('#eta4v').textContent = (+$('#eta4').value).toFixed(1);
+  const res = run4(), W = vw('fig4a');
+  $('#fig4a').setAttribute('viewBox', `0 0 ${W} 260`); $('#fig4b').setAttribute('viewBox', `0 0 ${W} 220`);
+  const X0 = 50, X1 = W - 20, Y0 = 220, Y1 = 40;
+  let s = `<line x1="${X0}" y1="${Y0}" x2="${X1}" y2="${Y0}" stroke="${css('--line')}"/><line x1="${X0}" y1="${Y0}" x2="${X0}" y2="${Y1}" stroke="${css('--line')}"/>`;
+  [0, .5, 1].forEach(v => { s += T(X0 - 8, Y0 - (Y0 - Y1) * v + 5, pc(v, 0), { anchor: 'end', size: 13, fill: css('--muted') }); });
+  s += T(X1, Y0 + 24, '训练步数（共 200）', { anchor: 'end', size: 14, fill: css('--muted') }) + T(X0, 18, '答对的概率 p', { size: 14, fill: css('--muted') });
+  res.forEach((r, j) => { s += `<polyline points="${r.ps.map((p, i) => `${(X0 + (X1 - X0) * i / STEPS).toFixed(1)},${(Y0 - (Y0 - Y1) * p).toFixed(1)}`).join(' ')}" fill="none" stroke="${css(C4[j])}" stroke-width="2.5"/>`; });
+  $('#fig4a').innerHTML = s;
+  const A0 = 50, A1 = W - 20, B0 = 190, B1 = 40;
+  let t = `<line x1="${A0}" y1="${B0}" x2="${A1}" y2="${B0}" stroke="${css('--line')}"/><line x1="${A0}" y1="${B0}" x2="${A0}" y2="${B1}" stroke="${css('--line')}"/>`;
+  const f = (p) => p ** G + (1 - p) ** G;
+  const pts = []; for (let i = 0; i <= 200; i++) { const p = i / 200; pts.push(`${(A0 + (A1 - A0) * p).toFixed(1)},${(B0 - (B0 - B1) * f(p)).toFixed(1)}`); }
+  t += `<polyline points="${pts.join(' ')}" fill="none" stroke="${css('--fg')}" stroke-width="2.2"/>`;
+  P4.forEach((p, j) => { const x = A0 + (A1 - A0) * p, y = B0 - (B0 - B1) * f(p); t += `<circle cx="${x}" cy="${y}" r="6" fill="${css(C4[j])}"/>` + T(x + (p > .9 ? -10 : 10), y - 12, pc(f(p)), { size: 14, anchor: p > .9 ? 'end' : 'start', fill: css(C4[j]) }); });
+  [0, .5, 1].forEach(v => { t += T(A0 - 8, B0 - (B0 - B1) * v + 5, pc(v, 0), { anchor: 'end', size: 13, fill: css('--muted') }); t += T(A0 + (A1 - A0) * v, B0 + 20, v.toFixed(1), { anchor: 'middle', size: 13, fill: css('--muted') }); });
+  t += T(A0, 18, `一组 ${G} 个全对或全错的概率`, { size: 14, fill: css('--muted') }) + T(A1, B0 - 8, '做对的概率 p', { anchor: 'end', size: 14, fill: css('--muted') });
+  $('#fig4b').innerHTML = t;
+  $('#r4a').textContent = pc(res[0].ps[STEPS]); $('#r4b').textContent = pc(res[1].ps[STEPS]); $('#r4c').textContent = pc(res[2].ps[STEPS]);
+  $('#r4d').textContent = pc(res[0].dead / STEPS, 0);
+}
+$('#g4').addEventListener('input', draw4); $('#eta4').addEventListener('input', draw4);
+$('#rerun4').onclick = () => { seed4++; draw4(); };
+
+/* ———— 05 流水线（数字取自各论文 / 技术报告） ———— */
+const PIPE = {
+  'InstructGPT': { stages: [
+    ['', 'GPT-3', '预训练好的基座模型', '175 B 参数'],
+    ['accent', 'SFT', '标注员针对提示写的示范回答', '约 1.3 万个问题'],
+    ['warn', '奖励模型', '标注员给模型的多个回答排序，训练一个打分模型', '约 3.3 万个问题'],
+    ['warn', 'PPO', '用奖励模型打分做强化学习，KL 惩罚拴住', '约 3.1 万个问题']],
+    note: 'Ouyang 等，2022。经典三段式：先示范，再偏好，再强化学习。' },
+  'Llama 3': { stages: [
+    ['', '预训练', '多语言文本、代码', '约 15 T token'],
+    ['warn', '奖励模型', '人工标注的偏好对', '每轮重新训练'],
+    ['accent', '拒绝采样 + SFT', '每个问题让当前模型写多个回答，奖励模型挑最好的当示范', '每轮新数据'],
+    ['warn', 'DPO', '直接用偏好对训练', '每轮一次'],
+    ['loop', '× 6 轮', '下一轮用这一轮的模型重新生成数据', '6 轮']],
+    note: 'Llama Team，2024。没有 PPO：每轮「拒绝采样 + SFT + DPO」，反复六轮。' },
+  'Tülu 3': { stages: [
+    ['', 'Llama 3.1', '基座模型', '8 B / 70 B / 405 B'],
+    ['accent', 'SFT', '公开数据与合成数据混合', '约 94 万个问题'],
+    ['warn', 'DPO', '偏好对（多数由模型生成、AI 评判）', '约 35 万对'],
+    ['ok', 'RLVR', '数学题（GSM8K、MATH）与带格式约束的指令，答对得固定奖励', '程序判对错']],
+    note: 'Lambert 等，2024。数据、代码、中间模型全部公开。' },
+  'DeepSeek-R1': { stages: [
+    ['', 'V3-Base', '基座模型', 'MoE'],
+    ['accent', '冷启动 SFT', '长推理示范，让输出可读', '数千条'],
+    ['ok', '推理 RL', 'GRPO，规则奖励（答案、格式）+ 语言一致性奖励', '数学、代码、逻辑题'],
+    ['accent', '重新 SFT', '用上一步的模型生成并筛选，从 V3-Base 重新训练 2 轮', '约 60 万推理 + 20 万非推理'],
+    ['ok', '全场景 RL', '推理题用规则奖励，一般问题用奖励模型（含安全）', '各类问题']],
+    note: 'DeepSeek-AI，2025。另一个版本 R1-Zero 跳过 SFT，直接在 V3-Base 上做 GRPO。' },
+};
+let m5 = 'InstructGPT';
+$('#m5').innerHTML = Object.keys(PIPE).map(k => `<button data-k="${k}" aria-pressed="${k === m5}">${k}</button>`).join('');
+$('#m5').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; m5 = b.dataset.k; [...$('#m5').children].forEach(x => x.setAttribute('aria-pressed', x === b)); draw5(); });
+function draw5() {
+  $('#stages5').innerHTML = PIPE[m5].stages.map(([c, n, d, k]) => `<div class="stage ${c === 'loop' ? 'loop' : c}"><b>${esc(n)}</b><div class="d">${esc(d)}</div><div class="k">${esc(k)}</div></div>`).join('');
+  $('#note5').textContent = PIPE[m5].note;
+}
+
+s1.hist = [s1loss()];
+const all = () => { draw1(); draw2(); draw3(); draw4(); draw5(); };
+all();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+let lastW = 0; addEventListener('resize', () => { const w = vw('fig1'); if (w !== lastW) { lastW = w; all(); } });
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>

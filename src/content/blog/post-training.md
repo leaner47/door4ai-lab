@@ -1,0 +1,452 @@
+---
+title: "后训练是什么：只会续写的基座模型，是怎么变成助手的"
+description: "预训练出来的模型只会接着写。后训练把它变成会回答的助手：对话模板把一问一答写成一串 token，SFT 照着示范学、只对回答算损失，偏好对齐教它分好坏，可验证奖励让它自己做题、对了加强。用一道「17 × 3」从头算到尾，最后看四个公开模型的后训练流水线。"
+pubDate: 2026-10-22
+tags: ["训练", "后训练", "SFT", "强化学习", "GRPO"]
+lab: /labs/post-training/
+series: ai-mastery
+order: 41
+---
+
+<!-- 本文由 labs-src/post-training/toy.py 从 article.src.md 生成，图和数字都由脚本算出。改文章请改 article.src.md 再运行脚本。 -->
+
+## 一句话版本
+
+预训练之后的模型叫**基座模型**（base model）。它读过海量文本，知识很多，但只会做一件事：接着往下写。**后训练**（post-training）是预训练之后的所有训练，目的是把这些能力引到「当一个好助手」上。它通常分三种做法，按顺序叠加：
+
+1. **监督微调（SFT）**：给模型看「问题 + 示范回答」，让它照着学。
+2. **偏好对齐**：给模型看「同一个问题的两个回答，哪个更好」，让它学会分好坏。
+3. **可验证奖励的强化学习（RLVR）**：给模型有标准答案的题，让它自己做，程序判对错，做对的做法被加强。
+
+后训练用的数据比预训练少几个数量级，因为它主要不是教新知识，而是教模型**怎样用已有的知识**。下面用一道题「17 × 3 等于多少？」把三种做法从头算到尾。
+
+## 预训练之后，模型只会接着写
+
+梯度下降那一讲说过，预训练的目标是预测下一个 token：给定前面的文字，输出下一个 token 的概率，把真实出现的那个 token 的概率尽量调高。训练数据是网页、书、代码。
+
+网页上「17 × 3 等于多少？」这样的句子，最常出现在练习题里，后面跟着的往往是下一道题，而不是答案。所以基座模型读完这句话，最可能接的是「问」，也就是再出一道题。
+
+我们把下一个 token 缩小到 4 个候选，给每个候选一个分数（logit，模型最后一层输出的原始分数，可以是任意实数）：
+
+| 候选 token | 意思 | 分数 $z$ |
+| --- | --- | --- |
+| 问 | 接着出下一道题 | $2.0$ |
+| 51 | 回答 | $0.5$ |
+| 17 | 把题目再抄一遍 | $1.0$ |
+| 。 | 句号，结束 | $0.0$ |
+
+分数要变成概率，用的是 softmax（Token 那一讲和注意力那一讲都用过）：每个分数取 $e$ 的指数，再除以所有指数的和。
+
+先算 4 个指数：
+
+$$
+\begin{aligned}
+e^{2.0} &= 7.389, & e^{0.5} &= 1.649, \\
+e^{1.0} &= 2.718, & e^{0.0} &= 1.000
+\end{aligned}
+$$
+
+加起来：
+
+$$
+\begin{aligned}
+&7.389 + 1.649 + 2.718 + 1.000 \\
+&= 12.756
+\end{aligned}
+$$
+
+每个指数除以这个和，就是概率。比如「问」：
+
+$$
+p(\text{问}) = \frac{7.389}{12.756} = 0.579
+$$
+
+同样算出另外三个：$p(51) = 0.129$，$p(17) = 0.213$，$p(\text{。}) = 0.078$。四个加起来是 1。
+
+<figure class="fig">
+<svg viewBox="0 0 480 190" role="img" aria-label="基座模型在题目之后对四个候选 token 的概率">
+<text x="54.0" y="33.0" font-size="17" text-anchor="end" font-weight="600" style="fill:var(--fg)">问</text><rect x="66.0" y="14.0" width="190.0" height="26.0" rx="4" style="fill:var(--warn)"/><text x="264.0" y="33.0" font-size="16" text-anchor="start" style="fill:var(--warn)">57.9%　接着出下一道题</text><text x="54.0" y="77.0" font-size="17" text-anchor="end" style="fill:var(--fg)">51</text><rect x="66.0" y="58.0" width="42.4" height="26.0" rx="4" style="fill:var(--accent)"/><text x="116.4" y="77.0" font-size="16" text-anchor="start" style="fill:var(--accent)">12.9%　回答</text><text x="54.0" y="121.0" font-size="17" text-anchor="end" style="fill:var(--fg)">17</text><rect x="66.0" y="102.0" width="69.9" height="26.0" rx="4" style="fill:var(--line)"/><text x="143.9" y="121.0" font-size="16" text-anchor="start" style="fill:var(--muted)">21.3%　把题目再抄一遍</text><text x="54.0" y="165.0" font-size="17" text-anchor="end" style="fill:var(--fg)">。</text><rect x="66.0" y="146.0" width="25.7" height="26.0" rx="4" style="fill:var(--line)"/><text x="99.7" y="165.0" font-size="16" text-anchor="start" style="fill:var(--muted)">7.8%　句号，结束</text>
+</svg>
+<figcaption>图 1　基座模型读完「17 × 3 等于多少？」之后，下一个 token 的四个候选。最可能的是「问」：接着出下一道题（示意数字）。</figcaption>
+</figure>
+
+模型会算 17 × 3（「51」有 12.9%），但它不认为自己该回答。后训练要改的就是这个：**同样的知识，换一种用法**。这一组数字会一直用到最后。
+
+<details class="pause"><summary>停一下：如果用这个基座模型做聊天机器人，按概率随机挑下一个 token，大约多少次里有一次会直接回答？</summary>
+
+「51」的概率是 0.129，约等于 $1/7.8$，所以大约 8 次里有 1 次直接回答。同样乘以 8：大约 4.6 次接着出题（0.579 × 8），1.7 次把题目再抄一遍，0.6 次直接结束。
+
+</details>
+
+## 第一步：把一问一答写成一串 token
+
+模型只认识一串 token，不认识「谁在说话」。所以要先约定一种写法，把一段对话排成一串 token，这种写法叫**对话模板**（chat template）。
+
+Qwen 系列用的是 ChatML 格式：用特殊 token `<|im_start|>` 开始一个人的发言，后面紧跟角色名（`user` 是用户，`assistant` 是助手），用 `<|im_end|>` 结束这段发言。我们的一问一答写出来是：
+
+```
+<|im_start|>user
+17 × 3 等于多少？<|im_end|>
+<|im_start|>assistant
+51。<|im_end|>
+```
+
+Llama 3 用的是另一套特殊 token（`<|start_header_id|>`、`<|eot_id|>` 等），道理一样。特殊 token 在预训练文本里几乎不出现，它们的意思完全是在后训练里学出来的。
+
+<figure class="fig">
+<svg viewBox="0 0 480 146" role="img" aria-label="对话模板把一问一答写成一串 token">
+<rect x="10.0" y="12" width="160.2" height="32" rx="6" style="fill:none;stroke:var(--line);stroke-width:1.5"/><text x="90.1" y="34.0" font-size="15" text-anchor="middle" style="fill:var(--muted)">&lt;|im_start|&gt;user</text><rect x="176.2" y="12" width="31.4" height="32" rx="6" style="fill:none;stroke:var(--line);stroke-width:1.5"/><text x="191.9" y="34.0" font-size="15" text-anchor="middle" style="fill:var(--muted)">17</text><rect x="213.6" y="12" width="31.4" height="32" rx="6" style="fill:none;stroke:var(--line);stroke-width:1.5"/><text x="229.3" y="34.0" font-size="15" text-anchor="middle" style="fill:var(--muted)"> ×</text><rect x="251.0" y="12" width="31.4" height="32" rx="6" style="fill:none;stroke:var(--line);stroke-width:1.5"/><text x="266.7" y="34.0" font-size="15" text-anchor="middle" style="fill:var(--muted)"> 3</text><rect x="288.4" y="12" width="59.0" height="32" rx="6" style="fill:none;stroke:var(--line);stroke-width:1.5"/><text x="317.9" y="34.0" font-size="15" text-anchor="middle" style="fill:var(--muted)"> 等于</text><rect x="353.4" y="12" width="49.8" height="32" rx="6" style="fill:none;stroke:var(--line);stroke-width:1.5"/><text x="378.3" y="34.0" font-size="15" text-anchor="middle" style="fill:var(--muted)">多少</text><rect x="409.2" y="12" width="31.4" height="32" rx="6" style="fill:none;stroke:var(--line);stroke-width:1.5"/><text x="424.9" y="34.0" font-size="15" text-anchor="middle" style="fill:var(--muted)">？</text><rect x="10.0" y="58" width="105.0" height="32" rx="6" style="fill:none;stroke:var(--line);stroke-width:1.5"/><text x="62.5" y="80.0" font-size="15" text-anchor="middle" style="fill:var(--muted)">&lt;|im_end|&gt;</text><rect x="121.0" y="58" width="206.2" height="32" rx="6" style="fill:none;stroke:var(--line);stroke-width:1.5"/><text x="224.1" y="80.0" font-size="15" text-anchor="middle" style="fill:var(--muted)">&lt;|im_start|&gt;assistant</text><rect x="333.2" y="58" width="31.4" height="32" rx="6" style="fill:none;stroke:var(--accent);stroke-width:2.2"/><text x="348.9" y="80.0" font-size="15" text-anchor="middle" style="fill:var(--accent)">51</text><rect x="370.6" y="58" width="31.4" height="32" rx="6" style="fill:none;stroke:var(--accent);stroke-width:2.2"/><text x="386.3" y="80.0" font-size="15" text-anchor="middle" style="fill:var(--accent)">。</text><rect x="10.0" y="104" width="105.0" height="32" rx="6" style="fill:none;stroke:var(--accent);stroke-width:2.2"/><text x="62.5" y="126.0" font-size="15" text-anchor="middle" style="fill:var(--accent)">&lt;|im_end|&gt;</text>
+</svg>
+<figcaption>图 2　一问一答被对话模板写成一串 token。灰框是用户的提问，蓝框是助手的回答。<code>&lt;|im_start|&gt;</code>、<code>&lt;|im_end|&gt;</code> 是特殊 token，标出谁在说话、哪里结束（切分是示意）。</figcaption>
+</figure>
+
+有了模板，用的时候就简单了：程序把用户的话套进模板，末尾写上 `<|im_start|>assistant`，然后让模型接着写。模型写出 `<|im_end|>` 时，程序就知道这次回答结束了。**「回答问题」被变成了「在这个格式里接着写」**，而接着写正是模型唯一会做的事。
+
+剩下的问题是：模型还不熟悉这个格式。接下来就要教它。
+
+## 第二步：SFT，照着示范学
+
+**监督微调**（Supervised Fine-Tuning，SFT）的做法是：准备很多条按模板写好的「问题 + 示范回答」，在上面继续训练。损失函数和预训练完全一样，还是预测下一个 token；变的只是数据。
+
+先看一个位置：读完 `<|im_start|>assistant` 之后，下一个 token 应该是「51」。为了只看一个变化，假设模型在这个位置给 4 个候选的分数，正好和上一节的表一样：「51」的概率是 0.129。
+
+### 损失：正确 token 的概率取负对数
+
+这个位置的损失是**交叉熵**：正确 token 的概率取对数，再取负号。
+
+$$
+L = -\ln p(51) = -\ln 0.129 = 2.046
+$$
+
+概率越接近 1，$\ln p$ 越接近 0，损失越小；概率越小，损失越大。训练就是把 $L$ 往下压。
+
+### 梯度：每个分数该往哪边调
+
+我们要知道：每个分数 $z_k$ 变大一点，损失怎么变。先把 $L$ 展开。$p(51)$ 是 softmax：
+
+$$
+p(51) = \frac{e^{z_{51}}}{\sum_m e^{z_m}}
+$$
+
+取对数，分数线变成减号：
+
+$$
+\ln p(51) = z_{51} - \ln \sum_m e^{z_m}
+$$
+
+所以损失是：
+
+$$
+L = -z_{51} + \ln \sum_m e^{z_m}
+$$
+
+对某一个分数 $z_k$ 求导，两项分别看。第一项 $-z_{51}$：如果 $k$ 就是「51」，导数是 $-1$；否则是 $0$。第二项 $\ln \sum_m e^{z_m}$：外层 $\ln$ 的导数是 $1/\sum_m e^{z_m}$，里面只有 $e^{z_k}$ 这一项含 $z_k$，导数是 $e^{z_k}$，乘起来正好是 $p_k$。合起来：
+
+$$
+\frac{\partial L}{\partial z_k} = p_k - y_k
+$$
+
+这里 $y_k$ 是正确答案的标记：$k$ 是「51」时 $y_k = 1$，其他时候 $y_k = 0$。这个结果很好记：**梯度 = 模型给的概率 − 正确答案**。
+
+代入数字：
+
+| 候选 | $p_k$ | $y_k$ | 梯度 $p_k - y_k$ |
+| --- | --- | --- | --- |
+| 问 | $0.579$ | $0$ | $0.579$ |
+| 51 | $0.129$ | $1$ | $-0.871$ |
+| 17 | $0.213$ | $0$ | $0.213$ |
+| 。 | $0.078$ | $0$ | $0.078$ |
+
+「51」的梯度是负的，其他三个是正的。梯度下降是**减去**梯度，所以「51」的分数会升，其他三个会降；而且原来概率越大的错误候选（「问」），被压得越多。
+
+### 走一步
+
+用学习率 $\eta = 1$，每个分数减去 $\eta$ 乘梯度：
+
+$$
+z_k \leftarrow z_k - \eta\,(p_k - y_k)
+$$
+
+逐个算：
+
+$$
+\begin{aligned}
+z_{\text{问}} &= 2.0 - 0.579 = 1.421 \\
+z_{51} &= 0.5 + 0.871 = 1.371 \\
+z_{17} &= 1.0 - 0.213 = 0.787 \\
+z_{\text{。}} &= 0.0 - 0.078 = -0.078
+\end{aligned}
+$$
+
+再用 softmax 把新分数变成概率（步骤和上一节一样）：「问」0.370，「51」0.352，「17」0.196，「。」0.083。损失从 2.046 降到 1.045。
+
+<figure class="fig">
+<svg viewBox="0 0 480 210" role="img" aria-label="SFT 一步之前与之后四个候选的概率">
+<text x="80.0" y="24.0" font-size="16" text-anchor="start" style="fill:var(--muted)">训练前</text><text x="290.0" y="24.0" font-size="16" text-anchor="start" style="fill:var(--muted)">走一步之后</text><text x="68.0" y="62.0" font-size="16" text-anchor="end" style="fill:var(--fg)">问</text><rect x="80.0" y="44.0" width="120.0" height="24.0" rx="4" style="fill:var(--line)"/><text x="206.0" y="62.0" font-size="16" text-anchor="start" style="fill:var(--muted)">57.9%</text><rect x="290.0" y="44.0" width="76.6" height="24.0" rx="4" style="fill:var(--line)"/><text x="372.6" y="62.0" font-size="16" text-anchor="start" style="fill:var(--muted)">37.0%</text><text x="68.0" y="102.0" font-size="16" text-anchor="end" style="fill:var(--fg)">51</text><rect x="80.0" y="84.0" width="26.8" height="24.0" rx="4" style="fill:var(--accent)"/><text x="112.8" y="102.0" font-size="16" text-anchor="start" style="fill:var(--accent)">12.9%</text><rect x="290.0" y="84.0" width="72.8" height="24.0" rx="4" style="fill:var(--accent)"/><text x="368.8" y="102.0" font-size="16" text-anchor="start" style="fill:var(--accent)">35.2%</text><text x="68.0" y="142.0" font-size="16" text-anchor="end" style="fill:var(--fg)">17</text><rect x="80.0" y="124.0" width="44.1" height="24.0" rx="4" style="fill:var(--line)"/><text x="130.1" y="142.0" font-size="16" text-anchor="start" style="fill:var(--muted)">21.3%</text><rect x="290.0" y="124.0" width="40.6" height="24.0" rx="4" style="fill:var(--line)"/><text x="336.6" y="142.0" font-size="16" text-anchor="start" style="fill:var(--muted)">19.6%</text><text x="68.0" y="182.0" font-size="16" text-anchor="end" style="fill:var(--fg)">。</text><rect x="80.0" y="164.0" width="16.2" height="24.0" rx="4" style="fill:var(--line)"/><text x="102.2" y="182.0" font-size="16" text-anchor="start" style="fill:var(--muted)">7.8%</text><rect x="290.0" y="164.0" width="17.1" height="24.0" rx="4" style="fill:var(--line)"/><text x="313.1" y="182.0" font-size="16" text-anchor="start" style="fill:var(--muted)">8.3%</text>
+</svg>
+<figcaption>图 3　朝「51」走一步（学习率 1）：「51」从 12.9% 升到 35.2%，其余三个都降。</figcaption>
+</figure>
+
+一步之后，「问」仍然以 37.0% 略高于「51」的 35.2%。接着走：第 3 步「51」到 71.1%，第 5 步到 83.1%，第 10 步到 92.0%。
+
+这里为了能手算，我们把 4 个分数当成可以直接调的参数。真实模型里，分数是由几十亿个参数算出来的，梯度要经过反向传播（第 30 讲）一路传回每个参数，但最后一层收到的就是这个 $p - y$。
+
+<details class="pause"><summary>停一下：如果示范回答的第一个 token 本来就是模型最想说的那个（概率已经是 0.95），这一步的梯度大不大？</summary>
+
+正确 token 的梯度是 $0.95 - 1 = -0.05$，其他候选的梯度加起来也只有 $0.05$。梯度很小，几乎不改。SFT 改得最多的，正是模型原来最不会说、而示范要求它说的地方。
+
+</details>
+
+## 第三步：只对回答算损失
+
+上面只看了一个位置。真实的一条样本有很多 token，每个位置都有一个「下一个 token 是什么」的问题。下表是我们这条样本里每个 token 的概率和损失（概率是示意数字，其中「51」那一格就是上一节的 0.129）：
+
+| token | 属于 | 模型给它的概率 $p$ | 损失 $-\ln p$ |
+| --- | --- | --- | --- |
+| `<\|im_start\|>user` | 提问 | 0.010 | 4.605 |
+| `17` | 提问 | 0.020 | 3.912 |
+| ` ×` | 提问 | 0.100 | 2.303 |
+| ` 3` | 提问 | 0.080 | 2.526 |
+| ` 等于` | 提问 | 0.250 | 1.386 |
+| `多少` | 提问 | 0.550 | 0.598 |
+| `？` | 提问 | 0.700 | 0.357 |
+| `<\|im_end\|>` | 提问 | 0.040 | 3.219 |
+| `<\|im_start\|>assistant` | 提问 | 0.030 | 3.507 |
+| `51` | 回答 | 0.129 | 2.046 |
+| `。` | 回答 | 0.600 | 0.511 |
+| `<\|im_end\|>` | 回答 | 0.050 | 2.996 |
+
+预训练时，每个位置都算损失，取平均。如果 SFT 也这样做：
+
+$$
+\frac{27.964}{12} = 2.330
+$$
+
+问题出在提问部分。提问是用户写的，模型猜不准很正常：对话会不会从用户开口开始、用户第一句写什么，没人能预测。这几格的损失很大（开头的 `<|im_start|>user` 是 4.605，紧接着的 `17` 是 3.912），提问部分的损失加起来是 22.412，占全部损失的 80.1%。
+
+这意味着如果全部都算，训练的大部分力气会花在「学会预测用户会问什么」上。这不是我们要的：模型的任务是回答，不是替用户提问。
+
+所以 SFT 的标准做法是**损失遮罩**（loss mask）：提问部分的 token 照样送进模型（回答要看着问题写），但它们的损失乘以 0，只对回答部分取平均：
+
+$$
+\begin{aligned}
+&\frac{2.046 + 0.511 + 2.996}{3} \\
+&= \frac{5.553}{3} = 1.851
+\end{aligned}
+$$
+
+<figure class="fig">
+<svg viewBox="0 0 480 230" role="img" aria-label="一条样本里每个 token 的损失，提问部分灰色、回答部分蓝色">
+<rect x="22.0" y="46.0" width="30.0" height="150.0" rx="3" style="fill:var(--line)"/><text x="37.0" y="40.0" font-size="14" text-anchor="middle" style="fill:var(--muted)">4.6</text><text x="37.0" y="216.0" font-size="13" text-anchor="middle" style="fill:var(--muted)">user</text><rect x="60.0" y="68.6" width="30.0" height="127.4" rx="3" style="fill:var(--line)"/><text x="75.0" y="62.6" font-size="14" text-anchor="middle" style="fill:var(--muted)">3.9</text><text x="75.0" y="216.0" font-size="13" text-anchor="middle" style="fill:var(--muted)">17</text><rect x="98.0" y="121.0" width="30.0" height="75.0" rx="3" style="fill:var(--line)"/><text x="113.0" y="115.0" font-size="14" text-anchor="middle" style="fill:var(--muted)">2.3</text><text x="113.0" y="216.0" font-size="13" text-anchor="middle" style="fill:var(--muted)">×</text><rect x="136.0" y="113.7" width="30.0" height="82.3" rx="3" style="fill:var(--line)"/><text x="151.0" y="107.7" font-size="14" text-anchor="middle" style="fill:var(--muted)">2.5</text><text x="151.0" y="216.0" font-size="13" text-anchor="middle" style="fill:var(--muted)">3</text><rect x="174.0" y="150.8" width="30.0" height="45.2" rx="3" style="fill:var(--line)"/><text x="189.0" y="144.8" font-size="14" text-anchor="middle" style="fill:var(--muted)">1.4</text><text x="189.0" y="216.0" font-size="13" text-anchor="middle" style="fill:var(--muted)">等于</text><rect x="212.0" y="176.5" width="30.0" height="19.5" rx="3" style="fill:var(--line)"/><text x="227.0" y="170.5" font-size="14" text-anchor="middle" style="fill:var(--muted)">0.6</text><text x="227.0" y="216.0" font-size="13" text-anchor="middle" style="fill:var(--muted)">多少</text><rect x="250.0" y="184.4" width="30.0" height="11.6" rx="3" style="fill:var(--line)"/><text x="265.0" y="178.4" font-size="14" text-anchor="middle" style="fill:var(--muted)">0.4</text><text x="265.0" y="216.0" font-size="13" text-anchor="middle" style="fill:var(--muted)">？</text><rect x="288.0" y="91.2" width="30.0" height="104.8" rx="3" style="fill:var(--line)"/><text x="303.0" y="85.2" font-size="14" text-anchor="middle" style="fill:var(--muted)">3.2</text><text x="303.0" y="216.0" font-size="13" text-anchor="middle" style="fill:var(--muted)">end</text><rect x="326.0" y="81.8" width="30.0" height="114.2" rx="3" style="fill:var(--line)"/><text x="341.0" y="75.8" font-size="14" text-anchor="middle" style="fill:var(--muted)">3.5</text><text x="341.0" y="216.0" font-size="13" text-anchor="middle" style="fill:var(--muted)">asst</text><rect x="364.0" y="129.4" width="30.0" height="66.6" rx="3" style="fill:var(--accent)"/><text x="379.0" y="123.4" font-size="14" text-anchor="middle" style="fill:var(--accent)">2.0</text><text x="379.0" y="216.0" font-size="13" text-anchor="middle" style="fill:var(--accent)">51</text><rect x="402.0" y="179.4" width="30.0" height="16.6" rx="3" style="fill:var(--accent)"/><text x="417.0" y="173.4" font-size="14" text-anchor="middle" style="fill:var(--accent)">0.5</text><text x="417.0" y="216.0" font-size="13" text-anchor="middle" style="fill:var(--accent)">。</text><rect x="440.0" y="98.4" width="30.0" height="97.6" rx="3" style="fill:var(--accent)"/><text x="455.0" y="92.4" font-size="14" text-anchor="middle" style="fill:var(--accent)">3.0</text><text x="455.0" y="216.0" font-size="13" text-anchor="middle" style="fill:var(--accent)">end</text><line x1="360.0" y1="30" x2="360.0" y2="224" style="stroke:var(--muted);stroke-width:1.2;stroke-dasharray:4 4;fill:none"/><text x="352.0" y="22.0" font-size="15" text-anchor="end" style="fill:var(--muted)">提问：不算</text><text x="368.0" y="22.0" font-size="15" text-anchor="start" style="fill:var(--accent)">回答：算</text>
+</svg>
+<figcaption>图 4　每根柱子是一个 token 的损失 −ln <i>p</i>。灰色是提问部分，训练时遮掉；只有右边三根蓝色的计入平均。</figcaption>
+</figure>
+
+看最右边那根柱子：回答末尾的 `<|im_end|>`，损失是 2.996，在回答部分里最大。基座模型从没见过这个特殊 token，不知道答完要停。SFT 让它学会在答完之后写出 `<|im_end|>`，程序看到它才会停止生成。没学好这一步的模型，会答完一句接着自己扮演用户再问下去。
+
+<details class="pause"><summary>停一下：一条样本的提问有 500 个 token，回答只有 20 个。不加遮罩，回答部分在平均损失里占多大分量？</summary>
+
+不加遮罩时，平均损失是 520 个位置的平均，每个位置权重 1/520。回答的 20 个位置合起来权重是 20/520，约 3.8%。如果提问部分每个 token 的损失还更大（像上表那样），回答在梯度里的分量更小。加了遮罩，回答的 20 个位置占 100%。
+
+</details>
+
+## 为什么几千条示范就够
+
+预训练要几万亿 token。Llama 3 的预训练用了约 15 T token。SFT 的数据小得多：InstructGPT 的 SFT 只有约 1.3 万条示范。
+
+更极端的例子是 LIMA（Zhou 等，2023）：在 65 B 参数的 LLaMA 上，只用 1000 条精心挑选的问答做 SFT，不做任何偏好对齐。人工评测里，有 43% 的问题，评审认为它的回答和 GPT-4 一样好或更好。作者据此提出「表面对齐假说」：模型的知识和能力几乎全在预训练里学到，对齐只是教它用什么格式、什么风格把这些能力拿出来。
+
+回到我们的例子：算出「51」靠的是预训练，SFT 没有教模型乘法，只是把「51」从第 3 位推到了第 1 位。这也是为什么 SFT 只改一小部分参数就够用（上一讲的 LoRA）。
+
+反过来也有代价。SFT 是在一小批数据上反复训练，模型会向这批数据的风格靠拢，原来会的东西可能变差，叫作**遗忘**。常见的缓解办法是在后训练数据里混入一部分预训练数据，或者限制模型离原来不要太远（下一讲的 KL 惩罚）。
+
+## 第四步：示范教不会的，交给偏好
+
+SFT 只能告诉模型「一个」好回答长什么样。可是同一个问题，好回答往往有很多种：「51。」是对的，「17 × 3 = 51，因为 10 × 3 = 30，7 × 3 = 21，30 + 21 = 51。」也是对的，哪个更好取决于用户想要什么。示范没法把这种取舍讲清楚，因为它只给了一个正例，没给「为什么这个比那个好」。
+
+**偏好对齐**换了一种数据：让模型对同一个问题写两个回答，人（或者另一个 AI）只说哪个更好。说「哪个更好」比亲手写一个满分回答容易得多，所以这种数据能收集得很多。怎样把「二选一」变成训练信号（奖励模型、PPO、KL 惩罚、DPO），是下一讲的全部内容，这里先跳过。
+
+## 第五步：有标准答案时，让模型自己练
+
+「17 × 3」有标准答案。对这种题，不需要人来判断好坏，程序就能判：模型最后给出的数等于 51，奖励 1；否则奖励 0。这叫**可验证奖励**，用它做强化学习就是 RLVR（Reinforcement Learning with Verifiable Rewards）。数学题核对答案，代码题跑测试，都属于这一类。
+
+和 SFT 最大的区别是：**没有示范回答**。模型自己写，写完打分，从自己的对错里学。
+
+### 起点：SFT 之后的模型
+
+SFT 之后，模型已经会按格式回答了，但最终给出的数不一定对。假设它在 4 个答案上的分数是：
+
+| 答案 | 51 | 41 | 54 | 21 |
+| --- | --- | --- | --- | --- |
+| 分数 $z$ | $0.4$ | $0.2$ | $0.0$ | $-0.6$ |
+| $e^{z}$ | $1.492$ | $1.221$ | $1.000$ | $0.549$ |
+| 概率 $p$ | $0.350$ | $0.287$ | $0.235$ | $0.129$ |
+
+（四个 $e^z$ 加起来是 4.262，每个除以它就是概率。）答对的概率只有 35.0%。
+
+### 采样一组，打分
+
+DeepSeek 提出的 **GRPO**（Group Relative Policy Optimization）是现在最常用的做法之一。它对同一道题让模型写一组回答，这里取 4 个。按上面的概率随机采样，假设采到的是：51、41、51、54。
+
+程序判对错，奖励是 $r = (1,\ 0,\ 1,\ 0)$。
+
+### 优势：比这一组的平均好多少
+
+一个回答值不值得加强，GRPO 的标准是：**它比同一组的其他回答好多少**。先算这一组奖励的平均：
+
+$$
+\bar r = \frac{1 + 0 + 1 + 0}{4} = 0.5
+$$
+
+再算标准差：每个奖励减去平均，得到 $0.5,\ -0.5,\ 0.5,\ -0.5$；各自平方，都是 $0.25$；取平均，再开根号：
+
+$$
+\begin{aligned}
+\sigma &= \sqrt{\frac{0.25 + 0.25 + 0.25 + 0.25}{4}} \\
+&= \sqrt{0.25} = 0.5
+\end{aligned}
+$$
+
+每个回答的**优势** $A_i$ 是它的奖励减去平均，再除以标准差：
+
+$$
+A_i = \frac{r_i - \bar r}{\sigma}
+$$
+
+答对的两个：$A = (1 - 0.5)/0.5 = +1$；答错的两个：$A = (0 - 0.5)/0.5 = -1$。
+
+<figure class="fig">
+<svg viewBox="0 0 480 248" role="img" aria-label="同一道题的四个回答、奖励和组内优势">
+<text x="14.0" y="22.0" font-size="15" text-anchor="start" style="fill:var(--muted)">回答</text><text x="150.0" y="22.0" font-size="15" text-anchor="start" style="fill:var(--muted)">判对错</text><text x="250.0" y="22.0" font-size="15" text-anchor="start" style="fill:var(--muted)">奖励</text><text x="330.0" y="22.0" font-size="15" text-anchor="start" style="fill:var(--muted)">优势 A</text><rect x="10" y="40" width="120" height="32" rx="6" style="fill:none;stroke:var(--line);stroke-width:1.5"/><text x="70.0" y="62.0" font-size="15" text-anchor="middle" style="fill:var(--fg)">回答 1：51</text><text x="150.0" y="62.0" font-size="16" text-anchor="start" font-weight="600" style="fill:var(--ok)">对</text><text x="262.0" y="62.0" font-size="16" text-anchor="middle" style="fill:var(--fg)">1</text><rect x="400.0" y="46.0" width="52.0" height="20.0" rx="3" style="fill:var(--ok)"/><text x="458.0" y="62.0" font-size="16" text-anchor="start" style="fill:var(--ok)">+1</text><rect x="10" y="84" width="120" height="32" rx="6" style="fill:none;stroke:var(--line);stroke-width:1.5"/><text x="70.0" y="106.0" font-size="15" text-anchor="middle" style="fill:var(--fg)">回答 2：41</text><text x="150.0" y="106.0" font-size="16" text-anchor="start" font-weight="600" style="fill:var(--warn)">错</text><text x="262.0" y="106.0" font-size="16" text-anchor="middle" style="fill:var(--fg)">0</text><rect x="348.0" y="90.0" width="52.0" height="20.0" rx="3" style="fill:var(--warn)"/><text x="342.0" y="106.0" font-size="16" text-anchor="end" style="fill:var(--warn)">−1</text><rect x="10" y="128" width="120" height="32" rx="6" style="fill:none;stroke:var(--line);stroke-width:1.5"/><text x="70.0" y="150.0" font-size="15" text-anchor="middle" style="fill:var(--fg)">回答 3：51</text><text x="150.0" y="150.0" font-size="16" text-anchor="start" font-weight="600" style="fill:var(--ok)">对</text><text x="262.0" y="150.0" font-size="16" text-anchor="middle" style="fill:var(--fg)">1</text><rect x="400.0" y="134.0" width="52.0" height="20.0" rx="3" style="fill:var(--ok)"/><text x="458.0" y="150.0" font-size="16" text-anchor="start" style="fill:var(--ok)">+1</text><rect x="10" y="172" width="120" height="32" rx="6" style="fill:none;stroke:var(--line);stroke-width:1.5"/><text x="70.0" y="194.0" font-size="15" text-anchor="middle" style="fill:var(--fg)">回答 4：54</text><text x="150.0" y="194.0" font-size="16" text-anchor="start" font-weight="600" style="fill:var(--warn)">错</text><text x="262.0" y="194.0" font-size="16" text-anchor="middle" style="fill:var(--fg)">0</text><rect x="348.0" y="178.0" width="52.0" height="20.0" rx="3" style="fill:var(--warn)"/><text x="342.0" y="194.0" font-size="16" text-anchor="end" style="fill:var(--warn)">−1</text><line x1="400" y1="36" x2="400" y2="216" style="stroke:var(--muted);stroke-width:1.2;fill:none"/><text x="14.0" y="238.0" font-size="15" text-anchor="start" style="fill:var(--muted)">平均 0.5，标准差 0.5</text>
+</svg>
+<figcaption>图 5　同一道题采样 4 个回答，程序判对错给奖励，减去组内平均、除以标准差，就是每个回答的优势。高于平均的被加强（绿），低于平均的被削弱（橙）。</figcaption>
+</figure>
+
+用组内平均当基准，好处是不需要另外训练一个模型来估计「这道题平均能得几分」，同一组里的其他回答就是参照。
+
+### 更新：优势大的加强，优势小的削弱
+
+目标是让优势为正的回答更可能出现、优势为负的更不可能出现。写成要**最大化**的式子：
+
+$$
+J = \frac{1}{G}\sum_{i=1}^{G} A_i \ln p(y_i)
+$$
+
+$G = 4$ 是组的大小，$y_i$ 是第 $i$ 个回答。$A_i$ 为正时，$\ln p(y_i)$ 越大 $J$ 越大，所以会把 $p(y_i)$ 往上推；$A_i$ 为负时反过来。
+
+$\ln p(y_i)$ 对分数 $z_k$ 的导数，SFT 那一节已经算过（只差一个负号）：
+
+$$
+\frac{\partial \ln p(y_i)}{\partial z_k} = y_{i,k} - p_k
+$$
+
+$y_{i,k}$ 是标记：第 $i$ 个回答就是答案 $k$ 时为 1，否则为 0。代进 $J$：
+
+$$
+\frac{\partial J}{\partial z_k} = \frac{1}{G}\sum_i A_i\, y_{i,k} \;-\; p_k \cdot \frac{1}{G}\sum_i A_i
+$$
+
+第二项里的 $\sum_i A_i$ 是四个优势之和：$1 - 1 + 1 - 1 = 0$。减过平均的数加起来总是 0，所以第二项消失，只剩第一项：**把每个回答的优势记到它自己的答案上，再除以 4**。
+
+- 51：被采到两次，优势都是 $+1$，$(1 + 1)/4 = 0.500$
+- 41：一次，优势 $-1$，$-1/4 = -0.250$
+- 54：一次，优势 $-1$，$-1/4 = -0.250$
+- 21：没被采到，$0.000$
+
+这次是最大化，所以**加上**梯度。学习率 $\eta = 1$：
+
+$$
+\begin{aligned}
+z_{51} &= 0.4 + 0.5 = 0.900 \\
+z_{41} &= 0.2 - 0.25 = -0.050 \\
+z_{54} &= 0.0 - 0.25 = -0.250 \\
+z_{21} &= -0.6 + 0 = -0.600
+\end{aligned}
+$$
+
+再做 softmax：51 是 0.519，41 是 0.201，54 是 0.164，21 是 0.116。
+
+<figure class="fig">
+<svg viewBox="0 0 480 210" role="img" aria-label="GRPO 一步之前与之后四个答案的概率">
+<text x="80.0" y="24.0" font-size="16" text-anchor="start" style="fill:var(--muted)">更新前</text><text x="290.0" y="24.0" font-size="16" text-anchor="start" style="fill:var(--muted)">更新一步之后</text><text x="68.0" y="62.0" font-size="16" text-anchor="end" style="fill:var(--fg)">51</text><rect x="80.0" y="44.0" width="80.9" height="24.0" rx="4" style="fill:var(--ok)"/><text x="166.9" y="62.0" font-size="16" text-anchor="start" style="fill:var(--ok)">35.0%</text><rect x="290.0" y="44.0" width="120.0" height="24.0" rx="4" style="fill:var(--ok)"/><text x="416.0" y="62.0" font-size="16" text-anchor="start" style="fill:var(--ok)">51.9%</text><text x="68.0" y="102.0" font-size="16" text-anchor="end" style="fill:var(--fg)">41</text><rect x="80.0" y="84.0" width="66.3" height="24.0" rx="4" style="fill:var(--line)"/><text x="152.3" y="102.0" font-size="16" text-anchor="start" style="fill:var(--muted)">28.7%</text><rect x="290.0" y="84.0" width="46.4" height="24.0" rx="4" style="fill:var(--line)"/><text x="342.4" y="102.0" font-size="16" text-anchor="start" style="fill:var(--muted)">20.1%</text><text x="68.0" y="142.0" font-size="16" text-anchor="end" style="fill:var(--fg)">54</text><rect x="80.0" y="124.0" width="54.2" height="24.0" rx="4" style="fill:var(--line)"/><text x="140.2" y="142.0" font-size="16" text-anchor="start" style="fill:var(--muted)">23.5%</text><rect x="290.0" y="124.0" width="38.0" height="24.0" rx="4" style="fill:var(--line)"/><text x="334.0" y="142.0" font-size="16" text-anchor="start" style="fill:var(--muted)">16.4%</text><text x="68.0" y="182.0" font-size="16" text-anchor="end" style="fill:var(--fg)">21</text><rect x="80.0" y="164.0" width="29.8" height="24.0" rx="4" style="fill:var(--line)"/><text x="115.8" y="182.0" font-size="16" text-anchor="start" style="fill:var(--muted)">12.9%</text><rect x="290.0" y="164.0" width="26.8" height="24.0" rx="4" style="fill:var(--line)"/><text x="322.8" y="182.0" font-size="16" text-anchor="start" style="fill:var(--muted)">11.6%</text>
+</svg>
+<figcaption>图 6　更新一步（学习率 1）：答对的「51」从 35.0% 升到 51.9%。这一组里没有被采到的「21」，分数没动，概率也略降了。</figcaption>
+</figure>
+
+答对的概率从 35.0% 升到 51.9%。注意「21」：它没被采到，分数没变，但概率从 12.9% 降到 11.6%，因为「51」的分数涨了，分母变大了。
+
+真实的 GRPO 在这个核心上还多两样东西：和 PPO 一样限制每一步的更新幅度（裁剪），以及用 KL 惩罚拴住模型不离原来太远（下一讲）。更新的方向就是上面算出来的这个。
+
+### 太简单和太难的题，学不到东西
+
+如果一组 4 个回答全对，奖励是 $(1,1,1,1)$，平均是 1，每个回答减去平均都是 0，优势全是 0，这一组什么也不改。全错也一样。**只有一组里有对有错，才有学习信号。**
+
+一组全对或全错的概率，是「4 个都对」加上「4 个都错」：
+
+$$
+p^4 + (1 - p)^4
+$$
+
+我们的模型 $p = 0.350$：$\ 0.350^4 + 0.650^4 = 0.0150 + 0.1785$，合计 19.3%。也就是说，这道题大约每 5 组里有 1 组白做。
+
+一道很难的题，$p = 0.02$：4 个一组时，全错的概率是 92.2%；组大小加到 16，仍然有 72.4%。模型几乎永远做不对的题，强化学习几乎学不到；已经稳稳做对的题，也学不到。所以 RLVR 的题目要挑**难度适中**的，有些做法（如 DAPO）会直接把全对、全错的组扔掉，重新采样。
+
+这也说明了 RLVR 的边界：它只能放大模型**偶尔能做对**的东西。如果基座模型一次都做不对，就没有可以加强的正例。
+
+<details class="pause"><summary>停一下：同一组 4 个回答，奖励是 (1, 0, 0, 0)。答对的那个优势是多少？</summary>
+
+平均是 $1/4 = 0.25$。偏差是 $0.75,\ -0.25,\ -0.25,\ -0.25$，平方是 $0.5625,\ 0.0625,\ 0.0625,\ 0.0625$，平均是 $0.75/4 = 0.1875$，开根号得标准差约 $0.433$。答对的优势是 $0.75/0.433 \approx 1.73$，答错的是 $-0.25/0.433 \approx -0.58$。
+
+比上面「两对两错」时的 $+1$ 大：一组里只有一个做对时，这个回答更稀罕，被加强得更多。
+
+</details>
+
+## 把几步串起来：真实模型的后训练流水线
+
+上面几步是零件，各家按自己的需要组装。下面是四个公开了做法的模型：
+
+<figure class="fig">
+<svg viewBox="0 0 480 314" role="img" aria-label="四个公开模型的后训练流水线">
+<text x="10.0" y="28.0" font-size="16" text-anchor="start" font-weight="600" style="fill:var(--fg)">InstructGPT · 2022</text><rect x="10.0" y="38" width="96" height="32" rx="6" style="fill:none;stroke:var(--line);stroke-width:1.5;"/><text x="58.0" y="60.0" font-size="15" text-anchor="middle" style="fill:var(--muted)">GPT-3</text><line x1="108.0" y1="54.0" x2="119.3" y2="54.0" style="stroke:var(--muted);stroke-width:1.5;fill:none"/><path d="M129.3 54.0 L120.2 58.1 L120.2 49.9 z" style="fill:var(--muted)"/><rect x="131.3" y="38" width="96" height="32" rx="6" style="fill:none;stroke:var(--accent);stroke-width:2.2;"/><text x="179.3" y="60.0" font-size="15" text-anchor="middle" style="fill:var(--accent)">SFT</text><line x1="229.3" y1="54.0" x2="240.7" y2="54.0" style="stroke:var(--muted);stroke-width:1.5;fill:none"/><path d="M250.7 54.0 L241.5 58.1 L241.5 49.9 z" style="fill:var(--muted)"/><rect x="252.7" y="38" width="96" height="32" rx="6" style="fill:none;stroke:var(--warn);stroke-width:2.2;"/><text x="300.7" y="60.0" font-size="15" text-anchor="middle" style="fill:var(--warn)">奖励模型</text><line x1="350.7" y1="54.0" x2="362.0" y2="54.0" style="stroke:var(--muted);stroke-width:1.5;fill:none"/><path d="M372.0 54.0 L362.9 58.1 L362.9 49.9 z" style="fill:var(--muted)"/><rect x="374.0" y="38" width="96" height="32" rx="6" style="fill:none;stroke:var(--warn);stroke-width:2.2;"/><text x="422.0" y="60.0" font-size="15" text-anchor="middle" style="fill:var(--warn)">PPO</text><text x="10.0" y="106.0" font-size="16" text-anchor="start" font-weight="600" style="fill:var(--fg)">Llama 3 · 2024</text><rect x="10.0" y="116" width="76" height="32" rx="6" style="fill:none;stroke:var(--line);stroke-width:1.5;"/><text x="48.0" y="138.0" font-size="15" text-anchor="middle" style="fill:var(--muted)">预训练</text><line x1="88.0" y1="132.0" x2="94.0" y2="132.0" style="stroke:var(--muted);stroke-width:1.5;fill:none"/><path d="M104.0 132.0 L94.9 136.1 L94.9 127.9 z" style="fill:var(--muted)"/><rect x="106.0" y="116" width="76" height="32" rx="6" style="fill:none;stroke:var(--warn);stroke-width:2.2;"/><text x="144.0" y="138.0" font-size="15" text-anchor="middle" style="fill:var(--warn)">奖励模型</text><line x1="184.0" y1="132.0" x2="190.0" y2="132.0" style="stroke:var(--muted);stroke-width:1.5;fill:none"/><path d="M200.0 132.0 L190.9 136.1 L190.9 127.9 z" style="fill:var(--muted)"/><rect x="202.0" y="116" width="76" height="32" rx="6" style="fill:none;stroke:var(--accent);stroke-width:2.2;"/><text x="240.0" y="138.0" font-size="15" text-anchor="middle" style="fill:var(--accent)">SFT</text><line x1="280.0" y1="132.0" x2="286.0" y2="132.0" style="stroke:var(--muted);stroke-width:1.5;fill:none"/><path d="M296.0 132.0 L286.9 136.1 L286.9 127.9 z" style="fill:var(--muted)"/><rect x="298.0" y="116" width="76" height="32" rx="6" style="fill:none;stroke:var(--warn);stroke-width:2.2;"/><text x="336.0" y="138.0" font-size="15" text-anchor="middle" style="fill:var(--warn)">DPO</text><line x1="376.0" y1="132.0" x2="382.0" y2="132.0" style="stroke:var(--muted);stroke-width:1.5;fill:none"/><path d="M392.0 132.0 L382.9 136.1 L382.9 127.9 z" style="fill:var(--muted)"/><rect x="394.0" y="116" width="76" height="32" rx="6" style="fill:none;stroke:var(--muted);stroke-width:1.5;stroke-dasharray:4 3"/><text x="432.0" y="138.0" font-size="15" text-anchor="middle" style="fill:var(--muted)">× 6 轮</text><text x="10.0" y="184.0" font-size="16" text-anchor="start" font-weight="600" style="fill:var(--fg)">Tülu 3 · 2024</text><rect x="10.0" y="194" width="96" height="32" rx="6" style="fill:none;stroke:var(--line);stroke-width:1.5;"/><text x="58.0" y="216.0" font-size="15" text-anchor="middle" style="fill:var(--muted)">Llama 3.1</text><line x1="108.0" y1="210.0" x2="119.3" y2="210.0" style="stroke:var(--muted);stroke-width:1.5;fill:none"/><path d="M129.3 210.0 L120.2 214.1 L120.2 205.9 z" style="fill:var(--muted)"/><rect x="131.3" y="194" width="96" height="32" rx="6" style="fill:none;stroke:var(--accent);stroke-width:2.2;"/><text x="179.3" y="216.0" font-size="15" text-anchor="middle" style="fill:var(--accent)">SFT</text><line x1="229.3" y1="210.0" x2="240.7" y2="210.0" style="stroke:var(--muted);stroke-width:1.5;fill:none"/><path d="M250.7 210.0 L241.5 214.1 L241.5 205.9 z" style="fill:var(--muted)"/><rect x="252.7" y="194" width="96" height="32" rx="6" style="fill:none;stroke:var(--warn);stroke-width:2.2;"/><text x="300.7" y="216.0" font-size="15" text-anchor="middle" style="fill:var(--warn)">DPO</text><line x1="350.7" y1="210.0" x2="362.0" y2="210.0" style="stroke:var(--muted);stroke-width:1.5;fill:none"/><path d="M372.0 210.0 L362.9 214.1 L362.9 205.9 z" style="fill:var(--muted)"/><rect x="374.0" y="194" width="96" height="32" rx="6" style="fill:none;stroke:var(--ok);stroke-width:2.2;"/><text x="422.0" y="216.0" font-size="15" text-anchor="middle" style="fill:var(--ok)">RLVR</text><text x="10.0" y="262.0" font-size="16" text-anchor="start" font-weight="600" style="fill:var(--fg)">DeepSeek-R1 · 2025</text><rect x="10.0" y="272" width="76" height="32" rx="6" style="fill:none;stroke:var(--line);stroke-width:1.5;"/><text x="48.0" y="294.0" font-size="15" text-anchor="middle" style="fill:var(--muted)">V3-Base</text><line x1="88.0" y1="288.0" x2="94.0" y2="288.0" style="stroke:var(--muted);stroke-width:1.5;fill:none"/><path d="M104.0 288.0 L94.9 292.1 L94.9 283.9 z" style="fill:var(--muted)"/><rect x="106.0" y="272" width="76" height="32" rx="6" style="fill:none;stroke:var(--accent);stroke-width:2.2;"/><text x="144.0" y="294.0" font-size="15" text-anchor="middle" style="fill:var(--accent)">SFT</text><line x1="184.0" y1="288.0" x2="190.0" y2="288.0" style="stroke:var(--muted);stroke-width:1.5;fill:none"/><path d="M200.0 288.0 L190.9 292.1 L190.9 283.9 z" style="fill:var(--muted)"/><rect x="202.0" y="272" width="76" height="32" rx="6" style="fill:none;stroke:var(--ok);stroke-width:2.2;"/><text x="240.0" y="294.0" font-size="15" text-anchor="middle" style="fill:var(--ok)">RL</text><line x1="280.0" y1="288.0" x2="286.0" y2="288.0" style="stroke:var(--muted);stroke-width:1.5;fill:none"/><path d="M296.0 288.0 L286.9 292.1 L286.9 283.9 z" style="fill:var(--muted)"/><rect x="298.0" y="272" width="76" height="32" rx="6" style="fill:none;stroke:var(--accent);stroke-width:2.2;"/><text x="336.0" y="294.0" font-size="15" text-anchor="middle" style="fill:var(--accent)">SFT</text><line x1="376.0" y1="288.0" x2="382.0" y2="288.0" style="stroke:var(--muted);stroke-width:1.5;fill:none"/><path d="M392.0 288.0 L382.9 292.1 L382.9 283.9 z" style="fill:var(--muted)"/><rect x="394.0" y="272" width="76" height="32" rx="6" style="fill:none;stroke:var(--ok);stroke-width:2.2;"/><text x="432.0" y="294.0" font-size="15" text-anchor="middle" style="fill:var(--ok)">RL</text>
+</svg>
+<figcaption>图 7　四个公开模型的后训练顺序（Llama 3 的四步要重复 6 轮）。灰框是起点，蓝是 SFT，橙是用偏好数据的一步，绿是用可验证奖励的强化学习。</figcaption>
+</figure>
+
+- **InstructGPT**（OpenAI，2022）：经典三段式。在 GPT-3 上先做 SFT（约 1.3 万条示范），再训练奖励模型（约 3.3 万个问题上的回答排序），最后用 PPO 强化学习（约 3.1 万个问题）。
+- **Llama 3**（Meta，2024）：预训练约 15 T token。后训练做了 6 轮，每一轮：训练奖励模型，对每个问题让当前模型写多个回答、用奖励模型挑最好的一个当 SFT 数据（叫拒绝采样），SFT，再做 DPO。下一轮用这一轮的模型重新生成数据。
+- **Tülu 3**（AI2，2024）：在 Llama 3.1 上依次做 SFT（约 94 万个问题）、DPO（约 35 万对偏好）和 RLVR（数学题和带格式要求的指令，用程序判对错）。数据和代码全部公开，是目前最完整的公开后训练配方。
+- **DeepSeek-R1**（2025）：在 DeepSeek-V3-Base 上，先用几千条长推理示范做一次 SFT（冷启动），再用 GRPO 做以可验证奖励为主的强化学习；然后用强化学习后的模型生成数据、筛选出约 60 万条推理样本，加上约 20 万条非推理样本，从 V3-Base 重新做一次 SFT；最后再做一轮覆盖各类问题的强化学习。另一个版本 R1-Zero 干脆跳过 SFT，直接在基座模型上做 GRPO，也学会了写长推理。
+
+共同点是：**SFT 先把格式立起来，偏好和强化学习在此基础上改好坏**。新的趋势是，用模型自己生成、再筛选出来的数据越来越多，人写的示范越来越少；用于强化学习的算力也越来越大。
+
+## 后训练改了什么、没改什么
+
+回头看「17 × 3」：
+
+- 预训练给了模型算出「51」的能力，基座模型已经给「51」12.9% 的概率。
+- SFT 改的是**用法**：知道这是一个提问，该回答，答完写 `<|im_end|>`。
+- 偏好对齐改的是**取舍**：同样对的回答里，哪种更合用户的意。
+- RLVR 改的是**可靠性**：把偶尔能做对的事，练成大多数时候做对。
+
+三种做法都没有往模型里灌入大量新知识，所以后训练的数据量远小于预训练。但是模型在用户眼里好不好用，大部分取决于这一段。
+
+## 实验里讲了什么
+
+1. **SFT 一步一步走**：拖学习率、点「走一步」，看 4 个候选的概率和梯度 $p - y$ 怎么变，损失曲线怎么降；也可以换一个示范要求的 token。
+2. **损失遮罩**：同一条样本，切换「全部都算」和「只算回答」，看平均损失和提问部分占的分量；点任意 token 改它算不算。
+3. **GRPO 的一组**：拖组大小，点「采样」从当前概率里真实抽一组回答，看奖励、平均、标准差、优势和更新量；点「更新」走一步。
+4. **难度与学习信号**：三道难度不同的题同时做 GRPO，看哪道学得动；对照全对 / 全错组的比例 $p^G + (1-p)^G$。
+5. **四条流水线**：InstructGPT、Llama 3、Tülu 3、DeepSeek-R1 每个阶段用什么数据、有多少。
+
+## 和前后两讲的关系
+
+梯度下降、反向传播几讲讲的是怎么训练；上一讲 LoRA 讲的是怎么便宜地改一个已经训好的模型。这一讲讲的是**改成什么**：SFT 和强化学习的梯度，最后一层都是这一讲算出来的 $p - y$ 和 $A\,(y - p)$。下一讲把中间跳过的偏好对齐拆开：Bradley–Terry、奖励模型、KL 惩罚和 DPO。
+
+## 延伸阅读
+
+- Long Ouyang et al., *Training language models to follow instructions with human feedback* (2022)，InstructGPT，三段式的出处
+- Chunting Zhou et al., *LIMA: Less Is More for Alignment* (2023)，1000 条示范与「表面对齐假说」
+- Zhihong Shao et al., *DeepSeekMath* (2024)，GRPO 的出处
+- DeepSeek-AI, *DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning* (2025)
+- Nathan Lambert et al., *Tülu 3: Pushing Frontiers in Open Language Model Post-Training* (2024)，完整公开的后训练配方
+- Llama Team, *The Llama 3 Herd of Models* (2024)，第 4 节是后训练
