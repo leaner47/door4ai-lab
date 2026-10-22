@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>过拟合实验室</title>
+<link rel="stylesheet" href="/vendor/katex/katex.min.css">
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(18px,9vw - 16px,200px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+ul,ol{padding-left:1.2em}
+.eq{margin:18px 0;overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.eq .katex-display{margin:0}
+.katex{font-size:1.08em}
+.eq .katex-display>.katex{font-size:1.22em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl input[type=range]{width:min(260px,52vw)}
+.ctrl b{font-variant-numeric:tabular-nums;min-width:3.2em}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.btn[aria-pressed=true]{border-color:var(--ok);color:var(--ok)}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.duo{display:grid;grid-template-columns:1fr;gap:10px}
+@media (min-width:820px){.duo{grid-template-columns:1fr 1fr}}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.acc b{color:var(--accent)} .ro.warn b{color:var(--warn)} .ro.ok b{color:var(--ok)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.num,th.num{text-align:right}
+tr.sel td{background:var(--accent-soft)}
+.tw{overflow-x:auto}
+.prog{font-size:13px;color:var(--muted)}
+.half{max-width:min(100%,560px)!important;margin-inline:auto}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">overfitting · bias–variance · L2 · dropout · double descent</div>
+  <h1>过拟合实验室：背熟训练题，和学会规律</h1>
+  <p class="lede">同一组 10 个点，七个实验。拟合、正则化、小网络训练都在页面里真实计算，随机种子固定，数字和下面文章里的一样。</p>
+</header>
+
+<section id="s1">
+  <h2><span class="n">01</span>阶数：越能弯，训练误差越低</h2>
+  <p>灰色虚线是真实规律 \(y = \sin 2\pi x\)，模型看不到它。蓝点是加了噪声测到的 10 个训练点，模型只靠它们求系数；橙点是另外测的 10 个验证点，模型训练时没见过。</p>
+  <p>模型是 \(d\) 阶多项式 \(\hat y = w_0 + w_1 x + \cdots + w_d x^d\)，系数用最小二乘求（让训练点上的均方误差最小）。拖动阶数，看两种误差怎么走。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="d1">阶数 <i>d</i></label><input id="d1" type="range" min="0" max="9" step="1" value="3"><b id="d1v">3</b></div>
+      <button class="btn" id="t1" aria-pressed="false">看一眼测试集</button>
+    </div>
+    <div class="duo"><svg id="f1a" viewBox="0 0 480 280" role="img" aria-label="多项式拟合曲线与训练点、验证点"></svg><svg id="f1b" viewBox="0 0 480 270" role="img" aria-label="训练误差与验证误差随阶数变化"></svg></div>
+    <div class="readout">
+      <div class="ro acc"><b id="r1a">–</b><span>训练误差</span></div>
+      <div class="ro warn"><b id="r1b">–</b><span>验证误差</span></div>
+      <div class="ro ok"><b id="r1c">未看</b><span>测试误差</span></div>
+      <div class="ro"><b id="r1d">–</b><span>最大的系数 |<i>w<sub>j</sub></i>|</span></div>
+    </div>
+    <p class="note">训练误差只降不升，9 阶是 0；验证误差在 3 阶最低。测试集（绿点）应该在挑完阶数之后才看。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>偏差与方差：重测 1000 次</h2>
+  <p>训练点的 \(x\) 不变，只把噪声重新抽 1000 次，每次重新拟合。细蓝线是前 20 次的曲线，粗橙线是 1000 次的平均。</p>
+  <p>平均离真实规律有多远，叫<b>偏差</b>；每次的曲线离平均有多散，叫<b>方差</b>。在每个 \(x\) 上：</p>
+  <div class="eq">\[ \mathbb{E}\big[(\hat y - y)^2\big] = \text{偏差}^2 + \text{方差} + \sigma^2 \]</div>
+  <p>\(\sigma^2 = 0.25^2 = 0.0625\) 是噪声本身，谁也去不掉。下面的偏差²和方差是在 \(x\) 从 0.02 到 0.95 上取的平均。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="d2">阶数 <i>d</i></label><input id="d2" type="range" min="0" max="9" step="1" value="1"><b id="d2v">1</b></div>
+    </div>
+    <div class="duo"><svg id="f2a" viewBox="0 0 480 280" role="img" aria-label="重抽噪声后的 20 条拟合曲线和平均曲线"></svg><svg id="f2b" viewBox="0 0 480 270" role="img" aria-label="偏差平方、方差和总误差随阶数变化"></svg></div>
+    <div class="readout">
+      <div class="ro acc"><b id="r2a">–</b><span>偏差²</span></div>
+      <div class="ro warn"><b id="r2b">–</b><span>方差</span></div>
+      <div class="ro"><b id="r2c">–</b><span>偏差² + 方差 + 0.0625</span></div>
+    </div>
+    <p class="note">1 阶：线都挤在一起，却整体偏离（偏差大）。9 阶：平均贴着真实规律，单条线东倒西歪（方差大）。三项之和在 3 阶最低。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>L2 正则化：不许系数太大</h2>
+  <p>还是 9 阶多项式，训练目标多加一项：除 \(w_0\) 外每个系数的平方和，乘以 \(\lambda\)。</p>
+  <div class="eq">\[ J(w) = \sum_{i=1}^{10}\left(y_i - \hat y_i\right)^2 + \lambda \sum_{j=1}^{9} w_j^2 \]</div>
+  <p>\(\lambda = 0\) 就是普通的最小二乘。\(\lambda\) 越大，越看重「系数小」。滑块是 \(\lambda\) 的常用对数，最左边一格是 \(\lambda = 0\)。下面第三张图是 10 个系数的绝对值，纵轴也是对数刻度。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="d3">log<sub>10</sub> <i>λ</i></label><input id="d3" type="range" min="-10.25" max="0" step="0.25" value="-3"><b id="d3v">−3</b></div>
+    </div>
+    <div class="duo"><svg id="f3a" viewBox="0 0 480 280" role="img" aria-label="9 阶多项式在当前 L2 系数下的拟合"></svg><svg id="f3b" viewBox="0 0 480 270" role="img" aria-label="训练误差和验证误差随 L2 系数变化"></svg></div>
+    <svg id="f3c" class="half" viewBox="0 0 480 190" role="img" aria-label="10 个系数的绝对值" style="margin-top:10px"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r3a">–</b><span><i>λ</i></span></div>
+      <div class="ro"><b id="r3b">–</b><span>最大的系数 |<i>w<sub>j</sub></i>|</span></div>
+      <div class="ro acc"><b id="r3c">–</b><span>训练误差</span></div>
+      <div class="ro warn"><b id="r3d">–</b><span>验证误差</span></div>
+    </div>
+    <p class="note">从 \(\lambda = 0\) 往右挪一格，最大系数就从几百万掉到几千；验证误差在 \(\lambda = 10^{-3}\) 附近最低，比 3 阶多项式还低一点。拖到最右，曲线被压平，又欠拟合了。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>早停：在验证误差最低时停下</h2>
+  <p>换成一个小神经网络：输入 \(x\)，两层各 32 个单元的隐藏层（tanh），输出 \(\hat y\)，一共 1153 个参数，是训练点的一百多倍。用 Adam 在 10 个训练点上训练 2000 步（学习率 0.01，余弦衰减到 0），每 10 步在训练集和验证集上各算一次均方误差。</p>
+  <p>训练在页面里真实进行，随机种子固定。训练完拖动「第几步」，看那一刻的曲线。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="d4">第几步</label><input id="d4" type="range" min="0" max="2000" step="10" value="2000" disabled><b id="d4v">2000</b></div>
+      <button class="btn" id="b4">跳到验证误差最低</button>
+      <span class="prog" id="p4"></span>
+    </div>
+    <div class="duo"><svg id="f4a" viewBox="0 0 480 280" role="img" aria-label="小网络在某一步的拟合曲线"></svg><svg id="f4b" viewBox="0 0 480 270" role="img" aria-label="训练误差与验证误差随训练步数变化"></svg></div>
+    <div class="readout">
+      <div class="ro acc"><b id="r4a">–</b><span>训练误差</span></div>
+      <div class="ro warn"><b id="r4b">–</b><span>验证误差</span></div>
+      <div class="ro"><b id="r4c">–</b><span>验证误差最低的一步</span></div>
+    </div>
+    <p class="note">前几百步曲线在学大致的形状，验证误差跟着降；之后它开始为每个蓝点拐弯，训练误差趋近 0，验证误差回升。早停就停在最低那一步。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>dropout：训练时随机关掉一部分单元</h2>
+  <p>同一个网络、同一个种子，训练时每一步对每个隐藏单元掷硬币：以概率 \(p\) 关掉（输出 0），否则保留并乘以 \(\frac{1}{1-p}\)，让平均输出不变。测试时全部打开、不乘。三种 \(p\) 各训 2000 步。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>dropout 比例 <i>p</i></label><div class="seg" id="seg5"></div></div>
+      <span class="prog" id="p5"></span>
+    </div>
+    <div class="duo"><svg id="f5a" viewBox="0 0 480 280" role="img" aria-label="训练 2000 步后的拟合曲线"></svg><svg id="f5b" viewBox="0 0 480 270" role="img" aria-label="训练误差与验证误差随训练步数变化"></svg></div>
+    <div class="tw"><table id="t5"></table></div>
+    <p class="note">\(p = 0.2\) 时训练误差升高、验证误差降低；\(p = 0.5\) 关得太多，开始欠拟合，验证误差反而比 0.2 高。</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2><span class="n">06</span>数据量：泛化差距缩小</h2>
+  <p>模型固定为 9 阶多项式，不加正则化，只增加训练点（新加的点按同样的办法测）。验证集还是那 10 个橙点。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="d6">训练点数 <i>n</i></label><input id="d6" type="range" min="10" max="200" step="1" value="40"><b id="d6v">40</b></div>
+    </div>
+    <div class="duo"><svg id="f6a" viewBox="0 0 480 280" role="img" aria-label="9 阶多项式在 n 个训练点上的拟合"></svg><svg id="f6b" viewBox="0 0 480 270" role="img" aria-label="训练误差和验证误差随训练点数变化"></svg></div>
+    <div class="readout">
+      <div class="ro acc"><b id="r6a">–</b><span>训练误差</span></div>
+      <div class="ro warn"><b id="r6b">–</b><span>验证误差</span></div>
+      <div class="ro"><b id="r6c">–</b><span>泛化差距（验证 − 训练）</span></div>
+    </div>
+    <p class="note">10 个系数穿得过 10 个点，穿不过 100 个点：点一多，噪声互相抵消，两条线一起向噪声 0.0625 靠拢。</p>
+  </div>
+</section>
+
+<section id="s7">
+  <h2><span class="n">07</span>双下降：系数比数据还多以后</h2>
+  <p>把阶数 \(D\) 从 9 继续加。系数个数 \(D + 1\) 超过 10 以后，穿过全部 10 个点的曲线有无数条，这里取系数平方和 \(\lVert w \rVert^2\) 最小的那条（最小范数解）。基函数换成勒让德多项式，9 阶以内拟合结果和实验 01 完全相同。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="d7">阶数 <i>D</i></label><input id="d7" type="range" min="0" max="60" step="1" value="30"><b id="d7v">30</b></div>
+    </div>
+    <div class="duo"><svg id="f7a" viewBox="0 0 480 280" role="img" aria-label="当前阶数的最小范数拟合曲线"></svg><svg id="f7b" viewBox="0 0 480 270" role="img" aria-label="训练误差和验证误差随阶数变化"></svg></div>
+    <svg id="f7c" class="half" viewBox="0 0 480 190" role="img" aria-label="系数大小随阶数变化" style="margin-top:10px"></svg>
+    <div class="readout">
+      <div class="ro acc"><b id="r7a">–</b><span>训练误差</span></div>
+      <div class="ro warn"><b id="r7b">–</b><span>验证误差</span></div>
+      <div class="ro"><b id="r7c">–</b><span>系数大小 ‖<i>w</i>‖</span></div>
+    </div>
+    <p class="note">验证误差在 9、10 阶冲顶，之后第二次下降；系数大小也在 9 阶到顶，然后回落。系数多了，才有余地挑一条系数小、起伏小的曲线。</p>
+  </div>
+</section>
+</div>
+
+<script src="/vendor/katex/katex.min.js"></script>
+<script src="/vendor/katex/auto-render.min.js"></script>
+<script>
+try{renderMathInElement(document.body,{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});}catch(e){}
+</script>
+<script id="core">
+__CORE__
+</script>
+<script id="plot">
+__PLOT__
+</script>
+<script>
+(() => {
+const C = CORE, P = PLOT, $ = (s) => document.querySelector(s);
+const { TRAIN, VAL, TEST, polyfit, polyval, mse } = C;
+const num = (v, d = 4) => { if (!isFinite(v)) return '—'; const a = Math.abs(v); const s = a >= 1e5 ? v.toExponential(2).replace('e+', ' × 10^') : a >= 100 ? v.toFixed(1) : v.toFixed(d); return s.replace('-', '−').replace(/10\^(\d+)/, (m, e) => '10' + e.split('').map(c => '⁰¹²³⁴⁵⁶⁷⁸⁹'[c]).join('')); };
+const put = (id, w, h, body) => { $(id).innerHTML = body; };
+const pred = (w) => (x) => polyval(w, x);
+
+/* ———— 01 阶数 ———— */
+const W1 = [], E1 = [];
+for (let d = 0; d <= 9; d++) { W1[d] = polyfit(TRAIN, d); const p = pred(W1[d]); E1[d] = { tr: mse(p, TRAIN), va: mse(p, VAL), te: mse(p, TEST) }; }
+let showTest = false;
+function draw1() {
+  const d = +$('#d1').value; $('#d1v').textContent = d;
+  const fp = P.fitPanel(pred(W1[d]), { train: TRAIN, val: VAL, test: showTest ? TEST : [], label: d + ' 阶' });
+  put('#f1a', 480, 280, fp.body);
+  const xs = [...Array(10).keys()];
+  put('#f1b', 480, 270, P.errChart(xs, xs.map(i => E1[i].tr), xs.map(i => E1[i].va), { xl: '阶数 d', cur: d, mark: { x: d, y: E1[d].va } }));
+  $('#r1a').textContent = d === 9 ? '0' : num(E1[d].tr); $('#r1b').textContent = num(E1[d].va);
+  $('#r1c').textContent = showTest ? num(E1[d].te) : '未看';
+  $('#r1d').textContent = num(Math.max(...W1[d].map(Math.abs)), 2);
+}
+$('#d1').addEventListener('input', draw1);
+$('#t1').addEventListener('click', () => { showTest = !showTest; $('#t1').setAttribute('aria-pressed', showTest); $('#t1').textContent = showTest ? '藏起测试集' : '看一眼测试集'; draw1(); });
+
+/* ———— 02 偏差与方差 ———— */
+const BV = []; for (let d = 0; d <= 9; d++) BV[d] = C.biasVar(d, 1000);
+function draw2() {
+  const d = +$('#d2').value; $('#d2v').textContent = d; const q = BV[d];
+  const F = P.frame(48, 20, 412, 220, [0, 1], [-2.5, 2.5]);
+  let b = P.axes(F, { xt: [0, 0.5, 1], yt: [-2, -1, 0, 1, 2], zero: true, yfmt: (t) => String(t).replace('-', '−') });
+  q.fits.slice(0, 20).forEach(w => { b += P.curve(F, pred(w), 'accent', 1, null, 160, [0.02, 0.95]); });
+  b += P.curve(F, (x) => Math.sin(2 * Math.PI * x), 'muted', 2, '6 5') + P.polyline(F, q.gx, q.mean, 'warn', 3);
+  b += P.text(F.x0 + F.w, F.y0 + 14, d + ' 阶', 'muted', 14, 'end');
+  put('#f2a', 480, 280, b);
+  const xs = [...Array(10).keys()];
+  const F2 = P.frame(56, 28, 400, 190, [0, 9], [-4, 1], true);
+  let c = P.axes(F2, { xt: xs, yt: [-4, -3, -2, -1, 0, 1], yfmt: P.pow10 }) + P.text(F2.x0 + F2.w, F2.y0 + F2.h + 40, '阶数 d', 'muted', 15, 'end');
+  c += P.line(F2.X(d), F2.y0, F2.X(d), F2.y0 + F2.h, 'muted', 1.2, '2 3');
+  c += P.polyline(F2, xs, xs.map(i => Math.max(BV[i].bias2, 1e-4)), 'accent', 2.5) + P.polyline(F2, xs, xs.map(i => BV[i].variance), 'warn', 2.5, '6 4') + P.polyline(F2, xs, xs.map(i => BV[i].bias2 + BV[i].variance + 0.0625), 'fg', 2);
+  c += P.line(F2.x0, F2.Y(0.0625), F2.x0 + F2.w, F2.Y(0.0625), 'ok', 1.2, '2 4');
+  c += P.text(F2.X(4.6), F2.Y(0.004), '— 偏差²', 'accent', 14) + P.text(F2.X(4.6), F2.Y(0.004) + 18, '- - 方差', 'warn', 14) + P.text(F2.X(6.6), F2.Y(0.004), '— 三项之和', 'fg', 14) + P.text(F2.X(6.6), F2.Y(0.004) + 18, '··· 噪声', 'ok', 14);
+  put('#f2b', 480, 270, c);
+  $('#r2a').textContent = num(q.bias2); $('#r2b').textContent = num(q.variance); $('#r2c').textContent = num(q.bias2 + q.variance + 0.0625);
+}
+$('#d2').addEventListener('input', draw2);
+
+/* ———— 03 L2 ———— */
+const LK = []; for (let k = -10; k <= 0.001; k += 0.25) LK.push(Math.round(k * 100) / 100);
+const L3 = LK.map(k => { const w = polyfit(TRAIN, 9, Math.pow(10, k)); return { k, w, tr: mse(pred(w), TRAIN), va: mse(pred(w), VAL) }; });
+function draw3() {
+  const v = +$('#d3').value, zero = v < -10; const lam = zero ? 0 : Math.pow(10, v);
+  $('#d3v').textContent = zero ? 'λ = 0' : String(v).replace('-', '−');
+  const w = polyfit(TRAIN, 9, lam), tr = mse(pred(w), TRAIN), va = mse(pred(w), VAL);
+  put('#f3a', 480, 280, P.fitPanel(pred(w), { train: TRAIN, val: VAL, label: '9 阶' }).body);
+  put('#f3b', 480, 270, P.errChart(LK, L3.map(q => q.tr), L3.map(q => q.va), { xl: 'log₁₀ λ', xt: [-10, -8, -6, -4, -2, 0], xfmt: (t) => String(t).replace('-', '−'), cur: zero ? null : v, mark: zero ? null : { x: v, y: va } }));
+  // 系数柱：对数纵轴 10^-2 … 10^7
+  const F = P.frame(56, 20, 400, 130, [-0.5, 9.5], [-2, 7], true);
+  let b = P.axes(F, { xt: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], yt: [-2, 0, 2, 4, 6], yfmt: (k) => k <= 0 ? P.pow10(k) : '10' + '⁰¹²³⁴⁵⁶⁷⁸⁹'[k] , xfmt: (j) => 'w' + '₀₁₂₃₄₅₆₇₈₉'[j] });
+  w.forEach((c, j) => { const y = F.Y(Math.max(Math.abs(c), 0.01)); b += `<rect x="${(F.X(j) - 13).toFixed(1)}" y="${y.toFixed(1)}" width="26" height="${(F.y0 + F.h - y).toFixed(1)}" rx="3" style="fill:var(--${c < 0 ? 'warn' : 'accent'})"/>`; });
+  b += P.text(F.x0 + F.w, F.y0 + 4, '系数的绝对值（蓝正、橙负）', 'muted', 13, 'end');
+  put('#f3c', 480, 190, b);
+  $('#r3a').innerHTML = zero ? '0' : '10<sup>' + String(v).replace('-', '−') + '</sup>';
+  $('#r3b').textContent = num(Math.max(...w.map(Math.abs)), 2); $('#r3c').textContent = num(tr); $('#r3d').textContent = num(va);
+}
+$('#d3').addEventListener('input', draw3);
+
+/* ———— 04 / 05 小网络 ———— */
+const GRID = Array.from({ length: 121 }, (_, i) => i / 120);
+const lerpGrid = (snap) => (x) => { const t = x * 120, i = Math.min(119, Math.floor(t)); return snap[i] + (snap[i + 1] - snap[i]) * (t - i); };
+const RUNS = {}; const PS = [0, 0.2, 0.5]; let curP = 0.2;
+function lossChart(run, cur) {
+  const xs = run.log.map(q => q.step);
+  const b = run.best;
+  return P.errChart(xs, run.log.map(q => q.train), run.log.map(q => q.val), { xl: '训练步数', xt: [0, 500, 1000, 1500, 2000], yr: [-3, 0.5], cur, noise: 0, mark: b.step != null ? { x: b.step, y: b.val, label: '最低 ' + num(b.val, 3), dy: 26, anchor: 'start', dx: 8 } : null, legend: true });
+}
+function draw4() {
+  const R = RUNS[0]; if (!R) return;
+  const n = R.snaps.length - 1, s = Math.min(+$('#d4').value, n * 10); const i = Math.min(n, s / 10);
+  $('#d4v').textContent = s;
+  put('#f4a', 480, 280, P.fitPanel(lerpGrid(R.snaps[i]), { train: TRAIN, val: VAL, label: '第 ' + s + ' 步' }).body);
+  put('#f4b', 480, 270, lossChart(R, s));
+  const q = R.log[i]; $('#r4a').textContent = num(q.train); $('#r4b').textContent = num(q.val);
+  $('#r4c').textContent = R.best.step == null ? '–' : '第 ' + R.best.step + ' 步';
+}
+$('#d4').addEventListener('input', draw4);
+$('#b4').addEventListener('click', () => { if (RUNS[0] && RUNS[0].done) { $('#d4').value = RUNS[0].best.step; draw4(); } });
+function draw5() {
+  const R = RUNS[curP];
+  [...$('#seg5').children].forEach(b => b.setAttribute('aria-pressed', +b.dataset.p === curP));
+  if (!R) { $('#f5a').innerHTML = P.fitPanel(null, { train: TRAIN, val: VAL }).body; $('#f5b').innerHTML = ''; }
+  else {
+    put('#f5a', 480, 280, P.fitPanel(lerpGrid(R.snaps[R.snaps.length - 1]), { train: TRAIN, val: VAL, label: 'p = ' + curP + (R.done ? '' : '（训练中）') }).body);
+    put('#f5b', 480, 270, lossChart(R, null));
+  }
+  let t = '<tr><th>dropout 比例 <i>p</i></th><th class="num">训练误差</th><th class="num">验证误差</th><th class="num">测试误差</th></tr>';
+  PS.forEach(p => { const R = RUNS[p]; const f = R && R.done ? R.final : null; t += `<tr class="${p === curP ? 'sel' : ''}"><td>${p === 0 ? '0（不用）' : p}</td><td class="num">${f ? num(f.train) : '…'}</td><td class="num">${f ? num(f.val) : '…'}</td><td class="num">${f ? num(f.test) : '…'}</td></tr>`; });
+  $('#t5').innerHTML = t;
+}
+PS.forEach(p => { const b = document.createElement('button'); b.textContent = p === 0 ? '0（不用）' : String(p); b.dataset.p = p; b.addEventListener('click', () => { curP = p; draw5(); }); $('#seg5').appendChild(b); });
+// 依次训练 p = 0、0.2、0.5；每帧走 50 步，边训练边画
+function trainAll() {
+  let k = 0;
+  const startNext = () => {
+    if (k >= PS.length) { $('#p5').textContent = ''; return; }
+    const p = PS[k++], T = C.mlpTrainer({ drop: p, seed: 11, grid: GRID });
+    const R = RUNS[p] = { log: T.log, snaps: T.snaps, best: { step: null }, done: false };
+    const tick = () => {
+      T.advance(50);
+      R.best = T.done() ? T.best : { step: null };
+      if (p === 0) { $('#p4').textContent = T.done() ? '' : '训练中… 第 ' + T.step + ' 步'; $('#d4').value = T.step; draw4(); }
+      $('#p5').textContent = '训练中：p = ' + p + '，第 ' + T.step + ' 步';
+      if (T.done()) {
+        R.done = true; R.best = T.best; const pr = C.mlpPredict(T.P);
+        R.final = { train: mse(pr, TRAIN), val: mse(pr, VAL), test: mse(pr, TEST) };
+        if (p === 0) { $('#d4').disabled = false; $('#d4').value = 2000; draw4(); }
+        draw5(); startNext();
+      } else { if (p === curP) draw5(); requestAnimationFrame(tick); }
+    };
+    requestAnimationFrame(tick);
+  };
+  startNext();
+}
+
+/* ———— 06 数据量 ———— */
+const NSx = []; for (let n = 10; n <= 200; n += 5) NSx.push(n);
+const fitN = (n) => { const pts = TRAIN.concat(C.EXTRA(n - 10)); const w = polyfit(pts, 9); return { pts, w, tr: mse(pred(w), pts), va: mse(pred(w), VAL) }; };
+const DN = NSx.map(fitN);
+function draw6() {
+  const n = +$('#d6').value; $('#d6v').textContent = n; const q = fitN(n);
+  put('#f6a', 480, 280, P.fitPanel(pred(q.w), { train: q.pts, val: VAL, label: 'n = ' + n }).body);
+  put('#f6b', 480, 270, P.errChart(NSx, DN.map(z => z.tr), DN.map(z => z.va), { xl: '训练点数 n', xt: [10, 50, 100, 150, 200], cur: n, mark: { x: n, y: q.va }, legendPos: 'right' }));
+  $('#r6a').textContent = n === 10 ? '0' : num(q.tr); $('#r6b').textContent = num(q.va); $('#r6c').textContent = num(q.va - q.tr);
+}
+$('#d6').addEventListener('input', draw6);
+
+/* ———— 07 双下降 ———— */
+const DD = []; for (let D = 0; D <= 60; D++) { const w = C.minNormFit(TRAIN, D), pr = (x) => C.legval(w, x); DD.push({ D, w, tr: mse(pr, TRAIN), va: mse(pr, VAL), nm: C.norm(w) }); }
+function draw7() {
+  const D = +$('#d7').value; $('#d7v').textContent = D; const q = DD[D];
+  put('#f7a', 480, 280, P.fitPanel((x) => C.legval(q.w, x), { train: TRAIN, val: VAL, label: D + ' 阶' + (D > 9 ? '（最小范数）' : '') }).body);
+  const xs = DD.map(z => z.D);
+  put('#f7b', 480, 270, P.errChart(xs, DD.map(z => z.tr), DD.map(z => z.va), { xl: '阶数 D', xt: [0, 9, 20, 30, 40, 50, 60], cur: D, mark: { x: D, y: q.va }, legendPos: 'right' }));
+  const F = P.frame(56, 20, 400, 120, [0, 60], [0, 2], true);
+  let b = P.axes(F, { xt: [0, 9, 20, 30, 40, 50, 60], yt: [0, 1, 2], yfmt: P.pow10 }) + P.text(F.x0 + F.w, F.y0 + F.h + 38, '阶数 D', 'muted', 14, 'end');
+  b += P.line(F.X(D), F.y0, F.X(D), F.y0 + F.h, 'muted', 1.2, '2 3') + P.polyline(F, xs, DD.map(z => z.nm), 'fg', 2.2) + P.dot(F.X(D), F.Y(q.nm), 'fg', 5);
+  b += P.text(F.x0 + 8, F.y0 + 4, '系数大小 ‖w‖（对数刻度）', 'muted', 13);
+  put('#f7c', 480, 190, b);
+  $('#r7a').textContent = q.tr < 1e-6 ? '0' : num(q.tr); $('#r7b').textContent = num(q.va); $('#r7c').textContent = num(q.nm, 2);
+}
+$('#d7').addEventListener('input', draw7);
+
+draw1(); draw2(); draw3(); draw4(); draw5(); draw6(); draw7();
+setTimeout(trainAll, 50);
+})();
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>

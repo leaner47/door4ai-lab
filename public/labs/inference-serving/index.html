@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>推理服务实验室</title>
+<link rel="stylesheet" href="/vendor/katex/katex.min.css">
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c; --ok-soft:#dcefe4;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --ok-soft:#173326; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; --ok-soft:#173326; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(18px,9vw - 16px,200px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+h3{font-size:18px;margin:28px 0 4px}
+p{margin:12px 0}
+ul,ol{padding-left:1.2em}
+.eq{margin:18px 0;overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.eq .katex-display{margin:0}
+.katex{font-size:1.08em}
+.eq .katex-display>.katex{font-size:1.22em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl input[type=range]{width:min(220px,48vw);accent-color:var(--accent)}
+.ctrl b{font-variant-numeric:tabular-nums;min-width:3.2em}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{background:var(--bg);border-radius:6px;padding:6px 10px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn b{color:var(--warn)} .ro.ok b{color:var(--ok)} .ro.acc b{color:var(--accent)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.sub{font-size:14px;color:var(--muted);margin:14px 0 4px}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">inference serving · batching · PagedAttention · speculative decoding</div>
+  <h1>推理服务实验室：一张卡怎么同时伺候几百个用户</h1>
+  <p class="lede">一张 H100 跑 Llama-3-8B：一个人用时算力几乎全闲着，几百个人一起用时带宽被 KV cache 吃满。五个实验，每个数都是页面里当场算出来的。</p>
+</header>
+
+<section id="s1">
+  <h2><span class="n">01</span>屋顶线：batch 越大，整卡越快、每个人越慢</h2>
+  <p>decode 一步要从显存读两样东西：权重（大家共用，读一遍）和每个人自己的 KV cache（有几个人读几份）。一步的时间取「读完这些字节」和「算完这些运算」里更慢的那个：</p>
+  <div class="eq">\[ t = \max\!\left(\frac{W + B \cdot L \cdot s_{kv}}{\text{带宽}},\ \frac{B \cdot f}{\text{算力}}\right) \]</div>
+  <p>\(W\) 是权重字节数，\(B\) 是 batch，\(L\) 是每人的上下文长度，\(s_{kv} = 131{,}072\) B 是 Llama-3-8B 每个 token 的 KV cache，\(f\) 是每个 token 的运算次数（权重 \(2 \times 8.03 \times 10^{9}\) 次，加上注意力 \(4 \cdot L \cdot 4096 \cdot 32\) 次）。H100 SXM：带宽 3.35 TB/s，BF16 算力 989.4 TFLOPS，显存 80 GB。一步出 \(B\) 个 token，整卡每秒 \(B / t\) 个，每个人每秒 \(1/t\) 个。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="b1">batch \(B\)</label><input id="b1" type="range" min="1" max="600" step="1" value="64"><b id="b1v">64</b></div>
+      <div class="ctrl"><label>上下文 \(L\)</label><div class="seg" id="seg1L"></div></div>
+      <div class="ctrl"><label>权重</label><div class="seg" id="seg1W"></div></div>
+      <div class="ctrl"><label for="sla1">每人至少</label><input id="sla1" type="range" min="10" max="200" step="5" value="50"><b id="sla1v">50 token/s</b></div>
+    </div>
+    <svg id="svg1" viewBox="0 0 800 340" role="img" aria-label="整卡吞吐与每个用户速度随 batch 的变化"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r1by">–</b><span>一步读的字节</span></div>
+      <div class="ro"><b id="r1t">–</b><span>一步的时间</span></div>
+      <div class="ro"><b id="r1u">–</b><span>计算占用</span></div>
+      <div class="ro acc"><b id="r1tot">–</b><span>整卡 token/s</span></div>
+      <div class="ro warn"><b id="r1per">–</b><span>每个用户 token/s</span></div>
+      <div class="ro"><b id="r1max">–</b><span>显存最多放几人</span></div>
+      <div class="ro ok"><b id="r1sla">–</b><span>满足下限的最大 batch</span></div>
+    </div>
+    <p class="note">默认 \(L = 1000\)、BF16、\(B = 64\)：一步 7.30 ms，整卡 8,769 token/s，每人 137.0 token/s，与文章第三步一致。把 \(B\) 拖到 1，计算占用只有 0.3%；把权重换成 INT4，前半段快得多，后半段差别变小，因为那时大部分字节是 KV cache。绿色区域是满足「每人至少」下限的 batch。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>静态批处理与连续批处理</h2>
+  <p>每一步，每个占着槽的请求出 1 个 token（不计 prefill）。静态批处理：一批里最长的那个结束，整批才换人。连续批处理：每一步结束时，谁说完了，下一步就从队首补一个进来。默认是文章里的 8 个请求（要生成 7、2、3、8、2、6、4、3 个 token），4 个槽。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>请求</label><div class="seg" id="seg2R"></div></div>
+      <div class="ctrl"><label>槽数</label><div class="seg" id="seg2S"></div></div>
+      <button class="btn" id="re2">换一组随机请求</button>
+    </div>
+    <p class="sub">静态批处理</p>
+    <svg id="svg2a" viewBox="0 0 800 200" role="img" aria-label="静态批处理的时间线"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r2aT">–</b><span>总步数</span></div>
+      <div class="ro"><b id="r2aU">–</b><span>槽利用率</span></div>
+      <div class="ro"><b id="r2aA">–</b><span>平均第几步完成</span></div>
+    </div>
+    <p class="sub">连续批处理</p>
+    <svg id="svg2b" viewBox="0 0 800 200" role="img" aria-label="连续批处理的时间线"></svg>
+    <div class="readout">
+      <div class="ro ok"><b id="r2bT">–</b><span>总步数</span></div>
+      <div class="ro ok"><b id="r2bU">–</b><span>槽利用率</span></div>
+      <div class="ro ok"><b id="r2bA">–</b><span>平均第几步完成</span></div>
+    </div>
+    <p class="note">默认例子：静态 14 步、利用率 62.5%、平均第 8.375 步完成；连续 10 步、87.5%、第 6.375 步。换成随机请求、长短差得越多，静态批处理里空着的格子越多。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>KV cache：按最大长度预留，还是按块分配</h2>
+  <p>一段显存有 2048 格，每格放 1 个 token 的 K、V。请求依次到来，每个已经写了一些 token（随机 16 到 256 个，示意分布），允许的最大长度是 256。预留：每个请求先占 256 格连续空间。分页：按块分配，写满一块再给一块。直到放不下为止，看各能放下几个请求、显存里有多少格真的存着东西。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>块大小</label><div class="seg" id="seg3B"></div></div>
+      <button class="btn" id="re3">换一批请求</button>
+    </div>
+    <p class="sub">按最大长度预留</p>
+    <svg id="svg3a" viewBox="0 0 800 140" role="img" aria-label="按最大长度预留时显存的占用"></svg>
+    <p class="sub">分页</p>
+    <svg id="svg3b" viewBox="0 0 800 140" role="img" aria-label="分页分配时显存的占用"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r3aN">–</b><span>预留：放下的请求</span></div>
+      <div class="ro warn"><b id="r3aU">–</b><span>预留：真正存着 token 的格子</span></div>
+      <div class="ro"><b id="r3bN">–</b><span>分页：放下的请求</span></div>
+      <div class="ro ok"><b id="r3bU">–</b><span>分页：真正存着 token 的格子</span></div>
+    </div>
+    <p class="note">实心格是存着 token 的，空框是分出去却没用上的。预留方式最多放 8 个请求，不管它们实际多短；分页只在每个请求最后一块里留空，块越小空得越少。块大小为 1 时没有浪费，但块表要记的条目最多，注意力算子取数据也最零碎，vLLM 默认取 16。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>prefix caching：相同的开头只算一次</h2>
+  <p>每个请求 = 所有人共用的前缀（系统提示）+ 各自的部分。按 16 个 token 一块，每个写满的块算一个哈希，哈希里带着前一块的哈希；新请求从第一块开始逐块查表，查到就复用。还是 H100 + Llama-3-8B（BF16）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="s4S">共用前缀</label><input id="s4S" type="range" min="0" max="4000" step="16" value="800"><b id="s4Sv">800</b></div>
+      <div class="ctrl"><label for="s4U">各自部分</label><input id="s4U" type="range" min="16" max="2000" step="8" value="200"><b id="s4Uv">200</b></div>
+      <div class="ctrl"><label>前缀里有一个每秒都变的时间戳</label><div class="seg" id="seg4T"></div></div>
+    </div>
+    <svg id="svg4" viewBox="0 0 800 260" role="img" aria-label="有无 prefix cache 时的 prefill 时间与显存可容纳人数"></svg>
+    <div class="readout">
+      <div class="ro acc"><b id="r4hit">–</b><span>命中的块</span></div>
+      <div class="ro acc"><b id="r4rate">–</b><span>输入 token 里命中的比例</span></div>
+      <div class="ro"><b id="r4p0">–</b><span>prefill：不复用</span></div>
+      <div class="ro ok"><b id="r4p1">–</b><span>prefill：复用</span></div>
+      <div class="ro"><b id="r4m0">–</b><span>显存放几人：不复用</span></div>
+      <div class="ro ok"><b id="r4m1">–</b><span>显存放几人：复用</span></div>
+    </div>
+    <p class="note">默认 800 + 200：命中 50 块，prefill 从 16.5 ms 降到 4.8 ms，能放的人数从 487 变成 2,435，与文章第八步一致。把时间戳放到开头，第一块就对不上，后面全部跟着对不上；放到结尾，只损失最后一两块。复用后 prefill 降到约 4.8 ms 就降不动了：再短的 prefill 也要把 16.06 GB 权重读一遍。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>投机解码：猜几个、接受几个、快多少</h2>
+  <p>小模型一个一个猜 \(\gamma\) 个 token，大模型一次验证。每个猜测以概率 \(\alpha\) 被接受，遇到第一个被拒的就停，大模型再自己给 1 个。一轮期望得到的 token 数与加速比：</p>
+  <div class="eq">\[ E = \frac{1 - \alpha^{\gamma+1}}{1 - \alpha} \qquad \text{加速比} = \frac{E}{\gamma c + 1} \]</div>
+  <p>\(c\) 是小模型跑一次的时间占大模型的比例。下面同时用公式和蒙特卡洛（每个 \(\gamma\) 真的模拟 4000 轮）算，点是模拟，线是公式。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="a5">\(\alpha\)</label><input id="a5" type="range" min="0.3" max="0.98" step="0.01" value="0.8"><b id="a5v">0.80</b></div>
+      <div class="ctrl"><label for="g5">\(\gamma\)</label><input id="g5" type="range" min="1" max="12" step="1" value="4"><b id="g5v">4</b></div>
+      <div class="ctrl"><label for="c5">\(c\)</label><input id="c5" type="range" min="0" max="0.3" step="0.01" value="0.05"><b id="c5v">0.05</b></div>
+      <button class="btn" id="re5">重新模拟</button>
+    </div>
+    <svg id="svg5" viewBox="0 0 800 320" role="img" aria-label="期望长度与加速比随猜测长度的变化，公式与模拟"></svg>
+    <div class="readout">
+      <div class="ro acc"><b id="r5E">–</b><span>\(E\)：公式</span></div>
+      <div class="ro acc"><b id="r5Em">–</b><span>\(E\)：模拟</span></div>
+      <div class="ro warn"><b id="r5S">–</b><span>加速比：公式</span></div>
+      <div class="ro warn"><b id="r5Sm">–</b><span>加速比：模拟</span></div>
+      <div class="ro ok"><b id="r5best">–</b><span>最好的 \(\gamma\)</span></div>
+    </div>
+    <p class="note">默认 \(\alpha = 0.8\)、\(\gamma = 4\)、\(c = 0.05\)：\(E = 3.3616\)，加速 2.80 倍，与文章一致。\(\alpha\) 越大，最好的 \(\gamma\) 越大；\(c\) 越大，最好的 \(\gamma\) 越小。这里假设大模型验证 \(\gamma + 1\) 个位置和算 1 个一样快，只在 batch 小、算力闲着时成立。</p>
+  </div>
+  <h3>接受规则不改变输出</h3>
+  <p>文章里的例子：大模型 \(p = (0.6,\ 0.3,\ 0.1)\)，小模型 \(q = (0.5,\ 0.2,\ 0.3)\)，候选是「饭」「粥」「面」。小模型抽到 \(x\)，以 \(\min(1,\ p(x)/q(x))\) 接受；被拒就从 \(\max(p - q,\ 0)\) 归一化后的分布里重抽。按这个规则真的抽两万次，数一数最终输出：</p>
+  <div class="lab">
+    <div class="ctrls"><button class="btn" id="re5b">再抽两万次</button></div>
+    <svg id="svg5b" viewBox="0 0 800 240" role="img" aria-label="按接受规则抽样两万次的输出分布与大模型分布对比"></svg>
+    <div class="readout">
+      <div class="ro ok"><b id="r5acc">–</b><span>实际接受率（理论 0.8）</span></div>
+      <div class="ro"><b id="r5dev">–</b><span>与 \(p\) 的最大偏差</span></div>
+    </div>
+    <p class="note">蓝框是大模型的 \(p\)，橙框是小模型的 \(q\)，绿柱是按规则抽出来的输出频率。绿柱贴着蓝框，而不是橙框：输出和大模型自己生成的分布一样，偏差只是抽样的随机波动（两万次时一般不超过 0.01）。</p>
+  </div>
+</section>
+
+</div>
+<script src="/vendor/katex/katex.min.js"></script>
+<script src="/vendor/katex/auto-render.min.js"></script>
+<script id="core">
+/* ———— 计算核心：纯函数，不碰页面。labs-src/inference-serving/check_lab.mjs 在 node 里抽出这一段核对文章数字 ———— */
+const HW = { BW: 3.35e12, PEAK: 989.4e12, MEM: 80e9 };                 // H100 SXM（NVIDIA 规格表，2026-10 核实）
+const M8 = { NP: 8030261248, LAYERS: 32, KVH: 8, HD: 128, DM: 4096 };   // Llama-3-8B config.json
+const KV_TOK = 2 * M8.LAYERS * M8.KVH * M8.HD * 2;                       // 131072 B
+const WBITS = { BF16: 16, INT8: 8.125, INT4: 4.125 };                    // INT8 / INT4 按组 128，每组一个 FP16 scale
+const wBytes = (bits) => M8.NP * bits / 8;
+function step(B, L, g = 1, bits = 16) {
+  const by = wBytes(bits) + B * L * KV_TOK;
+  const fl = (2 * M8.NP + 4 * L * M8.DM * M8.LAYERS) * B * g;
+  const tm = by / HW.BW, tc = fl / HW.PEAK;
+  return { t: Math.max(tm, tc), tm, tc, by, fl };
+}
+const bMaxMem = (L, bits = 16) => Math.floor((HW.MEM - wBytes(bits)) / (L * KV_TOK));
+function bMaxSla(L, bits, sla) {        // 每人至少 sla token/s 时最大的 B（逐个试，最多到显存上限）
+  let best = 0; const cap = bMaxMem(L, bits);
+  for (let B = 1; B <= cap; B++) { if (1 / step(B, L, 1, bits).t >= sla) best = B; else break; }
+  return best;
+}
+function prefillTime(n, prefix = 0) {
+  const pairs = n * prefix + n * n / 2;
+  const fl = 2 * M8.NP * n + 4 * pairs * M8.DM * M8.LAYERS;
+  return Math.max(fl / HW.PEAK, (wBytes(16) + (n + prefix) * KV_TOK) / HW.BW);
+}
+function staticBatch(lens, S) {
+  let t = 0; const spans = [];
+  for (let i = 0; i < lens.length; i += S) {
+    const b = lens.slice(i, i + S);
+    b.forEach((l, j) => spans.push({ slot: j, s: t, e: t + l, i: i + j }));
+    t += Math.max(...b);
+  }
+  return { T: t, spans };
+}
+function contBatch(lens, S) {
+  const free = new Array(S).fill(0); const spans = [];
+  lens.forEach((l, i) => {
+    let j = 0; for (let k = 1; k < S; k++) if (free[k] < free[j]) j = k;
+    spans.push({ slot: j, s: free[j], e: free[j] + l, i }); free[j] += l;
+  });
+  return { T: Math.max(...spans.map(x => x.e)), spans };
+}
+function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function kvAlloc(lens, pool, maxLen, blk) {
+  const res = []; let used = 0;                                          // 预留：每个请求 maxLen 格
+  for (const l of lens) { if (used + maxLen > pool) break; res.push({ l, start: used, alloc: maxLen }); used += maxLen; }
+  const pg = []; let blocks = 0; const nb = Math.floor(pool / blk);      // 分页：ceil(l / blk) 块
+  for (const l of lens) { const need = Math.ceil(l / blk); if (blocks + need > nb) break; pg.push({ l, start: blocks * blk, alloc: need * blk }); blocks += need; }
+  const sum = (a, k) => a.reduce((s, x) => s + x[k], 0);
+  return { res, pg, resUsed: sum(res, 'l'), resAlloc: sum(res, 'alloc'), pgUsed: sum(pg, 'l'), pgAlloc: sum(pg, 'alloc') };
+}
+const STAMP = 12;                                                        // 时间戳约 12 个 token
+function prefixCalc(S, U, stamp, blk = 16) {                             // stamp: 0 没有 / 1 在开头 / 2 在结尾
+  const stable = stamp === 1 ? 0 : stamp === 2 ? Math.max(0, S - STAMP) : S;
+  const hit = Math.floor(stable / blk), hitTok = hit * blk, total = S + U;
+  const free = HW.MEM - wBytes(16);
+  return {
+    hit, rate: hitTok / total,
+    p0: prefillTime(total), p1: prefillTime(total - hitTok, hitTok),
+    m0: Math.floor(free / (total * KV_TOK)),
+    m1: Math.floor((free - hitTok * KV_TOK) / ((total - hitTok) * KV_TOK)),
+  };
+}
+const expLen = (a, g) => a >= 1 ? g + 1 : (1 - Math.pow(a, g + 1)) / (1 - a);
+const speedup = (a, g, c) => expLen(a, g) / (g * c + 1);
+function bestGamma(a, c) { let bg = 1; for (let g = 2; g <= 12; g++) if (speedup(a, g, c) > speedup(a, bg, c)) bg = g; return bg; }
+function specMC(a, g, rounds, r) {                                       // 每轮：逐个以 α 接受，第一个被拒就停；再加大模型的 1 个
+  let tok = 0;
+  for (let k = 0; k < rounds; k++) { let n = 0; while (n < g && r() < a) n++; tok += n + 1; }
+  return tok / rounds;
+}
+function sampleCat(p, r) { let u = r(), i = 0; for (; i < p.length - 1; i++) { u -= p[i]; if (u < 0) return i; } return i; }
+function specRule(p, q, n, r) {                                          // 接受规则抽 n 次，返回输出频率与接受率
+  const res = p.map((v, i) => Math.max(v - q[i], 0)); const z = res.reduce((s, v) => s + v, 0); const resN = res.map(v => v / z);
+  const cnt = p.map(() => 0); let acc = 0;
+  for (let k = 0; k < n; k++) {
+    const x = sampleCat(q, r);
+    if (r() < Math.min(1, p[x] / q[x])) { cnt[x]++; acc++; } else cnt[sampleCat(resN, r)]++;
+  }
+  return { freq: cnt.map(c => c / n), acc: acc / n };
+}
+const TOY = { OUT: [7, 2, 3, 8, 2, 6, 4, 3], P: [0.6, 0.3, 0.1], Q: [0.5, 0.2, 0.3], TOK3: ['饭', '粥', '面'] };
+</script>
+<script>
+try{renderMathInElement(document.body,{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});}catch(e){}
+const NS='http://www.w3.org/2000/svg';
+function E(tag,a,p,t){const e=document.createElementNS(NS,tag);for(const k in a)e.setAttribute(k,a[k]);if(t!=null)e.textContent=t;if(p)p.appendChild(e);return e;}
+const $=(s)=>document.querySelector(s);
+const css=(v)=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function seg(id,labels,init,cb){const s=document.getElementById(id);s.innerHTML='';labels.forEach((l,i)=>{const b=document.createElement('button');b.textContent=l;b.setAttribute('aria-pressed',i===init);b.onclick=()=>{[...s.children].forEach((c,j)=>c.setAttribute('aria-pressed',j===i));cb(i);};s.appendChild(b);});}
+function W(svg,h){const w=Math.round(Math.max(340,Math.min(800,svg.getBoundingClientRect().width||800)));svg.setAttribute('viewBox',`0 0 ${w} ${h}`);svg.innerHTML='';return w;}
+function nice(m){const raw=m/4,p=Math.pow(10,Math.floor(Math.log10(raw)));const st=[1,2,2.5,5,10].map(k=>k*p).find(k=>k>=raw);return {step:st,max:Math.ceil(m/st)*st};}
+const fmt=(v,d=0)=>v.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const pct=(v,d=1)=>(v*100).toFixed(d)+'%';
+const C=()=>({fg:css('--fg'),mu:css('--muted'),li:css('--line'),ac:css('--accent'),wa:css('--warn'),ok:css('--ok'),bg:css('--bg'),okS:css('--ok-soft')});
+
+/* ———— 01 ———— */
+const S1={L:1000,bits:16};
+const L1=[500,1000,4000,16000], W1=['BF16','INT8','INT4'];
+seg('seg1L',L1.map(String),1,i=>{S1.L=L1[i];draw1();});
+seg('seg1W',W1,0,i=>{S1.bits=WBITS[W1[i]];draw1();});
+$('#b1').addEventListener('input',draw1);$('#sla1').addEventListener('input',draw1);
+function draw1(){
+  const c=C(),B=+$('#b1').value,sla=+$('#sla1').value;$('#b1v').textContent=B;$('#sla1v').textContent=sla+' token/s';
+  const svg=$('#svg1'),w=W(svg,340),ox=58,oy=286,pw=w-ox-58,ph=226,BX=600;
+  const cap=bMaxMem(S1.L,S1.bits),bs=bMaxSla(S1.L,S1.bits,sla);
+  const Bs=[];for(let b=1;b<=Math.min(BX,cap);b++)Bs.push(b);
+  const tots=Bs.map(b=>b/step(b,S1.L,1,S1.bits).t),pers=Bs.map(b=>1/step(b,S1.L,1,S1.bits).t);
+  const tk=nice(Math.max(1000,...tots)),pk=nice(Math.max(...pers,sla)),tmax=tk.max,pmax=pk.max;
+  const X=b=>ox+b/BX*pw,Yl=v=>oy-v/tmax*ph,Yr=v=>oy-v/pmax*ph;
+  if(bs>0)E('rect',{x:X(0),y:oy-ph,width:X(bs)-X(0),height:ph,fill:c.okS,opacity:.8},svg);
+  E('line',{x1:ox,y1:oy,x2:ox+pw,y2:oy,stroke:c.li},svg);E('line',{x1:ox,y1:oy,x2:ox,y2:oy-ph,stroke:c.li},svg);E('line',{x1:ox+pw,y1:oy,x2:ox+pw,y2:oy-ph,stroke:c.li},svg);
+  for(let b=0;b<=BX;b+=100)E('text',{x:X(b),y:oy+18,fill:c.mu,'font-size':13,'text-anchor':'middle'},svg,b);
+  E('text',{x:ox+pw/2,y:oy+40,fill:c.mu,'font-size':14,'text-anchor':'middle'},svg,'batch（同时服务的用户数）');
+  for(let v=0;v<=tmax+1e-9;v+=tk.step)E('text',{x:ox-6,y:Yl(v)+4,fill:c.ac,'font-size':12,'text-anchor':'end'},svg,v>=1000?fmt(v/1000,v%1000?1:0)+'k':fmt(v));
+  for(let v=0;v<=pmax+1e-9;v+=pk.step)E('text',{x:ox+pw+6,y:Yr(v)+4,fill:c.wa,'font-size':12},svg,fmt(v));
+  E('polyline',{points:Bs.map((b,i)=>`${X(b).toFixed(1)},${Yl(tots[i]).toFixed(1)}`).join(' '),fill:'none',stroke:c.ac,'stroke-width':2.5},svg);
+  E('polyline',{points:Bs.map((b,i)=>`${X(b).toFixed(1)},${Yr(pers[i]).toFixed(1)}`).join(' '),fill:'none',stroke:c.wa,'stroke-width':2.5},svg);
+  E('line',{x1:ox,y1:Yr(sla),x2:ox+pw,y2:Yr(sla),stroke:c.ok,'stroke-dasharray':'4 4'},svg);
+  if(cap<=BX){E('line',{x1:X(cap),y1:oy,x2:X(cap),y2:oy-ph,stroke:c.mu,'stroke-dasharray':'5 4'},svg);E('text',{x:X(cap)-5,y:oy-8,fill:c.mu,'font-size':13,'text-anchor':'end'},svg,`显存满 ${cap}`);}
+  E('text',{x:ox,y:16,fill:c.ac,'font-size':13},svg,'蓝：整卡 token/s（左轴）');
+  E('text',{x:ox,y:36,fill:c.wa,'font-size':13},svg,'橙：每个用户 token/s（右轴）');
+  const s=step(B,S1.L,1,S1.bits),ok=B<=cap;
+  if(ok&&B<=BX){E('line',{x1:X(B),y1:oy,x2:X(B),y2:oy-ph,stroke:c.fg,'stroke-width':1,opacity:.5},svg);
+    E('circle',{cx:X(B),cy:Yl(B/s.t),r:5,fill:c.ac},svg);E('circle',{cx:X(B),cy:Yr(1/s.t),r:5,fill:c.wa},svg);}
+  $('#r1by').textContent=fmt(s.by/1e9,2)+' GB';$('#r1t').textContent=fmt(s.t*1e3,2)+' ms';
+  $('#r1u').textContent=pct(s.tc/s.t,s.tc/s.t<0.01?2:1);
+  $('#r1tot').textContent=ok?fmt(B/s.t):'放不下';$('#r1per').textContent=ok?fmt(1/s.t,1):'放不下';
+  $('#r1max').textContent=fmt(cap);$('#r1sla').textContent=bs>0?fmt(bs):'无';
+}
+
+/* ———— 02 ———— */
+const S2={mode:0,S:4,seed:7};
+seg('seg2R',['文中 8 个','随机 16 个'],0,i=>{S2.mode=i;draw2();});
+seg('seg2S',['2','4','8'],1,i=>{S2.S=[2,4,8][i];draw2();});
+$('#re2').onclick=()=>{S2.seed++;if(S2.mode===0){S2.mode=1;[...$('#seg2R').children].forEach((c,j)=>c.setAttribute('aria-pressed',j===1));}draw2();};
+function lens2(){if(S2.mode===0)return TOY.OUT;const r=rng(S2.seed);return Array.from({length:16},()=>1+Math.floor(r()*12));}
+function timeline(svg,res,Tmax,S,lens){
+  const c=C(),rowH=Math.min(30,Math.max(18,160/S)),h=S*rowH+30,w=W(svg,h),x0=46,cw=(w-x0-10)/Tmax;
+  const names='ABCDEFGHIJKLMNOP';
+  for(let s=0;s<S;s++){E('text',{x:x0-8,y:s*rowH+rowH/2+5,fill:c.mu,'font-size':12,'text-anchor':'end'},svg,`槽 ${s+1}`);
+    E('rect',{x:x0,y:s*rowH+2,width:Tmax*cw,height:rowH-4,rx:3,fill:'none',stroke:c.li},svg);}
+  res.spans.forEach(sp=>{const col=Math.floor(sp.i/S)%2?c.ok:c.ac;
+    E('rect',{x:x0+sp.s*cw+1,y:sp.slot*rowH+3,width:Math.max(1,(sp.e-sp.s)*cw-2),height:rowH-6,rx:3,fill:col},svg);
+    if((sp.e-sp.s)*cw>16)E('text',{x:x0+sp.s*cw+5,y:sp.slot*rowH+rowH/2+5,fill:c.bg,'font-size':12,'font-weight':600},svg,names[sp.i]);});
+  const st=Tmax>24?5:Tmax>12?2:1;for(let t=st;t<=Tmax;t+=st)E('text',{x:x0+(t-0.5)*cw,y:S*rowH+16,fill:c.mu,'font-size':11,'text-anchor':'middle'},svg,t);
+  E('line',{x1:x0+res.T*cw,y1:0,x2:x0+res.T*cw,y2:S*rowH,stroke:c.wa,'stroke-width':2.5},svg);
+}
+function draw2(){
+  const L=lens2(),a=staticBatch(L,S2.S),b=contBatch(L,S2.S),tot=L.reduce((s,v)=>s+v,0);
+  timeline($('#svg2a'),a,a.T,S2.S,L);timeline($('#svg2b'),b,a.T,S2.S,L);
+  const avg=r=>r.spans.reduce((s,x)=>s+x.e,0)/L.length;
+  $('#r2aT').textContent=a.T;$('#r2aU').textContent=pct(tot/(a.T*S2.S));$('#r2aA').textContent=fmt(avg(a),3);
+  $('#r2bT').textContent=b.T;$('#r2bU').textContent=pct(tot/(b.T*S2.S));$('#r2bA').textContent=fmt(avg(b),3);
+}
+
+/* ———— 03 ———— */
+const S3={blk:16,seed:3},POOL=2048,MAXL=256;
+seg('seg3B',['1','4','16','64'],2,i=>{S3.blk=[1,4,16,64][i];draw3();});
+$('#re3').onclick=()=>{S3.seed++;draw3();};
+function lens3(){const r=rng(S3.seed);return Array.from({length:80},()=>16+Math.floor(r()*241));}
+function grid(svg,list){
+  const c=C(),w0=svg.getBoundingClientRect().width||800,cols=w0<600?64:128,rows=POOL/cols,w=W(svg,10),cs=(w-2)/cols,h=rows*cs+4;svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+  const pal=[c.ac,c.wa,c.ok];
+  E('rect',{x:0,y:0,width:w,height:rows*cs+2,fill:'none',stroke:c.li,rx:3},svg);
+  list.forEach((q,k)=>{const col=pal[k%3];for(let t=0;t<q.alloc;t++){const p=q.start+t,x=1+(p%cols)*cs,y=1+Math.floor(p/cols)*cs;
+    if(t<q.l)E('rect',{x:x+0.5,y:y+0.5,width:cs-1,height:cs-1,fill:col},svg);
+    else E('rect',{x:x+1,y:y+1,width:cs-2,height:cs-2,fill:'none',stroke:col,'stroke-width':0.8,opacity:.8},svg);}});
+}
+function draw3(){
+  const r=kvAlloc(lens3(),POOL,MAXL,S3.blk);grid($('#svg3a'),r.res);grid($('#svg3b'),r.pg);
+  $('#r3aN').textContent=r.res.length;$('#r3aU').textContent=`${r.resUsed} / ${POOL}（${pct(r.resUsed/POOL)}）`;
+  $('#r3bN').textContent=r.pg.length;$('#r3bU').textContent=`${r.pgUsed} / ${POOL}（${pct(r.pgUsed/POOL)}）`;
+}
+
+/* ———— 04 ———— */
+const S4={stamp:0};
+seg('seg4T',['没有','在开头','在结尾'],0,i=>{S4.stamp=i;draw4();});
+$('#s4S').addEventListener('input',draw4);$('#s4U').addEventListener('input',draw4);
+function draw4(){
+  const c=C(),S=+$('#s4S').value,U=+$('#s4U').value;$('#s4Sv').textContent=S;$('#s4Uv').textContent=U;
+  const r=prefixCalc(S,U,S4.stamp);
+  const svg=$('#svg4'),w=W(svg,260),x0=150,bw=w-x0-90;
+  const rows=[['prefill 时间',r.p0*1e3,r.p1*1e3,v=>fmt(v,1)+' ms'],['显存能放几人',r.m0,r.m1,v=>fmt(v)]];
+  rows.forEach(([lab,a,b,f],k)=>{const y=20+k*120,mx=Math.max(a,b)||1;
+    E('text',{x:0,y:y+12,fill:c.mu,'font-size':14},svg,lab);
+    E('text',{x:x0-8,y:y+42,fill:c.fg,'font-size':14,'text-anchor':'end'},svg,'不复用');
+    E('rect',{x:x0,y:y+26,width:Math.max(1,bw*a/mx),height:26,rx:3,fill:c.li},svg);
+    E('text',{x:x0+bw*a/mx+6,y:y+44,fill:c.fg,'font-size':14},svg,f(a));
+    E('text',{x:x0-8,y:y+80,fill:c.fg,'font-size':14,'text-anchor':'end'},svg,'复用前缀');
+    E('rect',{x:x0,y:y+64,width:Math.max(1,bw*b/mx),height:26,rx:3,fill:c.ok},svg);
+    E('text',{x:x0+bw*b/mx+6,y:y+82,fill:c.ok,'font-size':14},svg,f(b));});
+  $('#r4hit').textContent=`${r.hit} 块`;$('#r4rate').textContent=pct(r.rate);
+  $('#r4p0').textContent=fmt(r.p0*1e3,1)+' ms';$('#r4p1').textContent=fmt(r.p1*1e3,1)+' ms';
+  $('#r4m0').textContent=fmt(r.m0);$('#r4m1').textContent=fmt(r.m1);
+}
+
+/* ———— 05 ———— */
+let seed5=11,seed5b=5;
+['a5','g5','c5'].forEach(id=>$('#'+id).addEventListener('input',draw5));
+$('#re5').onclick=()=>{seed5++;draw5();};$('#re5b').onclick=()=>{seed5b++;draw5b();};
+function draw5(){
+  const c=C(),a=+$('#a5').value,g=+$('#g5').value,cc=+$('#c5').value;
+  $('#a5v').textContent=a.toFixed(2);$('#g5v').textContent=g;$('#c5v').textContent=cc.toFixed(2);
+  const r=rng(seed5),mc=[];for(let k=1;k<=12;k++)mc.push(specMC(a,k,4000,r));
+  const svg=$('#svg5'),w=W(svg,320),ox=44,oy=270,pw=w-ox-20,ph=240;
+  const ymax=Math.max(4,Math.ceil(expLen(a,12)+0.5));
+  const X=k=>ox+k/12*pw,Y=v=>oy-v/ymax*ph;
+  E('line',{x1:ox,y1:oy,x2:ox+pw,y2:oy,stroke:c.li},svg);E('line',{x1:ox,y1:oy,x2:ox,y2:oy-ph,stroke:c.li},svg);
+  E('line',{x1:ox,y1:Y(1),x2:ox+pw,y2:Y(1),stroke:c.li,'stroke-dasharray':'4 3'},svg);
+  for(let k=0;k<=12;k+=2)E('text',{x:X(k),y:oy+18,fill:c.mu,'font-size':13,'text-anchor':'middle'},svg,k);
+  for(let v=0;v<=ymax;v+=(ymax>8?2:1))E('text',{x:ox-6,y:Y(v)+4,fill:c.mu,'font-size':13,'text-anchor':'end'},svg,v);
+  E('text',{x:ox+pw,y:oy+38,fill:c.mu,'font-size':14,'text-anchor':'end'},svg,'猜测长度 γ');
+  const ks=[...Array(13).keys()];
+  E('polyline',{points:ks.map(k=>`${X(k)},${Y(expLen(a,k))}`).join(' '),fill:'none',stroke:c.ac,'stroke-width':2.2},svg);
+  E('polyline',{points:ks.map(k=>`${X(k)},${Y(speedup(a,k,cc))}`).join(' '),fill:'none',stroke:c.wa,'stroke-width':2.5},svg);
+  mc.forEach((m,i)=>{const k=i+1;E('circle',{cx:X(k),cy:Y(m),r:3.5,fill:'none',stroke:c.ac,'stroke-width':1.5},svg);E('circle',{cx:X(k),cy:Y(m/(k*cc+1)),r:3.5,fill:'none',stroke:c.wa,'stroke-width':1.5},svg);});
+  E('line',{x1:X(g),y1:oy,x2:X(g),y2:oy-ph,stroke:c.fg,opacity:.4},svg);
+  E('text',{x:ox+10,y:oy-ph+14,fill:c.ac,'font-size':13},svg,'蓝：每轮期望得到的 token');
+  E('text',{x:ox+10,y:oy-ph+32,fill:c.wa,'font-size':13},svg,'橙：加速比');
+  const bg=bestGamma(a,cc);
+  $('#r5E').textContent=fmt(expLen(a,g),4);$('#r5Em').textContent=fmt(mc[g-1],4);
+  $('#r5S').textContent=fmt(speedup(a,g,cc),2);$('#r5Sm').textContent=fmt(mc[g-1]/(g*cc+1),2);
+  $('#r5best').textContent=`${bg}（${fmt(speedup(a,bg,cc),2)} 倍）`;
+}
+function draw5b(){
+  const c=C(),res=specRule(TOY.P,TOY.Q,20000,rng(seed5b));
+  const svg=$('#svg5b'),w=W(svg,240),oy=190,hs=160,gw=Math.min(220,(w-20)/3);
+  const bw=Math.min(120,gw-16);
+  TOY.TOK3.forEach((t,i)=>{const cx=w/2+(i-1)*gw;
+    E('rect',{x:cx-bw/6,y:oy-res.freq[i]*hs,width:bw/3,height:res.freq[i]*hs,rx:2,fill:c.ok,opacity:.85},svg);
+    E('rect',{x:cx-bw/2,y:oy-TOY.P[i]*hs,width:bw,height:TOY.P[i]*hs,rx:2,fill:'none',stroke:c.ac,'stroke-width':2},svg);
+    E('rect',{x:cx-bw/4,y:oy-TOY.Q[i]*hs,width:bw/2,height:TOY.Q[i]*hs,rx:2,fill:'none',stroke:c.wa,'stroke-width':1.5,'stroke-dasharray':'4 3'},svg);
+    E('text',{x:cx,y:oy+20,fill:c.fg,'font-size':15,'text-anchor':'middle'},svg,t);
+    E('text',{x:cx,y:oy-Math.max(TOY.P[i],TOY.Q[i],res.freq[i])*hs-8,fill:c.ok,'font-size':13,'text-anchor':'middle'},svg,res.freq[i].toFixed(3));});
+  E('line',{x1:20,y1:oy,x2:w-10,y2:oy,stroke:c.li},svg);
+  $('#r5acc').textContent=res.acc.toFixed(4);
+  $('#r5dev').textContent=Math.max(...res.freq.map((f,i)=>Math.abs(f-TOY.P[i]))).toFixed(4);
+}
+
+const all=()=>{draw1();draw2();draw3();draw4();draw5();draw5b();};
+all();
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(all,80);});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',all);
+new MutationObserver(all).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>

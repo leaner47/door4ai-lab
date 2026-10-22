@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-22 12:15 America/New_York · 更新者：Claude（会话 session_011Magq82ckm1tyvEFLBiWRD）
+最后更新：2026-10-22 12:40 America/New_York · 更新者：Claude（会话 session_017BBX6F9xKreqTAVSmrMzpE）
 
 ---
 
@@ -143,6 +143,7 @@ door4ai-lab/
 - 课程顺序：数学讲（vectors-softmax，order 4.5）放在 Token 讲与注意力讲之间（2026-10-22 本人指定）：给没学过线性代数和概率的读者补齐点积、矩阵形状、softmax。**它的贯穿算例与注意力讲 `labs-src/attention-qkv/toy.py` 完全相同**（4 个 token、x、W_Q、W_K，分数 1.6 / 0.48 / 0.08 / 1.0，T = √2 即注意力的 ÷√d_k），改其中一讲的数字时两讲要一起改。
 - 需要大数据表的实验（如分词器词表）把打包好的 JS 放在实验页同目录（`public/labs/<slug>/xxx.js`），同源、受同样的门禁保护；不依赖外部 CDN，国内访问更稳。
 - 课程顺序：注意力 QKV（order 5）在前，KV Cache（order 10）在后，因为 KV cache 建立在 Q/K/V 概念上。
+- 课程顺序（2026-10-22 本人指定）：推理服务（13）在量化（12）与 MoE（15）之间；过拟合（22）在梯度下降（20）与残差（25）之间；分布式训练（39）在 Scaling Laws（38）与 LoRA（40）之间。
 - 课程顺序：残差连接（order 25）紧接梯度下降（20）：讲深网络为什么训不动。
 - 课程顺序：梯度下降（order 20）放在 KV Cache 之后：前面几讲讲推理，从这一讲开始讲训练（参数从哪来）；后续训练相关的讲（反向传播、LoRA 等）接在 20 之后。课程目录的「第 N 讲」由 order 排序自动生成。
 - **MCP 讲按 2026-07-28 规范写**（2026-10-19 已核对官方 changelog）：无状态，去掉了 `initialize` 握手与 `Mcp-Session-Id`，新增 `server/discover`，结果必带 `resultType`，Streamable HTTP 请求必带 `Mcp-Method` / `Mcp-Name` 头；实验 01 可切回 2025-11-25 握手式对照。规范再更新时改 `public/labs/mcp/` 与文章。
@@ -187,6 +188,8 @@ door4ai-lab/
 - [x] 新增《模型是怎么看图的：一张图怎样变成一串 token》（order 48，模型篇最后一讲；按新标准图文写，10 张分镜图 + 6 个实验，无视频）（2026-10-22）
 - [x] 新增《位置编码与 RoPE：注意力怎么知道谁在前谁在后》（order 6，注意力讲之后、多头 GQA 讲之前；按新标准图文写，沿用注意力讲的四个 token，11 张分镜图 + 实验 01–05；无视频）（2026-10-22）
 - [x] 新增《预训练是什么：模型是怎么从一大堆文字里学会说话的》（order 37，LayerNorm 之后、Scaling Laws(38) 与 LoRA 之前；按新标准图文写，贯穿算例「我爱吃米饭。」+ 7 token bigram，13 张分镜图、3 个「停一下」+ 实验 01–06，含页内真实训练的字符级小模型；无视频）（2026-10-22）
+- [x] 并行补写模型篇三讲（2026-10-22，按新标准图文写，无视频）：《推理服务：一张卡怎么同时伺候几百个用户》(order 13，12 张分镜图 + 实验 01–05)、《过拟合与泛化：模型背熟了训练题，为什么还是会考砸》(22，17 张分镜图 + 实验 01–07)、《分布式训练：一张卡放不下的模型是怎么训出来的》(39，12 张分镜图 + 实验 01–05)
+- [ ] 待补查（第一批并行写手标注的）：推理服务讲的 H100 3.35 TB/s 只对照了第三方汇总页；INT8 按每权重 8.125 位（组 128 + FP16 scale）是写手自设；Orca / SGLang 论文出处凭记忆。分布式训练讲 405B 气泡 48%（假设 m = 16）与每卡 6.7 GB 是推算；激活值 34sbh 按 GPT 结构，对 Llama 为量级估算
 - [ ] 待补查（写手凭记忆、未找到原文出处）：RLHF 讲里 GPT-3 预训练 300 B token、InstructGPT 每题 4–9 个回答排序、Llama 2 双奖励模型与四档评分；量化讲的困惑度表来自单作者预印本（arXiv 2601.14277），如需更强出处可删
 - [ ] 本人自学时发现缺口再补
 - [ ] 关于页只有两句话，待充实
@@ -206,6 +209,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-22 · Claude（session_017BBX6F9xKreqTAVSmrMzpE，主会话派 3 个子 agent 并行写，第一批）** — 新增三讲，均按 write-lesson 第 4、5 节写（toy.py/build 脚本生成文章与分镜图，实验页由模板起步、保留图形尺寸上限脚本，关键数字在 node 里用页内同一份代码核对）：`inference-serving`（13，贯穿算例 H100 SXM 跑 Llama-3-8B BF16、1000 token 上下文；屋顶线 / 静态与连续批处理 / PagedAttention / prefix caching / 投机解码 / 吞吐与延迟；vLLM 0.32.0、SGLang 0.5.22、TensorRT-LLM 1.3 移除 TensorRT 后端，2026-10-22 核实；生成：`labs-src/inference-serving/toy.py`）、`overfitting`（22，y = sin 2πx + 噪声 σ = 0.25、三组各 10 点；多项式 / 偏差方差 / L2 / 早停 / dropout 页内 MLP 真训 / 样本数 / 双下降（勒让德基最小范数）；生成：`node labs-src/overfitting/build.mjs`，文章与实验页都由它出）、`distributed-training`（39，Llama-3-8B 每参数 16 B → 128.5 GB、环形 all-reduce、ZeRO 1/2/3、张量并行手算、流水线气泡、3D 并行、Llama 3 405B 表 4 配置核算；生成：`labs-src/distributed-training/toy.py` + `build_lab.py`）。衔接句最小改动：weight-quantization、mixture-of-experts、gradient-descent、residual-connection、lora 的 .md，pretraining 的 article.src.md（重跑 toy.py，仅变一行）。scaling-laws（38）与 reasoning-models（43）由另一窗口在写，未碰；分布式训练讲里按「上一讲 Scaling Laws」称呼。`npm run build` 通过；dist 静态服务下全部 39 篇文章页 1440 浅色 / 390 深色 scrollWidth == innerWidth、无脚本错误；个人信息检索 0。
 
 - **2026-10-22 · Claude（session_011Magq82ckm1tyvEFLBiWRD）** — 按本人要求用 write-lesson 写 Scaling Laws 一讲。新增 `scaling-laws`（order 38）：`labs-src/scaling-laws/toy.py` 算出整讲数字、生成 8 张 SVG（y = Wx 前向 6 条连线 / 反向两件事 / 6N 拆成三块 + Llama-3-8B 卡时 / Kaplan 幂律普通 vs 对数坐标 / 固定 5.76e23 算力的 U 形与两项代价 / 加推理后最省模型随推理量变化 / 涌现 p 与 p⁵ / 六个公开模型 N–D 散点），填进 `article.src.md`（`{{figN}}` 与 `{{n:名字}}`）写出 `src/content/blog/scaling-laws.md`。正文：N、D、C 与 FLOPS → 2 × 3 小网络前向 2N（x = (1, 2, 3)，y = (7, 5)）→ 反向 ① Wᵀg = (1, −1, 1)、② g xᵀ（跨 token 累加）共 4N → C ≈ 6ND（Llama-3-8B 7.23e23；忽略的注意力项 13.4%）→ 卡时（H100 989.5 TFLOPS 稠密；100% 20.3 万、40% 50.7 万，官方 130 万 → 有效 15.6%）→ Kaplan L(N) = (Nc/N)^0.076（每 ×10 乘 0.839，取对数成直线、斜率验算 −0.076；N ∝ C^0.73）→ Chinchilla L = E + A/N^α + B/D^β，**用 Besiroglu 2024 重新拟合的系数**（E 1.8172、A 482.01、B 2085.43、α 0.3478、β 0.3658；原论文系数推出约 59 个/参数、与 20 不一致，实验 03 可切换）；同一算力三种花法 280B / 70B / 8B → L 1.9933 / 1.9745 / 2.0247；求导推出谷底条件 βB/D^β = αA/N^α 与 N_opt 公式，代入得 72.2B、1.33 T、18.4 个/参数，指数 0.513 / 0.487 → 过训练：C 总 = 6ND训 + 2ND推，目标 = Llama-3-8B 配置的损失 2.0218，推理 0 / 1e12 / 1e13 / 1e14 时最省 33.9B / 23.3B / 13.5B / 8.75B（19 / 43 / 192 / 1139 个/参数），1e14 时 8B 只比最优多 2.4%；Meta 原话 Chinchilla 最优约 200B token、训到 15 T 仍对数线性提升 → 涌现：Wei 2022（定义、三位数加法约 2.3e22 FLOPs、CoT 约 1e23）vs Schaeffer 2023（p⁵ 示意表、>92% 来自两种打分、编辑距离平滑），再加 Du 2024 损失阈值 → 公开模型表（GPT-3 / Gopher / Chinchilla / Llama-3-8B / 70B / 3.1-405B 的 N、D、D/N、6ND、官方 C、卡时、反推利用率 20% / — / — / 16% / 28% / 35%）；4 个「停一下」。实验页 `public/labs/scaling-laws/`（手写单文件，画布宽度随容器变）：01 6ND 计算器（预设、H100/A100/V100、利用率、卡数，和官方卡时对照）/ 02 幂律拖 α、普通 / 对数坐标 / 03 给定算力拖 N 的 U 形（两组系数）/ 04 加推理的总运算曲线 / 05 涌现：全对、token 准确率、编辑距离三种打分 × 答案长度 / 06 公开模型散点，点选看明细。事实 2026-10-22 查证：Kaplan 2020（α 0.076、Nc 8.8e13、6N、0.73/0.27、768–1.5B 参数）、Chinchilla 论文（表 2 指数、5.76e23、400+ 模型、MMLU 67.6 vs 60.0）、Besiroglu 2024 系数、Llama 3 模型卡（15T+、1.3M / 6.4M H100 卡时）、Llama 3.1 模型卡（405B 30.84M）、Llama 3 报告（405B、15.6 T、3.8e25、MFU 38–43%、402B / 16.55 T）、Meta 发布文（200B token、对数线性、2 × 24K GPU）、Patterson 2021（GPT-3 10,000 V100 × 14.8 天）、H100 数据表（1979 含稀疏）、Sardana & Frankle 2023、Wei 2022、Schaeffer 2023、Du 2024。衔接：`lora.md` 末段加「上一讲 Scaling Laws」（预训练讲已在另一会话写好指向本讲）。本地 build 47 页通过；1512 浅色 / 390 深色文章与实验页无横向滚动、KaTeX 无报错、长公式已拆行、无脚本错误；个人信息检索 0。
 
@@ -405,6 +410,7 @@ door4ai-lab/
    - 补充（2026-10-22）：`post-training` 41 后训练总览 · `scaling-laws` 38 Scaling Laws · `pretraining` 37 预训练 · `positional-encoding` 6 位置编码与 RoPE · `reasoning-models` 43 推理模型
    - 补充（2026-10-22）：`prompt-engineering` 99 Prompt 工程（Agent 篇第一讲）
    - 补充（2026-10-22 已写）：`vision-tokens` 48 模型怎么看图
+   - 补充（2026-10-22 已写，并行）：`inference-serving` 13 推理服务 · `overfitting` 22 过拟合与泛化 · `distributed-training` 39 分布式训练
    - 补充（2026-10-22 已写）：`vectors-softmax` 4.5 向量、矩阵乘法与 softmax（数学讲）
    - 补充（2026-10-19 已写）：`multihead-gqa` 7 · `weight-quantization` 12 · `mixture-of-experts` 15 · `rlhf-alignment` 42 · `agent-harness` 107 · `browser-computer-use` 122
 2. 给文章列表加按 tag 过滤。

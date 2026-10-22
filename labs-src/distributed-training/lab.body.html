@@ -1,0 +1,492 @@
+<style>
+select,input[type=number]{font:inherit;font-size:14px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:3px 6px}
+input[type=number]{width:90px}
+input[type=range]{accent-color:var(--accent);max-width:200px}
+.ro.acc b{color:var(--accent)}
+.chk{font-size:14px;margin-top:10px;line-height:1.9}
+.chk .bad{color:var(--warn)} .chk .good{color:var(--ok)}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+</style>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">显存 · 混合精度 · all-reduce · ZeRO · 张量并行 · 流水线 · 3D 并行</div>
+  <h1>分布式训练实验室：一张卡放不下的模型怎么训</h1>
+  <p class="lede">全量训练 Llama-3-8B 要 128.5 GB，一张 80 GB 的 H100 放不下。五个实验：算每张卡的显存，走一遍环形 all-reduce，把矩阵乘法切给几张卡再拼回来，画流水线的气泡，最后配一套 Llama 3 405B 的 3D 并行。全部是页内真实计算。</p>
+</header>
+
+<section id="s1">
+  <h2><span class="n">01</span>训练显存计算器</h2>
+  <p>训练时每张卡上有四样东西：<b style="color:var(--accent)">权重</b>、<b style="color:var(--warn)">梯度</b>、<b style="color:var(--ok)">优化器状态</b>和<b style="color:var(--muted)">激活值</b>。前三样按「每参数几个字节」算：混合精度 Adam 是权重 2 B + 梯度 2 B + 优化器状态 12 B（FP32 主权重、\(m\)、\(v\) 各 4 B），合计 16 B。</p>
+  <p>激活值按 Korthikanti 等（2022）的公式，每层 \(sbh\left(34 + \frac{5as}{h}\right)\) 字节（GPT 结构的系数，对 Llama 只是估算）：\(s\) 是序列长度，\(b\) 是微批次大小，\(h\) 是隐藏维度，\(a\) 是注意力头数。用 FlashAttention 时不存 \(s \times s\) 的注意力矩阵，第二项去掉；全部重算时每层只存输入 \(2sbh\)，另加反向时临时重算的一层。</p>
+  <p>并行方式：张量并行 \(TP\) 和流水线并行 \(PP\) 把参数切成 \(TP \times PP\) 份；ZeRO 在 \(DP\) 张数据并行的卡之间再切：ZeRO-1 切优化器状态，ZeRO-2 再切梯度，ZeRO-3 再切权重。张量并行按序列并行的做法把激活值也切成 \(TP\) 份。流水线用 1F1B 调度时，第一段要同时存 \(PP\) 个微批次、每个 \(L/PP\) 层的激活值，合起来还是 \(L\) 层。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="m1">模型</label><select id="m1"></select></div>
+      <div class="ctrl"><label>优化器</label><div class="seg" id="o1"></div></div>
+      <div class="ctrl"><label for="sl1">序列长度 <i>s</i></label><select id="sl1"><option>2048</option><option>4096</option><option selected>8192</option><option>16384</option><option>32768</option></select></div>
+      <div class="ctrl"><label for="b1">微批次 <i>b</i></label><input id="b1" type="range" min="1" max="8" value="1"><b id="b1v">1</b></div>
+      <div class="ctrl"><label>激活值</label><div class="seg" id="a1"></div></div>
+      <div class="ctrl"><label>ZeRO</label><div class="seg" id="z1"></div></div>
+      <div class="ctrl"><label for="tp1"><i>TP</i></label><select id="tp1"><option>1</option><option>2</option><option>4</option><option>8</option></select></div>
+      <div class="ctrl"><label for="pp1"><i>PP</i></label><select id="pp1"><option>1</option><option>2</option><option>4</option><option>8</option><option>16</option></select></div>
+      <div class="ctrl"><label for="dp1"><i>DP</i></label><select id="dp1"><option>1</option><option>2</option><option>4</option><option selected>8</option><option>16</option><option>32</option><option>64</option><option>128</option></select></div>
+    </div>
+    <svg id="fig1" viewBox="0 0 800 250" role="img" aria-label="每张卡上权重、梯度、优化器状态、激活值的显存堆叠条与 80 GB 线"></svg>
+    <div class="readout">
+      <div class="ro acc"><b id="r1p">–</b><span>参数个数</span></div>
+      <div class="ro"><b id="r1s">–</b><span>每卡模型状态</span></div>
+      <div class="ro"><b id="r1a">–</b><span>每卡激活值</span></div>
+      <div class="ro warn"><b id="r1t">–</b><span>每卡合计</span></div>
+      <div class="ro"><b id="r1n">–</b><span>总卡数 TP × PP × DP</span></div>
+    </div>
+    <p class="note">默认是文章里的情形：Llama-3-8B、8 张卡、ZeRO 关闭，每张卡 128.5 GB 模型状态。把 ZeRO 拨到 3，模型状态降到 16.1 GB；再换「全部重算」，激活值从 36.5 GB 降到 3.3 GB（含临时重算的那一层）。把优化器换成全 FP32 的 Adam，每参数还是 16 B。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>环形 all-reduce：每张卡的活一样多</h2>
+  <p>数据并行时，每张卡算出一份梯度，最后每张卡都要拿到所有卡的总和。环形算法把 \(N\) 张卡连成环，梯度切成 \(N\) 块。前半段 reduce-scatter 走 \(N - 1\) 步：每步每张卡把一块发给右边，对方<b>加</b>到自己那一块上；之后每张卡各有一块攒齐了总和。后半段 all-gather 再走 \(N - 1\) 步：攒齐的块往右传，对方<b>直接替换</b>。</p>
+  <p>下面每一列是一张卡，每格是一块梯度。点「下一步」，<b style="color:var(--warn)">橙色</b>是这一步刚收到的块，<b style="color:var(--ok)">绿色</b>是已经是总和的块；最右一列是正确答案（直接把各卡相加）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="n2">卡数 <i>N</i></label><input id="n2" type="range" min="2" max="8" value="4"><b id="n2v">4</b></div>
+      <div class="btns"><button class="btn" id="step2">下一步</button><button class="btn" id="reset2">重来</button><button class="btn" id="rand2">换一组梯度</button></div>
+    </div>
+    <svg id="fig2" viewBox="0 0 800 320" role="img" aria-label="环形 all-reduce 当前这一步每张卡上每一块的值"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r2k">–</b><span>步数</span></div>
+      <div class="ro acc"><b id="r2ph">–</b><span>阶段</span></div>
+      <div class="ro"><b id="r2s">–</b><span>每张卡已发出的块</span></div>
+      <div class="ro ok"><b id="r2ok">–</b><span>全部卡与正确答案一致</span></div>
+    </div>
+    <p class="note">走完 \(2(N - 1)\) 步，每张卡正好发了 \(2(N - 1)\) 块，每块是全部梯度的 \(\frac{1}{N}\)，合计 \(\frac{2(N-1)}{N}\) 份梯度。</p>
+  </div>
+  <p>换成真实规模。设梯度共 \(S\) 字节。「全发给卡 0 再发回」时，卡 0 要收、发各 \((N - 1)S\)；环形算法每张卡只发 \(\frac{2(N-1)}{N}S\)，不超过 \(2S\)。时间按「发送量 ÷ 一条链路的带宽」理想估算。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="sz2">梯度大小</label><select id="sz2"><option value="16.06">Llama-3-8B，16.06 GB</option><option value="141.1">Llama-3-70B，141.1 GB</option><option value="1">1 GB</option></select></div>
+      <div class="ctrl"><label for="nn2">卡数 <i>N</i></label><input id="nn2" type="range" min="2" max="64" value="8"><b id="nn2v">8</b></div>
+      <div class="ctrl"><label>带宽</label><div class="seg" id="bw2"></div></div>
+    </div>
+    <svg id="fig2b" viewBox="0 0 800 260" role="img" aria-label="每张卡（或卡 0）要发送的数据量随卡数的变化"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r2b1">–</b><span>环形：每张卡发送</span></div>
+      <div class="ro ok"><b id="r2b2">–</b><span>环形：理想时间</span></div>
+      <div class="ro warn"><b id="r2b3">–</b><span>全发给卡 0：卡 0 收 + 发</span></div>
+      <div class="ro warn"><b id="r2b4">–</b><span>全发给卡 0：理想时间</span></div>
+    </div>
+    <p class="note">绿线几乎是平的：卡再多，环形算法每张卡发的量也不超过 \(2S\)。橙线随卡数线性上涨。Llama-3-8B、8 张卡、NVLink 450 GB/s 时，环形约 62.5 ms。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>张量并行：把矩阵乘法切开，再拼回来</h2>
+  <p>MLP 是 \(y = \operatorname{ReLU}(xA)\,B\)。Megatron 的切法：\(A\) 按<b>列</b>切，每张卡算出中间结果的一段，ReLU 一个数一个数做，各自做完不用通信；\(B\) 按<b>行</b>切，每张卡用自己那段中间结果乘 \(B\) 的对应几行，得到一个部分和；最后所有卡的部分和相加（一次 all-reduce）。</p>
+  <p>下面每一行是一张卡算出的部分和，最后两行是「相加」和「一张卡完整算」。「文中例子」就是文章里的 \(x = (1,\ 2)\) 那组数；「随机」是 \(x\) 8 维、中间 16 维、输出 8 维的随机矩阵。换成「先按行切」，就是每张卡先各自 ReLU 再相加的错误做法。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>数据</label><div class="seg" id="d3"></div></div>
+      <div class="ctrl"><label>卡数 <i>t</i></label><div class="seg" id="t3"></div></div>
+      <div class="ctrl"><label>切法</label><div class="seg q" id="w3"></div></div>
+      <button class="btn" id="rand3">换一组随机数</button>
+    </div>
+    <svg id="fig3" viewBox="0 0 800 300" role="img" aria-label="每张卡的部分和、相加结果与一张卡完整计算的结果"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r3a">–</b><span>每张卡存的 A、B 元素</span></div>
+      <div class="ro"><b id="r3c">–</b><span>需要的 all-reduce 次数</span></div>
+      <div class="ro ok"><b id="r3d">–</b><span>与一张卡结果的最大差</span></div>
+    </div>
+    <p class="note">正确切法下，最大差是 0 或 \(10^{-16}\) 量级的浮点舍入误差（加法顺序不同）。先按行切时，ReLU 作用在部分和上，结果就错了：\(\operatorname{ReLU}(p + q) \neq \operatorname{ReLU}(p) + \operatorname{ReLU}(q)\)。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>流水线并行：气泡有多大</h2>
+  <p>把层切成 \(p\) 段放在 \(p\) 张卡上，一批数据切成 \(m\) 个微批次依次流过。每一格是一个微批次在一段上的计算：<b style="color:var(--accent)">蓝色</b>是前向，<b style="color:var(--warn)">橙色</b>是反向（按前向的 2 倍长算），浅灰是空等的气泡。图由页内按依赖关系逐格排出来：一段要等上一段的前向、下一段的反向做完才能开始。</p>
+  <p>GPipe 先做完全部前向再做反向；1F1B 在能开始反向之后就前向、反向交替，气泡一样大，但同时存着的激活值从 \(m\) 份降到最多 \(p\) 份。数格子可得气泡比例 \(\frac{p - 1}{m + p - 1}\)；交错调度（每张卡负责 \(V\) 段不相邻的层）按 Llama 3 报告的公式，气泡相对干活时间是 \(\frac{p - 1}{V \cdot m}\)。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="p4">段数 <i>p</i></label><input id="p4" type="range" min="2" max="16" value="4"><b id="p4v">4</b></div>
+      <div class="ctrl"><label for="m4">微批次 <i>m</i></label><input id="m4" type="range" min="1" max="64" value="4"><b id="m4v">4</b></div>
+      <div class="ctrl"><label>调度</label><div class="seg" id="sc4"></div></div>
+    </div>
+    <svg id="fig4" viewBox="0 0 800 310" role="img" aria-label="流水线并行的甘特图"></svg>
+    <div class="readout">
+      <div class="ro warn"><b id="r4b">–</b><span>气泡（按图数格）</span></div>
+      <div class="ro"><b id="r4f">–</b><span>公式 (p − 1)/(m + p − 1)</span></div>
+      <div class="ro acc"><b id="r4a">–</b><span>卡 0 最多同时存的激活值份数</span></div>
+      <div class="ro"><b id="r4v">–</b><span>交错调度 V = 2 / V = 4 时的气泡</span></div>
+    </div>
+    <p class="note">\(p = 4\) 时，\(m\) 从 1 拖到 4 再到 16，气泡从 75% 降到 42.9% 再到 15.8%。切到 1F1B，气泡不变，但「最多同时存的激活值份数」不再随 \(m\) 增长。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>3D 并行配置器：16,384 张卡怎么分</h2>
+  <p>总卡数 = \(TP \times CP \times PP \times DP\)（\(CP\) 是上下文并行，把一条长序列切给几张卡，Llama 3 在扩到 128K 上下文时才用）。规则：张量并行通信最频繁，最好不超过一台服务器的 8 张卡；流水线要把层分得均匀；数据并行放最外层。下面按 Llama 3 报告的做法估算每张卡的模型状态：权重按 \(TP \times PP\) 切、BF16 每参数 2 B 完整保留，梯度和优化器状态（14 B）再按 \(DP\) 切。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>Llama 3 报告表 4</label><div class="seg" id="pre5"></div></div>
+    </div>
+    <div class="ctrls">
+      <div class="ctrl"><label for="mm5">模型</label><select id="mm5"></select></div>
+      <div class="ctrl"><label for="tp5"><i>TP</i></label><select id="tp5"><option>1</option><option>2</option><option>4</option><option selected>8</option><option>16</option></select></div>
+      <div class="ctrl"><label for="cp5"><i>CP</i></label><select id="cp5"><option selected>1</option><option>2</option><option>4</option><option>8</option><option>16</option></select></div>
+      <div class="ctrl"><label for="pp5"><i>PP</i></label><select id="pp5"><option>1</option><option>2</option><option>4</option><option>8</option><option selected>16</option><option>32</option></select></div>
+      <div class="ctrl"><label for="dp5"><i>DP</i></label><select id="dp5"><option>1</option><option>2</option><option>4</option><option>8</option><option>16</option><option>32</option><option>64</option><option selected>128</option><option>256</option></select></div>
+      <div class="ctrl"><label for="sq5">序列长度</label><select id="sq5"><option selected>8192</option><option>131072</option></select></div>
+      <div class="ctrl"><label for="bd5">每个 DP 组的序列数</label><select id="bd5"><option>8</option><option selected>16</option><option>32</option><option>64</option></select></div>
+    </div>
+    <svg id="fig5" viewBox="0 0 800 250" role="img" aria-label="TP、PP、DP 三个维度的卡阵列示意"></svg>
+    <div class="readout">
+      <div class="ro acc"><b id="r5n">–</b><span>总卡数</span></div>
+      <div class="ro"><b id="r5t">–</b><span>每步 token 数</span></div>
+      <div class="ro"><b id="r5s">–</b><span>每卡模型状态（估算）</span></div>
+      <div class="ro warn"><b id="r5b">–</b><span>气泡（不交错，m = 每组序列数）</span></div>
+      <div class="ro"><b id="r5d">–</b><span>15.6 T token、每卡 400 TFLOPS 需要</span></div>
+    </div>
+    <div class="chk" id="chk5"></div>
+    <p class="note">选「8K，16,384 卡」：8 × 1 × 16 × 128 = 16,384，每步 16,777,216 个 token（表 4 的「16M」），每卡模型状态约 6.7 GB。训练天数按 \(6 \times\) 参数 \(\times\) token 数 ÷ (卡数 × 400 TFLOPS) 估算，是不停机的理想值。</p>
+  </div>
+</section>
+</div>
+<script src="/vendor/katex/katex.min.js"></script>
+<script src="/vendor/katex/auto-render.min.js"></script>
+<script>
+try{renderMathInElement(document.body,{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});}catch(e){}
+/* CALC-BEGIN：纯计算，check_lab.mjs 在 node 里抽出这一段核对文章里的数 */
+const GB = 1e9;
+const ARCH = {
+  'Llama-3-8B':   {L:32,  h:4096,  ffn:14336, a:32,  kv:8, V:128256},
+  'Llama-3-70B':  {L:80,  h:8192,  ffn:28672, a:64,  kv:8, V:128256},
+  'Llama-3-405B': {L:126, h:16384, ffn:53248, a:128, kv:8, V:128256},
+};
+function paramCount(m){
+  const hd = m.h / m.a;
+  const layer = 2*m.h*m.h + 2*m.h*m.kv*hd + 3*m.h*m.ffn + 2*m.h;
+  return layer*m.L + 2*m.V*m.h + m.h;
+}
+const OPT = { adam_mixed:{w:2,g:2,K:12,name:'混合精度 Adam'}, adam_fp32:{w:4,g:4,K:8,name:'FP32 Adam'}, sgd_mixed:{w:2,g:2,K:8,name:'混合精度 SGD+动量'} };
+/* 每张卡的显存（字节）。cfg: model, opt, s, b, act: 'flash'|'full'|'none'(不用 FlashAttention), zero 0–3, tp, pp, dp */
+function memPerGPU(cfg){
+  const m = ARCH[cfg.model], P = paramCount(m), o = OPT[cfg.opt];
+  const psi = P / (cfg.tp * cfg.pp);
+  const w = psi * o.w / (cfg.zero >= 3 ? cfg.dp : 1);
+  const g = psi * o.g / (cfg.zero >= 2 ? cfg.dp : 1);
+  const opt = psi * o.K / (cfg.zero >= 1 ? cfg.dp : 1);
+  const sbh = cfg.s * cfg.b * m.h;
+  const full = sbh * 34 / cfg.tp;                                   // 用 FlashAttention 时一层的激活值
+  let act;
+  if (cfg.act === 'full') act = 2 * sbh / cfg.tp * m.L + full;       // 每层只存输入 + 反向时临时重算的一层
+  else if (cfg.act === 'flash') act = full * m.L;
+  else act = sbh * (34 + 5 * m.a * cfg.s / m.h) / cfg.tp * m.L;
+  return {P, w, g, opt, act, states: w + g + opt, total: w + g + opt + act};
+}
+function zeroStates(psi, nd, stage, K=12){ return [(4+K)*psi, 4*psi + K*psi/nd, 2*psi + (2+K)*psi/nd, (4+K)*psi/nd][stage]; }
+function ringBytes(S, n){ return 2*(n-1)/n*S; }
+function ringTime(S, n, B){ return ringBytes(S, n)/B; }
+function naiveTime(S, n, B){ return 2*(n-1)*S/B; }
+/* 环形 all-reduce 的逐步模拟：返回每一步的状态与这一步收到的 [卡, 块] */
+function ringSim(G){
+  const n = G.length; let st = G.map(r => r.slice()); const hist = [{st: st.map(r => r.slice()), recv: []}];
+  for (let k = 0; k < n-1; k++){
+    const sends = st.map((r, i) => [i, ((i-k)%n+n)%n, r[((i-k)%n+n)%n]]);
+    sends.forEach(([i, c, v]) => { st[(i+1)%n][c] += v; });
+    hist.push({st: st.map(r => r.slice()), recv: sends.map(([i, c]) => [(i+1)%n, c])});
+  }
+  for (let k = 0; k < n-1; k++){
+    const sends = st.map((r, i) => [i, ((i+1-k)%n+n)%n, r[((i+1-k)%n+n)%n]]);
+    sends.forEach(([i, c, v]) => { st[(i+1)%n][c] = v; });
+    hist.push({st: st.map(r => r.slice()), recv: sends.map(([i, c]) => [(i+1)%n, c])});
+  }
+  return hist;
+}
+const relu = v => Math.max(0, v);
+function vecmat(x, M){ return M[0].map((_, j) => x.reduce((s, xi, i) => s + xi * M[i][j], 0)); }
+/* 张量并行：A 按列、B 按行切成 t 份；wrong = 先按行切 A、各自 ReLU 再相加 */
+function tpRun(x, A, B, t, wrong){
+  const full = vecmat(vecmat(x, A).map(relu), B);
+  const H = A[0].length, D = x.length, parts = [];
+  if (!wrong){
+    for (let r = 0; r < t; r++){
+      const c0 = r*H/t, c1 = (r+1)*H/t;
+      const z = vecmat(x, A.map(row => row.slice(c0, c1))).map(relu);
+      parts.push(vecmat(z, B.slice(c0, c1)));
+    }
+    const sum = full.map((_, j) => parts.reduce((s, p) => s + p[j], 0));
+    return {full, parts, sum};
+  }
+  const hs = []; t = Math.min(t, D);
+  for (let r = 0; r < t; r++){
+    const i0 = Math.round(r*D/t), i1 = Math.round((r+1)*D/t);
+    hs.push(vecmat(x.slice(i0, i1), A.slice(i0, i1)).map(relu));
+  }
+  const hsum = hs[0].map((_, j) => hs.reduce((s, v) => s + v[j], 0));
+  parts.push(...hs.map(v => vecmat(v, B)));
+  return {full, parts, sum: vecmat(hsum, B)};
+}
+/* 流水线排程：F 用 1 格，B 用 2 格；按依赖逐个排 */
+function pipeSchedule(p, m, kind){
+  const order = [];
+  for (let s = 0; s < p; s++){
+    const ops = [];
+    if (kind === 'gpipe'){ for (let k = 0; k < m; k++) ops.push(['F', k]); for (let k = 0; k < m; k++) ops.push(['B', k]); }
+    else { const warm = Math.min(p - 1 - s, m); let f = 0, b = 0;
+      for (; f < warm; f++) ops.push(['F', f]);
+      while (b < m){ if (f < m) ops.push(['F', f++]); ops.push(['B', b++]); } }
+    order.push(ops);
+  }
+  const endF = Array.from({length: p}, () => Array(m).fill(null)), endB = Array.from({length: p}, () => Array(m).fill(null));
+  const ptr = Array(p).fill(0), free = Array(p).fill(0), blocks = [];
+  let left = p * m * 2;
+  while (left > 0){
+    let progressed = false;
+    for (let s = 0; s < p; s++){
+      while (ptr[s] < order[s].length){
+        const [t, k] = order[s][ptr[s]];
+        let dep;
+        if (t === 'F') dep = s === 0 ? 0 : endF[s-1][k];
+        else dep = s === p-1 ? endF[s][k] : endB[s+1][k];
+        if (dep === null) break;
+        const st = Math.max(free[s], dep), d = t === 'F' ? 1 : 2;
+        (t === 'F' ? endF : endB)[s][k] = st + d; free[s] = st + d;
+        blocks.push({s, t, k, st, d}); ptr[s]++; left--; progressed = true;
+      }
+    }
+    if (!progressed) throw new Error('deadlock');
+  }
+  const T = Math.max(...free);
+  const bubble = 1 - (3 * m) / T;
+  // 卡 0 同时存着的激活值份数：前向做完、反向还没做的微批次数的最大值
+  const ev = blocks.filter(b => b.s === 0).sort((a, b) => a.st - b.st);
+  let cur = 0, peak = 0; ev.forEach(b => { cur += b.t === 'F' ? 1 : -1; peak = Math.max(peak, cur); });
+  return {blocks, T, bubble, peak};
+}
+const bubbleFormula = (p, m) => (p - 1) / (m + p - 1);
+const bubbleInterleaved = (p, m, v) => { const r = (p - 1) / (v * m); return r / (1 + r); };
+/* 3D 配置：Llama 3 的做法估算每卡模型状态 */
+function config3d(c){
+  const m = ARCH[c.model], P = paramCount(m);
+  const n = c.tp * c.cp * c.pp * c.dp;
+  const psi = P / (c.tp * c.pp);
+  const states = psi * 2 + psi * 14 / (c.dp * c.cp);
+  const tokens = c.seq * c.bdp * c.dp;
+  const mb = c.bdp;
+  const days = 6 * P * 15.6e12 / (n * 400e12) / 86400;
+  return {P, n, psi, states, tokens, bubble: bubbleFormula(c.pp, mb), days, layersPer: m.L / c.pp};
+}
+/* CALC-END */
+
+const $ = s => document.querySelector(s);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmtGB = v => (v / GB >= 100 ? (v / GB).toFixed(0) : (v / GB).toFixed(1)) + ' GB';
+const nf = v => v.toLocaleString('en-US');
+function seg(id, items, val, on){
+  const el = $(id); el.innerHTML = '';
+  items.forEach(([v, label]) => { const b = document.createElement('button'); b.textContent = label; b.dataset.v = v;
+    b.setAttribute('aria-pressed', String(v === val)); b.onclick = () => { el.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', 'false')); b.setAttribute('aria-pressed', 'true'); on(v); }; el.appendChild(b); });
+}
+const T = (x, y, s, o = {}) => `<text x="${x}" y="${y}" font-size="${o.size || 16}" text-anchor="${o.anchor || 'start'}" fill="${o.fill || css('--fg')}"${o.weight ? ` font-weight="${o.weight}"` : ''}${o.italic ? ' font-style="italic"' : ''}>${s}</text>`;
+/* 窄屏（实验卡片窄于 600 px）用 480 宽的画布，字不至于缩得太小 */
+function setVB(id, h){ const el = $(id); const W = el.parentElement.clientWidth < 600 ? 480 : 800; el.setAttribute('viewBox', `0 0 ${W} ${h}`); return W; }
+const R = (x, y, w, h, fill, o = {}) => `<rect x="${x}" y="${y}" width="${Math.max(0, w)}" height="${h}" rx="${o.rx ?? 3}" fill="${fill}"${o.op != null ? ` fill-opacity="${o.op}"` : ''}${o.stroke ? ` stroke="${o.stroke}" stroke-width="${o.sw || 1.5}"` : ''}/>`;
+
+/* ———— 01 ———— */
+const S1 = {model: 'Llama-3-8B', opt: 'adam_mixed', act: 'flash', zero: 0};
+Object.keys(ARCH).forEach(k => $('#m1').add(new Option(k, k)));
+seg('#o1', Object.entries(OPT).map(([k, v]) => [k, v.name]), S1.opt, v => { S1.opt = v; draw1(); });
+seg('#a1', [['flash', '全存（FlashAttention）'], ['full', '全部重算'], ['none', '全存（不用 FlashAttention）']], S1.act, v => { S1.act = v; draw1(); });
+seg('#z1', [[0, '关'], [1, '1'], [2, '2'], [3, '3']], S1.zero, v => { S1.zero = v; draw1(); });
+['#m1', '#sl1', '#b1', '#tp1', '#pp1', '#dp1'].forEach(id => $(id).addEventListener('input', draw1));
+function draw1(){
+  $('#b1v').textContent = $('#b1').value;
+  const cfg = {model: $('#m1').value, opt: S1.opt, s: +$('#sl1').value, b: +$('#b1').value, act: S1.act, zero: S1.zero, tp: +$('#tp1').value, pp: +$('#pp1').value, dp: +$('#dp1').value};
+  const r = memPerGPU(cfg);
+  const segs = [['权重', r.w, css('--accent')], ['梯度', r.g, css('--warn')], ['优化器状态', r.opt, css('--ok')], ['激活值', r.act, css('--muted')]];
+  const VW = setVB('#fig1', 250), narrow = VW < 600;
+  const maxv = Math.max(100 * GB, r.total * 1.08), X0 = 30, W = VW - 60, sc = W / maxv;
+  let s = '';
+  const step = (maxv / GB > 600 ? 200 : maxv / GB > 300 ? 100 : maxv / GB > 150 ? 50 : 20) * (narrow ? 2 : 1);
+  for (let t = 0; t * GB <= maxv; t += step){ const x = X0 + t * GB * sc; s += `<line x1="${x}" y1="60" x2="${x}" y2="150" stroke="${css('--line')}"/>` + T(x, 176, t + ' GB', {anchor: 'middle', fill: css('--muted'), size: 15}); }
+  let x = X0;
+  segs.forEach(([name, v, col], i) => { const w = v * sc; s += R(x + 0.5, 74, w - 1, 54, col);
+    const lx = narrow ? 18 + (i % 2) * 230 : 18 + i * 190, ly = narrow ? 200 + Math.floor(i / 2) * 24 : 204;
+    s += R(lx, ly, 14, 14, col) + T(lx + 20, ly + 12, `${name} ${fmtGB(v)}`, {size: 15}); x += w; });
+  const x80 = X0 + 80 * GB * sc;
+  s += `<line x1="${x80}" y1="46" x2="${x80}" y2="150" stroke="${css('--fg')}" stroke-width="2" stroke-dasharray="6 4"/>` + T(x80 + 6, 54, '一张 H100：80 GB', {size: 15});
+  s += T(X0, 30, `每张卡合计 ${fmtGB(r.total)}`, {weight: 600, fill: r.total > 80 * GB ? css('--warn') : css('--ok')});
+  $('#fig1').innerHTML = s;
+  $('#r1p').textContent = (r.P / 1e9).toFixed(2) + ' B';
+  $('#r1s').textContent = fmtGB(r.states); $('#r1a').textContent = fmtGB(r.act);
+  $('#r1t').textContent = fmtGB(r.total) + (r.total > 80 * GB ? '，放不下' : '，放得下');
+  $('#r1n').textContent = nf(cfg.tp * cfg.pp * cfg.dp);
+}
+
+/* ———— 02 ———— */
+let rng = 7; const rnd = () => (rng = (rng * 1103515245 + 12345) % 2147483648) / 2147483648;
+const G_DEFAULT = [[1, 0, 2, 1], [2, 1, 0, 3], [0, 3, 1, 2], [1, 2, 1, 0]];
+let G2 = G_DEFAULT, H2 = ringSim(G2), k2 = 0;
+function newG(n, random){ G2 = (!random && n === 4) ? G_DEFAULT : Array.from({length: n}, () => Array.from({length: n}, () => Math.floor(rnd() * 4))); H2 = ringSim(G2); k2 = 0; draw2(); }
+$('#n2').addEventListener('input', () => { $('#n2v').textContent = $('#n2').value; newG(+$('#n2').value, false); });
+$('#step2').onclick = () => { if (k2 < H2.length - 1) k2++; draw2(); };
+$('#reset2').onclick = () => { k2 = 0; draw2(); };
+$('#rand2').onclick = () => newG(+$('#n2').value, true);
+function draw2(){
+  const n = G2.length, {st, recv} = H2[k2];
+  const sums = G2[0].map((_, c) => G2.reduce((s, r) => s + r[c], 0));
+  const done = new Set();
+  if (k2 >= n - 1){ for (let i = 0; i < n; i++) done.add(i + ',' + (i + 1) % n);
+    for (let j = n; j <= k2; j++) H2[j].recv.forEach(([i, c]) => done.add(i + ',' + c)); }
+  const rset = new Set(recv.map(([i, c]) => i + ',' + c));
+  const cellH = Math.min(30, 230 / n), VW = setVB('#fig2', 70 + n * cellH);
+  const colW = Math.min(84, (VW - 110) / (n + 1) / 1.08), X0 = 56, Y0 = 50;
+  let s = '';
+  for (let i = 0; i < n; i++){
+    const x = X0 + i * colW * 1.08;
+    s += T(x + colW / 2, 30, '卡 ' + i, {anchor: 'middle', fill: css('--muted'), size: 15});
+    s += R(x - 3, Y0 - 3, colW + 6, n * cellH + 6, 'none', {stroke: css('--muted'), sw: 1, rx: 5});
+    for (let c = 0; c < n; c++){
+      const key = i + ',' + c, col = rset.has(key) ? css('--warn') : done.has(key) ? css('--ok') : null;
+      if (col) s += R(x + 1, Y0 + c * cellH + 1, colW - 2, cellH - 2, col, {op: 0.22});
+      s += T(x + colW / 2, Y0 + c * cellH + cellH / 2 + 5.5, st[i][c], {anchor: 'middle', fill: col || css('--fg'), weight: col ? 600 : null, size: 16});
+    }
+  }
+  const xa = X0 + n * colW * 1.08 + 14;
+  s += T(xa + colW / 2, 30, '正确答案', {anchor: 'middle', fill: css('--ok'), size: 15});
+  s += R(xa - 3, Y0 - 3, colW + 6, n * cellH + 6, 'none', {stroke: css('--ok'), sw: 1, rx: 5});
+  sums.forEach((v, c) => { s += T(xa + colW / 2, Y0 + c * cellH + cellH / 2 + 5.5, v, {anchor: 'middle', fill: css('--ok'), size: 16}); });
+  for (let c = 0; c < n; c++) s += T(X0 - 10, Y0 + c * cellH + cellH / 2 + 5, '块 ' + (c + 1), {anchor: 'end', fill: css('--muted'), size: 13});
+  $('#fig2').innerHTML = s;
+  const total = 2 * (n - 1);
+  $('#r2k').textContent = `${k2} / ${total}`;
+  $('#r2ph').textContent = k2 === 0 ? '开始' : k2 <= n - 1 ? 'reduce-scatter' : 'all-gather';
+  $('#r2s').textContent = `${k2} 块（共 ${n} 块）`;
+  const ok = st.every(r => r.every((v, c) => v === sums[c]));
+  $('#r2ok').textContent = ok ? '是' : '还没有';
+}
+let BW = 450e9;
+seg('#bw2', [[450e9, 'NVLink 450 GB/s'], [50e9, '跨服务器 50 GB/s']], BW, v => { BW = v; draw2b(); });
+['#sz2', '#nn2'].forEach(id => $(id).addEventListener('input', draw2b));
+function draw2b(){
+  const S = +$('#sz2').value * GB, n = +$('#nn2').value; $('#nn2v').textContent = n;
+  const VW = setVB('#fig2b', 260), narrow = VW < 600;
+  const X0 = 50, X1 = VW - 24, Y0 = 210, Y1 = 30, NMAX = 64;
+  const ymax = 2 * 63 * S * 1.02 / 2;   // 卡 0 收 + 发 / 2 的最大值，按「收、发各」画
+  const px = k => X0 + (k - 2) / (NMAX - 2) * (X1 - X0), py = v => Y0 - v / (63 * S) * (Y0 - Y1);
+  let s = `<line x1="${X0}" y1="${Y0}" x2="${X1}" y2="${Y0}" stroke="${css('--line')}"/><line x1="${X0}" y1="${Y0}" x2="${X0}" y2="${Y1 - 6}" stroke="${css('--line')}"/>`;
+  [2, 16, 32, 48, 64].forEach(k => s += T(px(k), Y0 + 22, k, {anchor: 'middle', fill: css('--muted'), size: 15}));
+  s += T(X1, Y0 + 44, '卡数 N', {anchor: 'end', fill: css('--muted'), size: 15});
+  [0, 20, 40, 60].forEach(v => s += T(X0 - 8, py(v * S) + 5, v + 'S', {anchor: 'end', fill: css('--muted'), size: 15}));
+  let pr = '', pn = '';
+  for (let k = 2; k <= NMAX; k++){ pr += `${px(k)},${py(ringBytes(S, k))} `; pn += `${px(k)},${py((k - 1) * S)} `; }
+  s += `<polyline points="${pn}" fill="none" stroke="${css('--warn')}" stroke-width="2.5"/><polyline points="${pr}" fill="none" stroke="${css('--ok')}" stroke-width="3"/>`;
+  s += `<line x1="${px(n)}" y1="${Y1}" x2="${px(n)}" y2="${Y0}" stroke="${css('--muted')}" stroke-dasharray="4 4"/>`;
+  s += `<circle cx="${px(n)}" cy="${py(ringBytes(S, n))}" r="5" fill="${css('--ok')}"/><circle cx="${px(n)}" cy="${py((n - 1) * S)}" r="5" fill="${css('--warn')}"/>`;
+  s += T(X0 + 12, Y1 + 8, narrow ? '全发给卡 0：收、发各 (N − 1)S' : '全发给卡 0：卡 0 收 (N − 1)S、发 (N − 1)S', {fill: css('--warn'), size: 15});
+  s += T(X1, py(2 * S) - 12, '环形：每张卡发 2(N − 1)S/N', {fill: css('--ok'), size: 15, anchor: 'end'});
+  $('#fig2b').innerHTML = s;
+  const ms = v => v >= 1 ? v.toFixed(2) + ' s' : (v * 1e3).toFixed(1) + ' ms';
+  $('#r2b1').textContent = (ringBytes(S, n) / GB).toFixed(2) + ' GB';
+  $('#r2b2').textContent = ms(ringTime(S, n, BW));
+  $('#r2b3').textContent = `各 ${((n - 1) * S / GB).toFixed(1)} GB`;
+  $('#r2b4').textContent = ms(naiveTime(S, n, BW));
+}
+
+/* ———— 03 ———— */
+const EX = {x: [1, 2], A: [[1, 0, -1, -2], [0, 1, 1, 0.5]], B: [[1, 0], [0, 1], [1, 1], [2, -1]]};
+let RD, S3 = {data: 'ex', t: 2, wrong: false};
+let rng3 = 11; const r3 = () => { rng3 = (rng3 * 1103515245 + 12345) % 2147483648; return rng3 / 2147483648 * 2 - 1; };
+function newRand(){ RD = {x: Array.from({length: 8}, r3), A: Array.from({length: 8}, () => Array.from({length: 16}, r3)), B: Array.from({length: 16}, () => Array.from({length: 8}, r3))}; }
+newRand();
+seg('#d3', [['ex', '文中例子'], ['rand', '随机 8 → 16 → 8']], 'ex', v => { S3.data = v; draw3(); });
+seg('#t3', [[1, '1'], [2, '2'], [4, '4']], 2, v => { S3.t = v; draw3(); });
+seg('#w3', [[false, '先按列、再按行'], [true, '先按行切（错误）']], false, v => { S3.wrong = v; draw3(); });
+$('#rand3').onclick = () => { newRand(); S3.data = 'rand'; document.querySelectorAll('#d3 button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === 'rand'))); draw3(); };
+function draw3(){
+  const d = S3.data === 'ex' ? EX : RD, t = S3.t;
+  const r = tpRun(d.x, d.A, d.B, t, S3.wrong);
+  const D = r.full.length, fmt = v => (Math.abs(v) < 5e-13 ? 0 : v).toFixed(S3.data === 'ex' ? 0 : 2).replace('-', '−');
+  const X0 = 170;
+  const rows = [...r.parts.map((p, i) => ['卡 ' + i + (S3.wrong ? '：先 ReLU 再乘 B' : ' 的部分和'), p, css('--accent')]), ['相加', r.sum, S3.wrong && t > 1 ? css('--warn') : css('--ok')], ['一张卡完整算', r.full, css('--fg')]];
+  const rh = Math.min(40, 260 / rows.length), VW = setVB('#fig3', 30 + rows.length * rh + 10), cw = Math.min(70, (VW - 180) / D);
+  let s = '';
+  rows.forEach(([lab, v, col], i) => {
+    const y = 16 + i * rh + (i >= rows.length - 2 ? 10 : 0);
+    s += T(X0 - 14, y + rh / 2 + 5, lab, {anchor: 'end', fill: col, size: 15});
+    v.forEach((val, j) => { s += R(X0 + j * cw + 1, y + 2, cw - 2, rh - 6, col, {op: 0.13}); s += T(X0 + j * cw + cw / 2, y + rh / 2 + 5, fmt(val), {anchor: 'middle', fill: col, size: D > 4 ? 14 : 16}); });
+  });
+  $('#fig3').innerHTML = s;
+  const diff = Math.max(...r.full.map((v, j) => Math.abs(v - r.sum[j])));
+  const H = d.A[0].length, Din = d.x.length;
+  $('#r3a').textContent = S3.wrong ? `A：${Din / Math.min(t, Din) * H}，B：${H * D}` : `A：${Din * H / t}，B：${H / t * D}`;
+  $('#r3c').textContent = t === 1 ? '0' : '1';
+  $('#r3d').textContent = diff === 0 ? '0' : diff < 1e-9 ? diff.toExponential(1) : diff.toFixed(3);
+  $('#r3d').parentElement.className = 'ro ' + (diff < 1e-9 ? 'ok' : 'warn');
+}
+
+/* ———— 04 ———— */
+let SC4 = '1f1b';
+seg('#sc4', [['gpipe', 'GPipe'], ['1f1b', '1F1B']], SC4, v => { SC4 = v; draw4(); });
+['#p4', '#m4'].forEach(id => $(id).addEventListener('input', draw4));
+function draw4(){
+  const p = +$('#p4').value, m = +$('#m4').value; $('#p4v').textContent = p; $('#m4v').textContent = m;
+  const r = pipeSchedule(p, m, SC4);
+  const VW = setVB('#fig4', 310);
+  const X0 = 50, X1 = VW - 10, Y0 = 14, H = 250, rh = H / p, u = (X1 - X0) / r.T;
+  let s = '';
+  for (let st = 0; st < p; st++){
+    s += R(X0, Y0 + st * rh + 1, X1 - X0, rh - 2, css('--muted'), {op: 0.16, rx: 2});
+    if (p <= 8 || st % 2 === 0) s += T(X0 - 8, Y0 + st * rh + rh / 2 + 5, '卡 ' + st, {anchor: 'end', fill: css('--muted'), size: 14});
+  }
+  r.blocks.forEach(b => {
+    const x = X0 + b.st * u, w = b.d * u, y = Y0 + b.s * rh + 1;
+    s += R(x + 0.4, y, w - 0.8, rh - 2, b.t === 'F' ? css('--accent') : css('--warn'), {rx: 2});
+    if (u >= 14 && rh >= 14) s += T(x + w / 2, y + rh / 2 + 4, b.k + 1, {anchor: 'middle', fill: css('--bg'), size: 12});
+  });
+  s += `<line x1="${X0}" y1="${Y0 + H + 10}" x2="${X1}" y2="${Y0 + H + 10}" stroke="${css('--muted')}"/>` + T(X1, Y0 + H + 28, VW < 600 ? `时间（共 ${r.T} 格）` : `时间（共 ${r.T} 格，前向 1 格、反向 2 格）`, {anchor: 'end', fill: css('--muted'), size: 14});
+  $('#fig4').innerHTML = s;
+  $('#r4b').textContent = (r.bubble * 100).toFixed(1) + '%';
+  $('#r4f').textContent = (bubbleFormula(p, m) * 100).toFixed(1) + '%';
+  $('#r4a').textContent = r.peak + ' 份';
+  $('#r4v').textContent = (bubbleInterleaved(p, m, 2) * 100).toFixed(1) + '% / ' + (bubbleInterleaved(p, m, 4) * 100).toFixed(1) + '%';
+}
+
+/* ———— 05 ———— */
+Object.keys(ARCH).forEach(k => $('#mm5').add(new Option(k, k))); $('#mm5').value = 'Llama-3-405B';
+const PRE = {a: [8, 1, 16, 64, 8192, 32], b: [8, 1, 16, 128, 8192, 16], c: [8, 16, 16, 8, 131072, 16]};
+seg('#pre5', [['a', '8K，8,192 卡'], ['b', '8K，16,384 卡'], ['c', '128K，16,384 卡']], 'b', v => {
+  const [tp, cp, pp, dp, sq, bd] = PRE[v]; $('#mm5').value = 'Llama-3-405B';
+  $('#tp5').value = tp; $('#cp5').value = cp; $('#pp5').value = pp; $('#dp5').value = dp; $('#sq5').value = sq; $('#bd5').value = bd; draw5(); });
+['#mm5', '#tp5', '#cp5', '#pp5', '#dp5', '#sq5', '#bd5'].forEach(id => $(id).addEventListener('input', () => { document.querySelectorAll('#pre5 button').forEach(b => b.setAttribute('aria-pressed', 'false')); draw5(); }));
+function draw5(){
+  const c = {model: $('#mm5').value, tp: +$('#tp5').value, cp: +$('#cp5').value, pp: +$('#pp5').value, dp: +$('#dp5').value, seq: +$('#sq5').value, bdp: +$('#bd5').value};
+  const r = config3d(c), m = ARCH[c.model];
+  // 示意：一行 = 一份模型副本（PP 台服务器组），每格 = 一组 TP × CP 张卡；最多画 6 行
+  const VW = setVB('#fig5', 250);
+  const rows = Math.min(c.dp, 5), X0 = 80, X1 = VW - 16, cellW = (X1 - X0) / c.pp;
+  let s = T(X0, 20, `每格 = ${c.tp * c.cp} 张卡（TP ${c.tp} × CP ${c.cp}）`, {fill: css('--accent'), size: 15});
+  for (let i = 0; i < rows; i++){
+    const y = 34 + i * 36, label = i === rows - 1 && c.dp > rows ? '副本 ' + c.dp : '副本 ' + (i + 1);
+    s += T(X0 - 10, y + 21, label, {anchor: 'end', fill: css('--muted'), size: 14});
+    for (let j = 0; j < c.pp; j++) s += R(X0 + j * cellW + 1.5, y, cellW - 3, 28, css('--accent'), {op: c.tp * c.cp > 8 ? 0.95 : 0.55, rx: 3});
+  }
+  s += T(X1, 34 + rows * 36 + 18, VW < 600 ? `一行 ${c.pp} 段（PP），共 ${c.dp} 行（DP）` : `一行 ${c.pp} 段流水线（PP），共 ${c.dp} 行数据并行（DP）`, {anchor: 'end', fill: css('--ok'), size: 15});
+  $('#fig5').innerHTML = s;
+  $('#r5n').textContent = nf(r.n);
+  $('#r5t').textContent = nf(r.tokens);
+  $('#r5s').textContent = (r.states / GB).toFixed(1) + ' GB';
+  $('#r5b').textContent = (r.bubble * 100).toFixed(0) + '%';
+  $('#r5d').textContent = r.days.toFixed(0) + ' 天';
+  const chk = [];
+  chk.push(c.tp * c.cp <= 8 ? ['good', `TP × CP = ${c.tp * c.cp} ≤ 8：在一台服务器内，走 NVLink`] : ['bad', `TP × CP = ${c.tp * c.cp} > 8：要跨服务器做张量并行，通信会拖慢每一层`]);
+  chk.push(Number.isInteger(r.layersPer) ? ['good', `${m.L} 层 ÷ PP ${c.pp} = ${r.layersPer} 层/段，分得均匀`] : ['bad', `${m.L} 层 ÷ PP ${c.pp} = ${r.layersPer.toFixed(2)} 层/段，分不均匀（Llama 3 让首尾两段各少放一层）`]);
+  chk.push(r.states < 40 * GB ? ['good', `每卡模型状态 ${(r.states / GB).toFixed(1)} GB，剩下的显存留给激活值`] : ['bad', `每卡模型状态 ${(r.states / GB).toFixed(1)} GB，留给激活值的不多了`]);
+  $('#chk5').innerHTML = chk.map(([k, t]) => `<div class="${k}">${k === 'good' ? '✓' : '✗'} ${t}</div>`).join('');
+}
+
+const all = () => { draw1(); draw2(); draw2b(); draw3(); draw4(); draw5(); };
+all();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+addEventListener('resize', all);
+new MutationObserver(all).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+</script>

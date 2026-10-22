@@ -41,6 +41,10 @@ export const POSTS: Record<string, PostAccess> = {
     "access": "paid",
     "series": "ai-mastery"
   },
+  "distributed-training": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
   "gateway-orchestration": {
     "access": "paid",
     "series": "ai-mastery"
@@ -50,6 +54,10 @@ export const POSTS: Record<string, PostAccess> = {
     "series": "ai-mastery"
   },
   "gradient-descent": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
+  "inference-serving": {
     "access": "paid",
     "series": "ai-mastery"
   },
@@ -86,6 +94,10 @@ export const POSTS: Record<string, PostAccess> = {
     "series": "ai-mastery"
   },
   "multihead-gqa": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
+  "overfitting": {
     "access": "paid",
     "series": "ai-mastery"
   },
@@ -163,9 +175,11 @@ export const LABS: Record<string, string> = {
   "labs/browser-computer-use": "browser-computer-use",
   "labs/computer-anatomy": "computer-anatomy",
   "labs/context-window": "context-window",
+  "labs/distributed-training": "distributed-training",
   "labs/gateway-orchestration": "gateway-orchestration",
   "labs/git-github": "git-github",
   "labs/gradient-descent": "gradient-descent",
+  "labs/inference-serving": "inference-serving",
   "labs/internet-basics": "internet-basics",
   "labs/kv-cache": "kv-cache-quantization",
   "labs/layernorm": "layernorm",
@@ -175,6 +189,7 @@ export const LABS: Record<string, string> = {
   "labs/mlp": "mlp",
   "labs/model-evaluation": "model-evaluation",
   "labs/multihead-gqa": "multihead-gqa",
+  "labs/overfitting": "overfitting",
   "labs/positional-encoding": "positional-encoding",
   "labs/post-training": "post-training",
   "labs/pretraining": "pretraining",
