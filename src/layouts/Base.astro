@@ -44,7 +44,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     html,body{height:100%}
     body{display:flex;flex-direction:column;min-height:100dvh}
     .wrap{flex:1;display:flex;flex-direction:column;width:100%}
-    header.site{display:flex;align-items:center;gap:16px 28px;flex-wrap:wrap;padding:16px clamp(18px,9vw - 16px,200px)}
+    header.site{display:flex;align-items:center;gap:16px 28px;flex-wrap:wrap;padding:16px clamp(16px,3vw,40px)}
     header.site nav{margin-left:auto}
     .acts{display:flex;align-items:center;gap:14px}
     .acct{position:relative}
@@ -74,7 +74,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     header.site nav a:hover{color:var(--fg)}
     main{flex:1;display:flex;flex-direction:column;width:100%;padding:40px clamp(18px,9vw - 16px,200px) 80px;box-sizing:border-box}
     main.full{max-width:none;padding:0}
-    footer.site{padding:20px clamp(18px,9vw - 16px,200px) 28px;color:var(--muted);font-size:14px}
+    footer.site{padding:20px clamp(16px,3vw,40px) 28px;color:var(--muted);font-size:14px}
     .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
     h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;text-wrap:balance}
     .prose h2{font-size:22px;margin:40px 0 8px}
