@@ -97,6 +97,10 @@ export const POSTS: Record<string, PostAccess> = {
     "access": "paid",
     "series": "ai-mastery"
   },
+  "prompt-engineering": {
+    "access": "paid",
+    "series": "ai-mastery"
+  },
   "rag-embedding": {
     "access": "paid",
     "series": "ai-mastery"
@@ -157,6 +161,7 @@ export const LABS: Record<string, string> = {
   "labs/multihead-gqa": "multihead-gqa",
   "labs/positional-encoding": "positional-encoding",
   "labs/post-training": "post-training",
+  "labs/prompt-engineering": "prompt-engineering",
   "labs/rag-embedding": "rag-embedding",
   "labs/residual-connection": "residual-connection",
   "labs/rlhf-alignment": "rlhf-alignment",

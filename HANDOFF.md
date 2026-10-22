@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-22 12:00 America/New_York · 更新者：Claude（会话 session_014tDUqdaiQ99Ldxb23D7ZMj）
+最后更新：2026-10-22 12:05 America/New_York · 更新者：Claude（会话 session_01BU4u8x4TdPeBZqiM9RuSf3）
 
 ---
 
@@ -146,7 +146,7 @@ door4ai-lab/
 - 课程顺序：梯度下降（order 20）放在 KV Cache 之后：前面几讲讲推理，从这一讲开始讲训练（参数从哪来）；后续训练相关的讲（反向传播、LoRA 等）接在 20 之后。课程目录的「第 N 讲」由 order 排序自动生成。
 - **MCP 讲按 2026-07-28 规范写**（2026-10-19 已核对官方 changelog）：无状态，去掉了 `initialize` 握手与 `Mcp-Session-Id`，新增 `server/discover`，结果必带 `resultType`，Streamable HTTP 请求必带 `Mcp-Method` / `Mcp-Name` 头；实验 01 可切回 2025-11-25 握手式对照。规范再更新时改 `public/labs/mcp/` 与文章。
 - **课程文章里的表格与行内代码**（2026-10-19）：`Base.astro` 里 `.prose table` 在 ≤720px 时变为块级、表内横向滚动；行内 `code` 允许任意处断行（`overflow-wrap:anywhere`），避免长 API 名把手机页面撑宽。
-- **课程三篇结构（2026-10-16 本人决定）**：基础篇（order < 4）→ 模型篇（4 ≤ order < 100）→ **Agent 篇（order ≥ 100）**。Agent 篇的骨架参考了市面上一门 Agent 工程课的目录顺序（工具调用 → Loop → 上下文/记忆 → RAG → MCP → 流式 → Trace/Eval → 网关与编排 → 框架全景），采用的是"先手写、后看框架"的顺序，**不吸收**它的 Node/前端工程内容。本人决定：先立项写出全部讲，缺什么等他自学时发现再补；模型篇先补齐（反向传播 30、LayerNorm 35、LoRA 40、模型评测 45）再写 Agent 篇。
+- **课程三篇结构（2026-10-16 本人决定）**：基础篇（order < 4）→ 模型篇（4 ≤ order < 99）→ **Agent 篇（order ≥ 99）**（2026-10-22 起由 ≥ 100 改为 ≥ 99：`prompt-engineering` 排 99，作为 Agent 篇第一讲；`src/data/course.ts` 模型篇 `until: 99`）。Agent 篇的骨架参考了市面上一门 Agent 工程课的目录顺序（工具调用 → Loop → 上下文/记忆 → RAG → MCP → 流式 → Trace/Eval → 网关与编排 → 框架全景），采用的是"先手写、后看框架"的顺序，**不吸收**它的 Node/前端工程内容。本人决定：先立项写出全部讲，缺什么等他自学时发现再补；模型篇先补齐（反向传播 30、LayerNorm 35、LoRA 40、模型评测 45）再写 Agent 篇。
 
 - **账号与计费（2026-10-14 本人确认）**：自建账号，D1 不用 PG；不设密码，Passkey 为主、邮箱验证码注册与兜底、TOTP 可选（未做）；每账号同一时间只允许 1 个会话，新登录踢掉旧会话；只做买断，不做订阅；买全套包含以后新增的讲；收款复用 door4ai.com 的 pay-api（接口文档待本人提供）；记录注册来源（首次/最后触达 UTM、ref 渠道码、来源问卷）。设计文档：https://claude.ai/code/artifact/9679fc7a-0fe4-4323-86f1-65cbb1cc005f
 - 两步验证只在「邮箱验证码登录」时要求；Passkey 登录不需要（Passkey 本身就是强认证）。新注册的第一次登录不要求（还没开）。
@@ -178,6 +178,7 @@ door4ai-lab/
 - [x] 模型篇补充四讲（2026-10-19）：《多头注意力与 GQA》(order 7)、《模型量化》(12)、《MoE 混合专家》(15)、《RLHF 与偏好对齐》(42)，各 6 实验 + 2 动画
 - [x] 新增《Harness 是什么：模型外面那层替它动手的程序》（order 107，Agent Loop 之后、上下文窗口之前，作为 Agent 篇总纲；5 实验 + 2 动画）；RLHF 讲末尾加「Agent 的强化学习」一节 + 实验 06（2026-10-19）
 - [x] 新增《后训练是什么：只会续写的基座模型，是怎么变成助手的》（order 41，LoRA 之后、RLHF 之前；按新标准图文写，贯穿算例「17 × 3」，7 张分镜图 + 实验 01–05；无视频）（2026-10-22）
+- [x] 新增《Prompt 工程：怎么跟模型把话说清楚》（order 99，Agent 篇第一讲；按新标准图文写，贯穿算例「网店评论分好评 / 中评 / 差评」，8 张分镜图 + 实验 01–05；无视频）（2026-10-22）
 - [x] 新增《AI 怎么浏览网页、操作电脑：眼睛、手和权限》（order 122，MCP 之后、流式输出之前；5 实验 + 1 动画）（2026-10-19）
 - [x] 新增《模型是怎么看图的：一张图怎样变成一串 token》（order 48，模型篇最后一讲；按新标准图文写，10 张分镜图 + 6 个实验，无视频）（2026-10-22）
 - [x] 新增《位置编码与 RoPE：注意力怎么知道谁在前谁在后》（order 6，注意力讲之后、多头 GQA 讲之前；按新标准图文写，沿用注意力讲的四个 token，11 张分镜图 + 实验 01–05；无视频）（2026-10-22）
@@ -200,6 +201,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-22 · Claude（session_01BU4u8x4TdPeBZqiM9RuSf3）** — 本人要求写 Prompt 工程一讲。新增 `prompt-engineering`（order 99，Agent 篇第一讲，工具调用之前）；`src/data/course.ts` 模型篇 `until` 100 → 99（课程目录已确认它排在 Agent 篇第一位），第 4 节「Agent 篇 order ≥ 100」同步改为 ≥ 99。`labs-src/prompt-engineering/toy.py` 定义贯穿算例（耳机网店评论分类，第一条评论「快递第二天就到了……左耳就没声了」应判差评），token 数由 `count_tokens.mjs` 调同源 `/labs/tokenizer-llm/tiktoken.js`（o200k）在 node 里真实计数（好版本 ChatML 整串 227 = 5 特殊 + 6 角色名 + 2 换行 + 系统提示 184 + 用户 30；系统提示四块 30/25/87/42），生成 8 张 SVG 并由 `article.src.md` 生成文章（4 个「停一下」）。正文七节：消息列表 → 对话模板（ChatML / Llama 3 / Harmony 对照表，Harmony 角色优先级）→ 系统提示四块（角色、任务、规则、输出格式）与「给理由」→ 少样本（示意偏差模型 z = s + α·n/k + β·[最后一个]，四种示例安排，同样 3 个示例只换顺序答案就变；过度模仿）→ 结构化输出（JSON Schema、六种常见格式错误、各家 API 参数表、受约束解码手算 0.46/0.72 = 0.639）→ 先分析再回答（字段顺序 reason 在前）与提示链 → 三个坑（指令冲突、Lost in the Middle、否定指令）→ 10 道测试题两版对比（示例数据，标准误 0.095，McNemar p = 0.375，放大到 100 题 2.4 × 10⁻⁵）。**实验页由 toy.py 生成**：skill 模板的头尾 + `labs-src/prompt-engineering/lab.body.html`，并把 `toy.json` 写成页内 TOY 常量（改实验页改 lab.body.html 后重跑脚本）。实验：01 对话模板拼装器（三种模板，o200k 逐段计数，可带前一轮）/ 02 检查清单（页内规则，标明不是 AI 评分）/ 03 少样本偏差示意（追加 / 删除 / 打乱示例，枚举全部顺序看几种判对）/ 04 JSON 解析 + schema 校验（六种错误一键切换）+ 受约束解码屏蔽与 1000 次抽样 / 05 10 题对比表（示例数据，点格子改结果，题目放大 ×3 / ×10）。事实 2026-10-22 查证：Anthropic `output_config.format`（GA，`output_format` 已弃用，beta 头 `structured-outputs-2025-11-13`）、OpenAI Responses `text.format` + `strict`、Gemini Interactions API `response_format`（`mime_type` + `schema`）、Qwen3 ChatML 模板、Llama 3 格式、Harmony 特殊 token 与优先级、Anthropic 提示文档（正面指令、给理由、3–5 个示例、长文档放前面最多 30%、4.6 起不支持 prefill）、Kojima 2022（17.7% → 78.7%，10.4% → 40.7%）、Wei 2022（PaLM 540B GSM8K 58%）。衔接：`tool-calling.md`「和前后两讲的关系」改为承接本讲。本地 build 42 页通过；1512 浅色 / 390 深色无横向滚动、KaTeX 无报错、无脚本错误，五个实验逐项点过；个人信息检索 0。
 
 - **2026-10-22 · Claude（session_014tDUqdaiQ99Ldxb23D7ZMj）** — 本人要求写位置编码一讲。新增 `positional-encoding`（order 6）：`labs-src/positional-encoding/toy.py` 沿用注意力讲的 x、W_Q、W_K、W_V（另加 4 个示意位置向量 p 与玩具 RoPE θ = 10°），算出整讲数字、表格与 11 张 SVG（打乱前后份额 / 加 p 后份额 / 正弦热力图 / 两根指针 / q 转 30° / 一起转点积不变 / (3,0) 与 (13,10) 同分 / 单频率周期 / 多频率叠加 / Llama 3 底数下 64 对在 8192 内转的圈数 / PI、NTK-aware、YaRN 每对转速倍数），填 `article.src.md` 的 `{{figN}}`、`{{tab_*}}`、`{{n:名字}}` 生成 `src/content/blog/positional-encoding.md`。正文六步：打乱词序结果不变（x′ ≈ (0.74, 1.66) 两句相同）→ 可学习绝对位置（三个毛病，GPT-2 1024 × 768）→ 正弦编码（d = 4 手算、挪 k 格 = 转固定角度推导、加法式四项展开）→ RoPE（旋转公式推导、点积只看 m − n 的角度推法与矩阵推法、(3,0) 与 (13,10) 都是 1.186）→ 多频率（θ_i = b^{−2i/d}，周期 36 的问题、两对验算、远程衰减）→ 长上下文（Llama 3 底数 50 万、L = 8192 时 29 对没转满一圈；PI / NTK-aware（改底数后中间各对仍稍超出，第 35 对 1.85 倍）/ YaRN 分段 + 温度）+ Llama 3 / 3.1 配置表；6 个「停一下」。实验页 `public/labs/positional-encoding/`：01 六种词序 × 三种位置做法 / 02 正弦热力图 + 8 根指针 + PE·PE 只看 k / 03 RoPE 旋转盘 + 分数随位置差曲线 / 04 多频率平均 cos 与每对 cos 小柱 / 05 五种做法下每对训练与测试圈数（橙色 = 没见过的角度）。窄屏改为上下排，公式在 390 宽全部不溢出（长式用 aligned 拆行）。事实 2026-10-22 查证：Llama 3 8B config（rope_theta 500000、8192）、Llama 3.1 8B config（131072、rope_scaling llama3 factor 8 / low 1 / high 4 / original 8192）、Llama 3 论文（底数 500,000，6 阶段约 800B token 扩到 128K）、RoFormer（2021-04）、PI（Chen 等 2023，LLaMA 7B–65B 到 32768，1000 步内）、YaRN（α = 1、β = 32，√(1/t) = 0.1 ln s + 1，Llama 2 7B/13B 到 128K，400 + 200 步）、NTK-aware（bloc97，r/LocalLLaMA，2023）。衔接：`attention-qkv` 的 article.src.md 末段「下一讲」改为位置编码（重跑 toy.py），`multihead-gqa.md`「和前后两讲的关系」加一句承接 RoPE。本地 build 42 页通过；1512 浅色 / 390 深色无横向滚动、KaTeX 无报错、无脚本错误；个人信息检索 0。
 
@@ -387,6 +390,7 @@ door4ai-lab/
    - 模型篇：`backpropagation` 30 反向传播 · `layernorm` 35 LayerNorm · `lora` 40 LoRA · `model-evaluation` 45 模型评测
    - Agent 篇：`tool-calling` 100 工具调用 · `agent-loop` 105 Agent Loop 与 ReAct · `context-window` 110 上下文与记忆 · `rag-embedding` 115 Embedding 与 RAG · `mcp` 120 MCP · `streaming` 125 流式输出（SSE）· `trace-eval` 130 Trace 与 Eval · `gateway-orchestration` 135 多模型网关与多 Agent 编排 · `agent-frameworks` 140 框架全景（纯文字）
    - 补充（2026-10-22）：`post-training` 41 后训练总览 · `positional-encoding` 6 位置编码与 RoPE
+   - 补充（2026-10-22）：`prompt-engineering` 99 Prompt 工程（Agent 篇第一讲）
    - 补充（2026-10-22 已写）：`vision-tokens` 48 模型怎么看图
    - 补充（2026-10-19 已写）：`multihead-gqa` 7 · `weight-quantization` 12 · `mixture-of-experts` 15 · `rlhf-alignment` 42 · `agent-harness` 107 · `browser-computer-use` 122
 2. 给文章列表加按 tag 过滤。
