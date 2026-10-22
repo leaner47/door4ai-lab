@@ -1,11 +1,13 @@
 ---
 name: write-lesson
-description: 把本人提出的一个问题（如「X 是什么」「为什么 Y」「Z 怎么工作」）写成 lab.door4ai.com 课程「AI 从入门到精通」的一讲教材：文章 + 可交互实验页 + Manim 动画，构建、上线并更新 HANDOFF。仅用于 door4ai-lab 项目。
+description: 把本人提出的一个问题（如「X 是什么」「为什么 Y」「Z 怎么工作」）写成 lab.door4ai.com 课程「AI 从入门到精通」的一讲教材：一小步一小步讲清楚的图文讲解 + 风格一致的可交互实验页，构建、上线并更新 HANDOFF。仅用于 door4ai-lab 项目。
 ---
 
 # 写一讲教材（door4ai-lab 专用）
 
-本人在这个项目里提出一个问题时，把它写成课程里的一讲：**文章（讲清楚）+ 实验页（亲手试）+ Manim 动画（看它动起来）**，最后上线。
+本人在这个项目里提出一个问题时，把它写成课程里的一讲：**图文讲解（一小步一小步讲清楚）+ 实验页（亲手试）**，最后上线。
+
+**以图文为主，不做视频。**本人原话：学习需要思考，思考需要停顿。「3b1b 风格」指的是画面像 3b1b——图干净、同一概念同一颜色、一次只变一样东西，而且**文章里的图和实验里的交互图是同一套画法**；不是在文章里插一段视频。
 
 开始前必须先完整读 `HANDOFF.md`（项目强制规定）。它和本人当下的要求优先于本文件。
 
@@ -14,14 +16,14 @@ description: 把本人提出的一个问题（如「X 是什么」「为什么 Y
 - **slug**：英文短横线，如 `gradient-descent`。
 - **标题**：沿用现有风格「问题：一句话点题」，例：`Token 是什么：一句话是怎么进出大模型的`。
 - **order**：看 `src/content/blog/*.md` 现有 order，插在逻辑上该在的位置（可用小数，如 3.5）。
-- **分篇**：`src/data/course.ts` 的 `PARTS` 按 order 区间自动归篇（order < 4 基础篇，其余模型篇）。不属于现有任何一篇时才新开一篇，先问本人。
+- **分篇**：`src/data/course.ts` 的 `PARTS` 按 order 区间自动归篇（区间以该文件为准）。不属于现有任何一篇时才新开一篇，先问本人。
 - 和前后讲的衔接：这一讲依赖哪讲、又为哪讲铺路。
 
 ## 1. 先研究，后动笔
 
 - 概念要准确。涉及现状、版本、价格、规格的内容先查证（WebSearch），不凭记忆写。
 - 数字用真实公开参数（如 Llama-3-70B：80 层 × 8 KV 头 × 128 维；RTX 4090 1008 GB/s），实验里做真实计算，不画假数据。
-- 讲法参照 3Blue1Brown：先给直觉画面，再给公式；一次只引入一个新东西。
+- 讲法参照 3Blue1Brown：先给直觉画面，再给公式；一次只引入一个新东西。具体写法见第 4 节，**那一节是这份 skill 最重要的部分**。
 
 ## 2. 硬规矩（违反就是返工）
 
@@ -29,7 +31,7 @@ description: 把本人提出的一个问题（如「X 是什么」「为什么 Y
 - **不出现指向本人的信息**：不用本人城市（扬州、高邮、波士顿等）、学校、真名、GitHub 用户名、邮箱、自家设备。需要例子就用北京、上海、合肥、纽约，用户名用 `your-name`。
 - **简洁**：不加没被要求的说明小字（eyebrow 以外的副标题、导语式灰字、计数、注释）。实验页开头只放 `.eyebrow` + `h1` + `.lede` 三样（这是实验页规范的一部分）。
 - 字体：拉丁与数字 Times New Roman，中文苹方 / 黑体。
-- **科学单位一律用英文缩写**：s、ms、μs、ns、m、km、kg、g、Hz、W 等，数字与单位之间空一格（`300 s`、`204 km/ms`、`1 TB/s`、`token/s`）。正文、实验页文字、JS 拼出的读数、Manim 画面里都一样。「秒级」这类量级说法可以保留中文。
+- **科学单位一律用英文缩写**：s、ms、μs、ns、m、km、kg、g、Hz、W 等，数字与单位之间空一格（`300 s`、`204 km/ms`、`1 TB/s`、`token/s`）。正文、实验页文字、JS 拼出的读数、图里的标注都一样。「秒级」这类量级说法可以保留中文。
 - **不用横线分隔内容**：段落、小节、列表项之间靠留白；要突出某一块用圆角浅底（`var(--paper)`），不加 `border-top/bottom` 分隔线（表格行线、卡片外框除外）。
 - **文字铺满版面**：不给段落、列表、导语设 `max-width`（不要 68ch 之类），只留左右页边距 `clamp(16px,3vw,40px)`（与页眉对齐）。表单可以有自己的宽度。
 - 手机宽度 390px 不能横向滚动；深浅两色都要能看。
@@ -49,60 +51,66 @@ description: 把本人提出的一个问题（如「X 是什么」「为什么 Y
 
 每个实验 = 编号小标题 `<h2><span class="n">01</span>…</h2>` → 一两段说明 → `.lab` 卡片（控件条 → 画图区 SVG/canvas → 读数行）→ 一句「注意看什么」的 `.note`。一般 4–6 个实验，从直觉到细节递进。
 
-## 4. Manim 动画（可视化）
+## 4. 讲解：一小步一小步讲清楚（最重要）
 
-参考项目文档 `manim/使用说明.md`。只给**动起来才讲得清**的东西做动画：公式推导、向量/矩阵变换、过程演化（训练迭代、数据流过网络）。能用滑块交互讲清的放实验页，不重复做动画。每讲 1–3 段，每段 15–60 s。
+本人的反馈：读者需要自己停下来推演的地方太多，说明步骤不够细。目标是**读者不用拿草稿纸补任何一步**。
 
-**源码**：`manim-src/<slug>/scenes.py`，从 `templates/scene.py` 复制。开头导入 `manim-src/door4ai_style.py`，它统一了背景 `#111214`、配色（`ACCENT/C_Q/C_K/C_V/WARN/OK`）、字体（`T()` 中文、`N()` 数字英文、`M()` 公式）。同一个概念整讲始终用同一种颜色；用 `Transform` 表现「这个变成那个」；动画之间 `pause(self)`；不用 Pi creatures。
+**写法规矩**
 
-**渲染**（在云端工作区做；本人 Mac 上的 Manim 不在可用的 shell 里）：
+1. **一步只引入一个新东西**：一个新符号、一个新操作，或者一个新结论。符号第一次出现前，先用一句话说清它是什么、单位是什么、大概多大。
+2. **推导不跳步**：从上一行到下一行只做一件事（代入、展开、合并同类项、约掉、取对数……），并用一句话说做了什么、为什么可以这样做。禁止「显然」「易得」「不难看出」「同理可得」「略去推导」。
+3. **每个公式都配一个真实数字的算例**：把具体数字代进去，一步步算到结果，读者用计算器能逐步复核。**整讲沿用同一组数字**，从第一个例子一直用到最后，读者不用反复换脑子。
+4. **先具体后一般**：先用最小的例子（1 个参数、2 个 token、3 维向量、4 个数据点）完整算一遍，算完再推广成一般公式，最后才说真实模型的规模。
+5. **每一步配一张图**：过程拆成若干张静止的「分镜图」，每张只比上一张多一个变化。图下的正文要告诉读者看哪里（「看蓝色箭头」「右上角那个点」）。
+6. **给读者停顿**：每个关键结论之后，可以放一个「停一下」问题，让读者先自己想。答案折叠起来，点开才看：
+   ```html
+   <details class="pause"><summary>停一下：学习率翻倍，这一步会走到哪里？</summary>
+   答案：……（同样一步一步写）
+   </details>
+   ```
+   每节 0–2 个，问题必须是读完前文就答得出的，不考没讲过的东西。
+7. **因果链写完整**：「因为 A，所以 B」中间如果还隐含了 C，把 C 写出来。说某个设计「更好」时，要说清楚好在哪、和什么比、差多少（最好给数字）。
+8. **写完自查**：假装自己是只学过前面几讲的读者，从头读一遍。凡是需要停下来自己补一步、自己翻回前文找定义、自己猜图在说什么的地方，都改成写出来。讲清楚优先，不为篇幅省步骤；但每句话都要推进，不写空话。
 
-```bash
-# 一次性环境（每个新会话做一次；manimpango 需要 pango 头文件，Python 用 3.12）
-apt-get install -y -q libpango1.0-dev libcairo2-dev pkg-config dvisvgm
-python3.12 -m venv "$SCRATCH/mvenv" && "$SCRATCH/mvenv/bin/pip" install -q manim
-# 渲染（在 manim-src/ 目录里跑，manim.cfg 在这里）
-cd manim-src
-"$SCRATCH/mvenv/bin/manim" -ql --format webm <slug>/scenes.py SceneName   # 预览
-"$SCRATCH/mvenv/bin/manim" -s -ql <slug>/scenes.py SceneName              # 末帧 PNG，用 Read 看一眼
-"$SCRATCH/mvenv/bin/manim" -qh --format webm <slug>/scenes.py SceneName   # 正式 1080p
-"$SCRATCH/mvenv/bin/manim" -qh -s <slug>/scenes.py SceneName              # 海报帧
-```
+**分工**：文章负责把道理一步步讲完，读者只看文章、不碰实验也能懂；实验负责「自己改一个数，看结果怎么变」，验证文章里的每个结论。实验页每个实验开头同样一步步讲，不能只放控件。
 
-`$SCRATCH` 是会话的 scratchpad 目录。渲染失败时看 `manim/使用说明.md` 第 8 节排错表（缺 `dvisvgm`、LaTeX 转义 `r"\pi"`、改了不生效加 `--disable_caching`）。
+## 5. 图：和实验交互图是同一套画法
 
-**产物**：复制到 `public/videos/<slug>/<SceneName>.webm` 和 `.png`（海报）。单个 webm 尽量 < 5 MB（Cloudflare Pages 单文件上限 25 MB）。`media/` 缓存不入库（已在 `.gitignore`）。
-
-**嵌入**：
-
-- 文章正文里：
-  ```html
-  <figure class="clip"><video src="/videos/<slug>/SceneName.webm" poster="/videos/<slug>/SceneName.png" controls loop muted playsinline preload="metadata"></video></figure>
+- **默认用内联 SVG**，直接写在文章 markdown 里，外面包 `<figure class="fig">…<figcaption>…</figcaption></figure>`（样式在 `Base.astro`）。颜色只用 CSS 变量：`var(--fg)`、`var(--muted)`、`var(--line)`、`var(--accent)`、`var(--warn)`、`var(--ok)`，这样深浅色自动切换，并且和实验页同色。`templates/figure.svg` 是一张示范图（坐标轴、曲线、点、箭头、标注的画法），从它起步。
+- **同一个概念整讲同一个颜色**，文章和实验保持一致（例如参数点一直是 accent 蓝，梯度箭头一直是 warn 橙）。
+- **图的元素和实验一致**：实验里怎么画坐标轴、箭头、柱子、网格，文章的图就怎么画。读者在文章里看到的图，就是实验里那张图在某一时刻的样子。图多、需要算真实数据时，可以写一个小脚本 `labs-src/<slug>/figs.mjs` 生成 SVG，再贴进文章。
+- 图里的变量用斜体，公式片段用 KaTeX 写在图外的正文里，不要在 SVG 里拼公式。
+- **尺寸**：画布宽约 480（`viewBox="0 0 480 H"`），字号 16，缩到手机宽度后约 12px；文章里 CSS 让图最宽 760px、最高一屏的 62%。坐标要用真实函数算出来（写个小脚本生成 points），不要目测。标注不能压线、不能重叠，深浅两色都要截图看。
+- **Manim 只在内联 SVG 画不出来时用**（3D 曲面之类），而且只导出**静态图**（`manim -s`，导出单帧），不做视频。源码放 `manim-src/<slug>/scenes.py`，统一导入 `manim-src/door4ai_style.py`。环境搭建与排错见项目文档 `manim/使用说明.md`。
+  ```bash
+  apt-get install -y -q libpango1.0-dev libcairo2-dev pkg-config dvisvgm
+  python3.12 -m venv "$SCRATCH/mvenv" && "$SCRATCH/mvenv/bin/pip" install -q manim
+  cd manim-src && "$SCRATCH/mvenv/bin/manim" -qh -s -t <slug>/scenes.py SceneName   # -t 透明背景，深浅页面都能放
   ```
-- 实验页里：同样的 `<figure class="clip">`，`templates/lab.html` 已带 `.clip` 样式。
-- 交付前用 `-s` 导出的末帧 PNG 逐段看一遍：文字不出画、不重叠、颜色符合规矩。
+  产物放 `public/figs/<slug>/<SceneName>.png`，用 `<figure class="fig"><img src=… alt=…></figure>` 嵌入。
 
-## 5. 文章 `src/content/blog/<slug>.md`
+## 6. 文章 `src/content/blog/<slug>.md`
 
 从 `templates/article.md` 复制。frontmatter 必填：`title / description / pubDate / tags / lab / series: ai-mastery / order`。正文结构沿用现有各讲：
 
 1. `## 一句话版本`：一段话说清本质。
-2. 2–4 个讲解小节，必要处嵌 Manim 动画。
+2. 讲解小节：按第 4 节的规矩一步一步写，每一步配图、配算例，必要处放「停一下」。小节数量按内容需要，不设上限。
 3. `## 实验里讲了什么`：按实验编号逐条一句话。
 4. `## 和前后两讲的关系`。
 5. `## 延伸阅读`（可选，只放可靠出处）。
 
 文章页会自动把实验整宽嵌在最上面（实验自带标题），正文接在下面，末尾自动出现 WhatsApp 一行和上一讲 / 下一讲。不要自己再写这些。
 
-## 6. 检查与上线
+## 7. 检查与上线
 
 1. `npm run build` 必须通过（会顺带重新生成 `functions/_lib/access-map.ts`，一起提交）。
-2. 本地起 `dist/` 静态服务，用 Playwright（`executablePath: '/opt/pw-browsers/chromium'`）截图并亲眼看：1440 宽与 390 宽、深浅两色；文章页、实验页、课程目录。检查 `scrollWidth` 不超过视口、控制台无报错、视频能加载。
+2. 本地起 `dist/` 静态服务，用 Playwright（`executablePath: '/opt/pw-browsers/chromium'`）截图并亲眼看：1440 宽与 390 宽、深浅两色；文章页、实验页、课程目录。检查 `scrollWidth` 不超过视口、控制台无报错、文章里的 SVG 在深浅两色下都看得清。
+2b. 按第 4 节第 8 条，以读者身份通读一遍文章和实验说明，补齐所有跳步。
 3. 全文再检索一遍个人信息（`扬州|高邮|波士顿|leaner47|周业闰|Yerun`），必须为 0。
 4. 按 HANDOFF「更新协议」更新第 5、6 节（新决定写进第 4 节），与代码一起 commit，`git pull --rebase` 后 push `main`（常有其他会话同时在推）。
 5. 等 1–2 分钟，用 `gh api repos/leaner47/door4ai-lab/commits/<sha>/check-runs` 确认 Cloudflare Pages 成功。
 6. 把 HANDOFF.md 同步到 claude.ai 项目文档 `door4ai-lab/HANDOFF.md`；本人 Mac 上的副本 `~/Documents/Agents/door4ai-lab` 若已连接，`git pull --ff-only` 同步。
 
-## 7. 回复本人
+## 8. 回复本人
 
-简短：这一讲叫什么、排在第几讲、有几个实验和几段动画、已上线。不复述过程。
+简短：这一讲叫什么、排在第几讲、有几个实验和几张图、已上线。不复述过程。

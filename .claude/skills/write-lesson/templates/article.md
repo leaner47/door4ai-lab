@@ -12,15 +12,35 @@ order: __数字__
 
 __一段话说清本质。先给画面，再给术语。__
 
-## __讲解小节 1__
+## __第一步：只讲一件事__
 
-__正文。需要动画的地方：__
+__先说清楚这一步要用到的每个符号是什么。然后用最小的例子、真实的数字，一行一行算，每一行说明做了什么。__
 
-<figure class="clip"><video src="/videos/__slug__/Intro.webm" poster="/videos/__slug__/Intro.png" controls loop muted playsinline preload="metadata"></video></figure>
+$$
+L(x) = x^2
+$$
 
-## __讲解小节 2__
+__代入 $x = 2.6$：__
 
-__正文。__
+$$
+L(2.6) = 2.6^2 = 6.76
+$$
+
+<!-- 每一步一张分镜图：从 templates/figure.svg 复制，颜色只用 CSS 变量 -->
+<figure class="fig">
+<svg viewBox="0 0 800 340" role="img" aria-label="__图的说明__"><!-- … --></svg>
+<figcaption>图 1　__告诉读者看哪里__</figcaption>
+</figure>
+
+<details class="pause"><summary>停一下：__一个读完上文就能答的问题__</summary>
+
+__答案，同样一步一步写。__
+
+</details>
+
+## __第二步：在上一步的基础上只多一样东西__
+
+__沿用同一组数字。__
 
 ## 实验里讲了什么
 

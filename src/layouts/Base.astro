@@ -22,16 +22,16 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
   <style is:global>
     :root{
       --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
-      --accent:#1f5fd1; --accent-soft:#dfe8fb;
+      --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --ok:#2a8a5c;
       --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
       --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
     }
     @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
       --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#2a2d31;
-      --accent:#6f9cf0; --accent-soft:#23334f; color-scheme:dark } }
+      --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --ok:#5ec48f; color-scheme:dark } }
     :root[data-theme="dark"]{
       --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#2a2d31;
-      --accent:#6f9cf0; --accent-soft:#23334f; color-scheme:dark }
+      --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --ok:#5ec48f; color-scheme:dark }
     :root[data-theme="light"]{color-scheme:light}
     :root{--menu-bg:#fff;--menu-shadow:0 10px 30px rgba(20,22,26,.12),0 2px 6px rgba(20,22,26,.06);--chip:#ece8de}
     @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--menu-bg:#17181b;--menu-shadow:0 12px 32px rgba(0,0,0,.6);--chip:#1c1e21} }
@@ -90,6 +90,12 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     .prose th,.prose td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
     .prose figure.cf-flow{margin:28px auto;max-width:420px}
     .prose figure.cf-flow svg{display:block;width:100%;height:auto;font-family:inherit}
+    .prose figure.fig{margin:28px 0}
+    .prose figure.fig svg,.prose figure.fig img{display:block;width:100%;max-width:min(100%,760px);height:auto;max-height:min(62vh,620px);margin-inline:auto;font-family:inherit}
+    .prose figure.fig svg text{font-family:var(--sans)}
+    .prose details.pause{background:var(--paper);border:0;border-radius:12px;padding:14px 18px;margin:24px 0}
+    .prose details.pause summary{font-weight:700;color:var(--accent)}
+    .prose details.pause[open] summary{margin-bottom:8px}
     .prose figure.clip{margin:28px 0;max-width:none}
     .prose figure.clip video{display:block;width:100%;max-width:min(100%,calc(min(62vh,620px) * 16 / 9));margin-inline:auto;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
     .prose figcaption{font-size:14px;color:var(--muted);margin-top:8px;text-align:center}
