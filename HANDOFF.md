@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-22 11:20 America/New_York · 更新者：Claude（会话 session_01VqMoFiGixz3RVrE6UJ4jAo）
+最后更新：2026-10-22 12:00 America/New_York · 更新者：Claude（会话 session_014tDUqdaiQ99Ldxb23D7ZMj）
 
 ---
 
@@ -180,6 +180,7 @@ door4ai-lab/
 - [x] 新增《后训练是什么：只会续写的基座模型，是怎么变成助手的》（order 41，LoRA 之后、RLHF 之前；按新标准图文写，贯穿算例「17 × 3」，7 张分镜图 + 实验 01–05；无视频）（2026-10-22）
 - [x] 新增《AI 怎么浏览网页、操作电脑：眼睛、手和权限》（order 122，MCP 之后、流式输出之前；5 实验 + 1 动画）（2026-10-19）
 - [x] 新增《模型是怎么看图的：一张图怎样变成一串 token》（order 48，模型篇最后一讲；按新标准图文写，10 张分镜图 + 6 个实验，无视频）（2026-10-22）
+- [x] 新增《位置编码与 RoPE：注意力怎么知道谁在前谁在后》（order 6，注意力讲之后、多头 GQA 讲之前；按新标准图文写，沿用注意力讲的四个 token，11 张分镜图 + 实验 01–05；无视频）（2026-10-22）
 - [ ] 待补查（写手凭记忆、未找到原文出处）：RLHF 讲里 GPT-3 预训练 300 B token、InstructGPT 每题 4–9 个回答排序、Llama 2 双奖励模型与四档评分；量化讲的困惑度表来自单作者预印本（arXiv 2601.14277），如需更强出处可删
 - [ ] 本人自学时发现缺口再补
 - [ ] 关于页只有两句话，待充实
@@ -199,6 +200,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-22 · Claude（session_014tDUqdaiQ99Ldxb23D7ZMj）** — 本人要求写位置编码一讲。新增 `positional-encoding`（order 6）：`labs-src/positional-encoding/toy.py` 沿用注意力讲的 x、W_Q、W_K、W_V（另加 4 个示意位置向量 p 与玩具 RoPE θ = 10°），算出整讲数字、表格与 11 张 SVG（打乱前后份额 / 加 p 后份额 / 正弦热力图 / 两根指针 / q 转 30° / 一起转点积不变 / (3,0) 与 (13,10) 同分 / 单频率周期 / 多频率叠加 / Llama 3 底数下 64 对在 8192 内转的圈数 / PI、NTK-aware、YaRN 每对转速倍数），填 `article.src.md` 的 `{{figN}}`、`{{tab_*}}`、`{{n:名字}}` 生成 `src/content/blog/positional-encoding.md`。正文六步：打乱词序结果不变（x′ ≈ (0.74, 1.66) 两句相同）→ 可学习绝对位置（三个毛病，GPT-2 1024 × 768）→ 正弦编码（d = 4 手算、挪 k 格 = 转固定角度推导、加法式四项展开）→ RoPE（旋转公式推导、点积只看 m − n 的角度推法与矩阵推法、(3,0) 与 (13,10) 都是 1.186）→ 多频率（θ_i = b^{−2i/d}，周期 36 的问题、两对验算、远程衰减）→ 长上下文（Llama 3 底数 50 万、L = 8192 时 29 对没转满一圈；PI / NTK-aware（改底数后中间各对仍稍超出，第 35 对 1.85 倍）/ YaRN 分段 + 温度）+ Llama 3 / 3.1 配置表；6 个「停一下」。实验页 `public/labs/positional-encoding/`：01 六种词序 × 三种位置做法 / 02 正弦热力图 + 8 根指针 + PE·PE 只看 k / 03 RoPE 旋转盘 + 分数随位置差曲线 / 04 多频率平均 cos 与每对 cos 小柱 / 05 五种做法下每对训练与测试圈数（橙色 = 没见过的角度）。窄屏改为上下排，公式在 390 宽全部不溢出（长式用 aligned 拆行）。事实 2026-10-22 查证：Llama 3 8B config（rope_theta 500000、8192）、Llama 3.1 8B config（131072、rope_scaling llama3 factor 8 / low 1 / high 4 / original 8192）、Llama 3 论文（底数 500,000，6 阶段约 800B token 扩到 128K）、RoFormer（2021-04）、PI（Chen 等 2023，LLaMA 7B–65B 到 32768，1000 步内）、YaRN（α = 1、β = 32，√(1/t) = 0.1 ln s + 1，Llama 2 7B/13B 到 128K，400 + 200 步）、NTK-aware（bloc97，r/LocalLLaMA，2023）。衔接：`attention-qkv` 的 article.src.md 末段「下一讲」改为位置编码（重跑 toy.py），`multihead-gqa.md`「和前后两讲的关系」加一句承接 RoPE。本地 build 42 页通过；1512 浅色 / 390 深色无横向滚动、KaTeX 无报错、无脚本错误；个人信息检索 0。
 
 - **2026-10-22 · Claude（session_01VqMoFiGixz3RVrE6UJ4jAo）** — 本人问「模型是如何理解图像的」后要求写成教材。新增 `vision-tokens`（order 48，模型评测之后、Agent 篇之前），按 write-lesson 新标准（图文、一小步一小步、无视频）：`labs-src/vision-tokens/toy.py` 定义贯穿算例（4 × 4 灰度小图 → 2 × 2 切块 → $W_E$ 取「亮度 / 竖边」两行得 e → 位置向量 ±0.1 让两块全黑的块分开 → CLIP：三图三句、余弦 0.943/0.055/0.832、τ = 0.1、图 A 选对 75.2%、损失 0.285 → 平均向量丢位置（两张图平均都是 (0.375, 0.25)）→ 投影 W_P → 「竖杠」q = (1, 1) 的注意力 17.1/17.1/53.0/12.9 %），生成 10 张 SVG 分镜图并由 `article.src.md` 生成 `src/content/blog/vision-tokens.md`（4 个「停一下」）。实验页 `public/labs/vision-tokens/`（手写，数字与 toy.py 一致）：00 可点改像素 + 切块大小 / 01 e 与位置向量 / 02 打乱四块平均不变 / 03 CLIP 3 × 3 表（温度、文字向量方向可调）/ 04 三种问题的注意力份额 / 05 Claude 视觉 token 计算器（28 × 28、标准 / 高分辨率两档，二分求最大缩放）+ 小字缩小演示（canvas 真缩放）。真实规模数字 2026-10-22 查证：Claude Vision 文档（⌈w/28⌉ × ⌈h/28⌉，1000² → 1296，1920 × 1080 → 1456 × 819 → 1560，高分辨率 2576 / 4784）、Qwen2-VL 论文（675M ViT、patch 14、2 × 2 合并、224² → 66 token、2D-RoPE）；LLaVA-1.5（ViT-L/14-336、576 token、两层 MLP 投影）与 CLIP（4 亿对、τ 起点 0.07）凭已知出处。衔接：`model-evaluation.md` 末段「到模型篇这里结束」改为接本讲，`tool-calling.md` 模型篇回顾加「模型怎么看图」。本地 build 40 页通过；1512 浅色 / 390 深色无横向滚动、无脚本错误、KaTeX 无报错，390 宽长公式已拆行；个人信息检索 0。
 
@@ -383,7 +386,7 @@ door4ai-lab/
    - 基础篇：`ai-coding-tools` 3.8 AI Coding 入门（Claude Code / Codex 怎么用，接 Resource 页）
    - 模型篇：`backpropagation` 30 反向传播 · `layernorm` 35 LayerNorm · `lora` 40 LoRA · `model-evaluation` 45 模型评测
    - Agent 篇：`tool-calling` 100 工具调用 · `agent-loop` 105 Agent Loop 与 ReAct · `context-window` 110 上下文与记忆 · `rag-embedding` 115 Embedding 与 RAG · `mcp` 120 MCP · `streaming` 125 流式输出（SSE）· `trace-eval` 130 Trace 与 Eval · `gateway-orchestration` 135 多模型网关与多 Agent 编排 · `agent-frameworks` 140 框架全景（纯文字）
-   - 补充（2026-10-22）：`post-training` 41 后训练总览
+   - 补充（2026-10-22）：`post-training` 41 后训练总览 · `positional-encoding` 6 位置编码与 RoPE
    - 补充（2026-10-22 已写）：`vision-tokens` 48 模型怎么看图
    - 补充（2026-10-19 已写）：`multihead-gqa` 7 · `weight-quantization` 12 · `mixture-of-experts` 15 · `rlhf-alignment` 42 · `agent-harness` 107 · `browser-computer-use` 122
 2. 给文章列表加按 tag 过滤。

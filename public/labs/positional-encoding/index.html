@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>位置编码实验室</title>
+<link rel="stylesheet" href="/vendor/katex/katex.min.css">
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(18px,9vw - 16px,200px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+.eq{margin:18px 0;overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.eq .katex-display{margin:0}
+.katex{font-size:1.08em}
+.eq .katex-display>.katex{font-size:1.22em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl input[type=range]{width:150px;max-width:52vw}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn b{color:var(--warn)} .ro.ok b{color:var(--ok)} .ro.acc b{color:var(--accent)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:14px;height:4px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">位置编码 · 正弦编码 · RoPE · 长上下文</div>
+  <h1>位置编码实验室</h1>
+  <p class="lede">还是注意力一讲那四个 token：粮油、店、买了、小米。打乱它们，看注意力分不分得清；再把 q 和 k 转起来。每个数字都在页面里真实算出来。</p>
+</header>
+
+<section id="s1">
+  <h2><span class="n">01</span>打乱词序</h2>
+  <p>「小米」固定在最后（位置 3），前面三个词可以任意排列。每个词的向量 \(x\)、三个矩阵 \(W_Q\)、\(W_K\)、\(W_V\) 都和注意力一讲相同。「小米」用自己的 \(q\) 和每个词的 \(k\) 做点积得到分数 \(s\)，除以 \(\sqrt 2\) 后做 softmax 得到份额 \(w\)，再算 \(x' = x + \sum w\,v\)。</p>
+  <p>三种做法：<b>不加位置</b>；<b>加位置向量</b>，每个词先加上所在位置的 \(p\)（文章第二步那张表）；<b>RoPE</b>，位置 \(m\) 上的 \(q\)、\(k\) 转 \(m \times 10°\)。换几种词序，看右边的 \(x'\) 动不动。灰色虚线箭头是原句「粮油 店 买了 小米」的 \(x'\)。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>词序</label><div class="seg" id="ord1"></div></div>
+      <div class="ctrl"><label>位置信息</label><div class="seg" id="mode1"><button data-m="none" aria-pressed="true">不加位置</button><button data-m="abs" aria-pressed="false">加位置向量</button><button data-m="rope" aria-pressed="false">RoPE</button></div></div>
+    </div>
+    <svg id="fig1" viewBox="0 0 800 260" role="img" aria-label="小米分给每个词的份额，以及得到的 x′"></svg>
+    <div class="readout">
+      <div class="ro warn"><b id="r1a">–</b><span>「粮油」分到的份额</span></div>
+      <div class="ro"><b id="r1b">–</b><span>x′</span></div>
+      <div class="ro acc"><b id="r1c">–</b><span>和原句 x′ 的距离</span></div>
+    </div>
+    <p class="note">不加位置时，六种词序的距离全是 0：份额只是跟着词换了行。加位置向量或 RoPE 之后，换一种顺序，x′ 就变。RoPE 下「粮油」离「小米」越近，分到的份额越大（这一组数字恰好如此，训练出来的模型不一定）。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>正弦位置编码</h2>
+  <p>第 \(i\) 对数是同一个角度的 \(\sin\) 和 \(\cos\)，角度是 \(\omega_i \cdot \text{pos}\)，转速 \(\omega_i = b^{-2i/d}\)。原论文 \(b = 10000\)。热力图每一行是一个位置的编码，每一列是一维：蓝色为正，橙色为负，越深绝对值越大。下面一排圆盘是其中 8 对在选定位置上的指针。</p>
+  <p>两个位置的编码做点积，每一对贡献 \(\sin a \sin(a+b) + \cos a \cos(a+b) = \cos b\)（\(a = \omega_i\,\text{pos}\)，\(b = \omega_i k\)），所以 \(\operatorname{PE}(\text{pos}) \cdot \operatorname{PE}(\text{pos}+k) = \sum_i \cos(\omega_i k)\)，只取决于相隔几格 \(k\)。拖「位置」，看右下角的点积变不变。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="d2">维度 d</label><input id="d2" type="range" min="8" max="128" step="8" value="64"><b id="d2v">64</b></div>
+      <div class="ctrl"><label>底数 b</label><div class="seg" id="b2"><button data-b="100" aria-pressed="false">100</button><button data-b="10000" aria-pressed="true">10000</button><button data-b="500000" aria-pressed="false">500000</button></div></div>
+      <div class="ctrl"><label for="p2">位置</label><input id="p2" type="range" min="0" max="127" step="1" value="20"><b id="p2v">20</b></div>
+      <div class="ctrl"><label for="k2">相隔 k</label><input id="k2" type="range" min="0" max="64" step="1" value="5"><b id="k2v">5</b></div>
+    </div>
+    <svg id="fig2" viewBox="0 0 800 420" role="img" aria-label="正弦位置编码热力图与各对指针"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r2a">–</b><span>第 0 对每个位置转</span></div>
+      <div class="ro"><b id="r2b">–</b><span>最慢一对转一圈要几个位置</span></div>
+      <div class="ro acc"><b id="r2c">–</b><span>PE(位置) · PE(位置 + k)</span></div>
+    </div>
+    <p class="note">热力图左边几列变化最快，越往右越慢。把底数改成 100，最慢的一对也转得很快，远处的位置开始重复；改成 500000，右边一大片几乎不变。拖动「位置」时点积纹丝不动，只有改「相隔 k」它才变。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>RoPE 旋转盘</h2>
+  <p>只看一对数。「小米」的 \(q = (1.0,\ -0.6)\) 在位置 \(m\)，转 \(m\theta\)；「粮油」的 \(k = (1,\ -1)\) 在位置 \(n\)，转 \(n\theta\)。两个箭头的夹角是旋转前的 \(14.04°\) 加上 \((m - n)\theta\)，分数是</p>
+  <div class="eq">\[ q_m \cdot k_n = \lVert q \rVert\,\lVert k \rVert \cos\big(14.04° + (m - n)\,\theta\big) = 1.649\,\cos\big(14.04° + (m - n)\,\theta\big) \]</div>
+  <p>左边是旋转盘：虚线是旋转之前，实线是旋转之后。右边是分数随位置差 \(m - n\) 的曲线，橙点是当前位置差。点「一起往后挪」，两个位置同时加 1：两个箭头都在转，夹角和分数不变。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="m3">小米的位置 m</label><input id="m3" type="range" min="0" max="60" step="1" value="3"><b id="m3v">3</b></div>
+      <div class="ctrl"><label for="n3">粮油的位置 n</label><input id="n3" type="range" min="0" max="60" step="1" value="0"><b id="n3v">0</b></div>
+      <div class="ctrl"><label>每个位置转 θ</label><div class="seg" id="t3"><button data-t="10" aria-pressed="true">10°</button><button data-t="30" aria-pressed="false">30°</button><button data-t="57.2958" aria-pressed="false">1 rad</button></div></div>
+      <button class="btn" id="go3">一起往后挪</button>
+      <button class="btn" id="reset3">回到 (3, 0)</button>
+    </div>
+    <svg id="fig3" viewBox="0 0 800 350" role="img" aria-label="q 和 k 按位置旋转，以及分数随位置差的曲线"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r3a">–</b><span>位置差 m − n</span></div>
+      <div class="ro"><b id="r3b">–</b><span>旋转后的夹角</span></div>
+      <div class="ro warn"><b id="r3c">–</b><span>分数 q · k</span></div>
+      <div class="ro acc"><b id="r3d">–</b><span>下一个同分的位置差</span></div>
+    </div>
+    <p class="note">(3, 0) 和 (13, 10) 分数都是 1.186。只有一个转速时，曲线是周期的：θ = 10° 时位置差 3 和 39 分数相同，这就是下一个实验要多放几个转速的原因。把 n 拖到 m 后面（m − n &lt; 0），分数也不同：RoPE 分得清谁在前。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>多频率叠加</h2>
+  <p>真实的 \(q\)、\(k\) 有 \(d\) 个数，分成 \(d/2\) 对，第 \(i\) 对的转速是 \(\theta_i = b^{-2i/d}\)。为了只看位置的作用，假设每一对的 \(q\)、\(k\) 都同向、长度为 1，这时第 \(i\) 对贡献 \(\cos\big((m-n)\,\theta_i\big)\)，总分除以对数后，在位置差为 0 时是 1。</p>
+  <p>上图是这个平均值随位置差的变化；下面的小柱是选定位置差上每一对各自的 \(\cos\)：蓝色向上为正，橙色向下为负。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>对数 d/2</label><div class="seg" id="n4"></div></div>
+      <div class="ctrl"><label>底数 b</label><div class="seg" id="b4"><button data-b="10000" aria-pressed="true">10000</button><button data-b="500000" aria-pressed="false">500000</button></div></div>
+      <div class="ctrl"><label>横轴到</label><div class="seg" id="x4"><button data-x="100" aria-pressed="true">100</button><button data-x="1000" aria-pressed="false">1000</button><button data-x="20000" aria-pressed="false">20000</button></div></div>
+      <div class="ctrl"><label for="dd4">位置差</label><input id="dd4" type="range" min="0" max="100" step="1" value="30"><b id="dd4v">30</b></div>
+    </div>
+    <svg id="fig4" viewBox="0 0 800 400" role="img" aria-label="多个频率叠加后分数随位置差的变化"></svg>
+    <div class="readout">
+      <div class="ro warn"><b id="r4a">–</b><span>选定位置差的平均分数</span></div>
+      <div class="ro"><b id="r4b">–</b><span>范围内第一次回到 0.95 以上</span></div>
+      <div class="ro"><b id="r4c">–</b><span>最慢一对转一圈要几个位置</span></div>
+    </div>
+    <p class="note">1 对时每 6.3 个位置就回到 1；2 对、4 对时回来得越来越晚；64 对时曲线在开头很快降下来，之后在 0 附近小幅起伏，不再回到 1。选一个较大的位置差看下面的小柱：快的对正负交错、互相抵消，只剩右边慢的几对还是正的。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>超出训练长度</h2>
+  <p>\(d = 128\)，64 对。训练时输入最长 \(L\) 个 token，第 \(i\) 对最多转过 \((L-1)\,\theta_i\)。灰色细柱是训练时转过的圈数，彩色粗柱是测试长度 \(T\) 下（按所选办法改过转速之后）转过的圈数，纵轴是对数刻度，虚线是一圈。训练时没转满一圈、测试时又转得比训练时更远的对，会遇到没见过的角度，标成橙色。</p>
+  <p>记 \(s = T / L\)。位置插值：每一对转速除以 \(s\)。NTK-aware：底数换成 \(b\,s^{d/(d-2)}\)。YaRN：按训练时转过的圈数 \(r\) 分段，\(r &lt; 1\) 的除以 \(s\)，\(r &gt; 32\) 的不动，中间线性过渡。Llama 3.1：按 8192 分段，转一圈少于 2048 个位置的不动，多于 8192 的除以 8，中间平滑过渡（这一项固定用它自己的配置：\(b = 500000\)，\(L = 8192\)）。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>办法</label><div class="seg" id="m5"><button data-m="raw" aria-pressed="true">直接用</button><button data-m="pi" aria-pressed="false">位置插值</button><button data-m="ntk" aria-pressed="false">NTK-aware</button><button data-m="yarn" aria-pressed="false">YaRN</button><button data-m="llama3" aria-pressed="false">Llama 3.1</button></div></div>
+      <div class="ctrl"><label>底数 b</label><div class="seg" id="b5"><button data-b="10000" aria-pressed="false">10000</button><button data-b="500000" aria-pressed="true">500000</button></div></div>
+      <div class="ctrl"><label>训练长度 L</label><div class="seg" id="l5"><button data-l="2048" aria-pressed="false">2048</button><button data-l="4096" aria-pressed="false">4096</button><button data-l="8192" aria-pressed="true">8192</button></div></div>
+      <div class="ctrl"><label for="tl5">测试长度 T</label><input id="tl5" type="range" min="0" max="5" step="1" value="2"><b id="tl5v">32768</b></div>
+    </div>
+    <svg id="fig5" viewBox="0 0 800 300" role="img" aria-label="每一对在训练与测试长度下转过的圈数"></svg>
+    <div class="legend"><span><i style="background:var(--muted)"></i>训练时</span><span><i style="background:var(--accent)"></i>测试时，角度都见过</span><span><i style="background:var(--warn)"></i>测试时，有没见过的角度</span></div>
+    <div class="readout">
+      <div class="ro warn"><b id="r5a">–</b><span>遇到没见过角度的对数</span></div>
+      <div class="ro"><b id="r5b">–</b><span>第 0 对相邻 token 的角度差</span></div>
+      <div class="ro"><b id="r5c">–</b><span>s = T / L</span></div>
+      <div class="ro acc"><b id="r5d">–</b><span>YaRN 的分数系数 1/t</span></div>
+      <div class="ro warn"><b id="r5e">–</b><span>最多转到训练时的几倍</span></div>
+    </div>
+    <p class="note">直接用时，底数 50 万、L = 8192、T = 32768 有 29 对是橙色，正是训练时没转满一圈的那些，最多转到训练时的 4 倍远。位置插值把橙色全部消掉，可第 0 对相邻角度差从 57.3° 缩到 57.3° ÷ s。NTK-aware 只把最慢的一对正好拉回来，其余没转满的对仍是橙色，但超出的倍数小得多（看最右边的读数）。YaRN 全部消掉，第 0 对仍是 57.3°。Llama 3.1 固定只放慢 8 倍，T 超过 8 × 8192 又会出现橙色；它实际上还在 128K 长度上继续训练过，这里只看改转速这一步。</p>
+  </div>
+</section>
+
+</div>
+<script src="/vendor/katex/katex.min.js"></script>
+<script src="/vendor/katex/auto-render.min.js"></script>
+<script>
+try{renderMathInElement(document.body,{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});}catch(e){}
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const vw = (id) => { const lab = document.getElementById(id).closest('.lab'); return Math.max(320, Math.min(800, (lab ? lab.clientWidth - 36 : 800))); };
+const R = Math.PI / 180;
+const fmt = (v, n = 3) => (Math.abs(v) < 0.5 * 10 ** -n ? 0 : v).toFixed(n).replace('-', '−');
+const pc = (v) => (v * 100).toFixed(1) + '%';
+const T = (x, y, s, col = '--fg', size = 15, anchor = 'start', extra = '') => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${size}" text-anchor="${anchor}" fill="${css(col)}" ${extra}>${s}</text>`;
+const L_ = (x1, y1, x2, y2, col = '--line', w = 1.2, dash = '') => `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${css(col)}" stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ''}/>`;
+function arrow(x1, y1, x2, y2, col, w = 2.5, dash = '') {
+  const a = Math.atan2(y2 - y1, x2 - x1), h = 10, s = 0.42;
+  if (Math.hypot(x2 - x1, y2 - y1) < 3) return '';
+  const bx = x2 - h * Math.cos(a), by = y2 - h * Math.sin(a);
+  return L_(x1, y1, bx, by, col, w, dash) + `<path d="M${x2.toFixed(1)} ${y2.toFixed(1)} L${(x2 - h * Math.cos(a - s)).toFixed(1)} ${(y2 - h * Math.sin(a - s)).toFixed(1)} L${(x2 - h * Math.cos(a + s)).toFixed(1)} ${(y2 - h * Math.sin(a + s)).toFixed(1)}z" fill="${css(col)}"/>`;
+}
+function seg(id, cb) {
+  const el = document.getElementById(id);
+  el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; el.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); cb(b); });
+}
+const pressed = (id) => document.querySelector(`#${id} button[aria-pressed=true]`);
+
+/* ———— 注意力一讲的小例子（labs-src/positional-encoding/toy.json）———— */
+const TOY = {x:{'粮油':[0,1],'店':[0.4,0.2],'买了':[0.2,0],'小米':[0.5,0.5]}, WQ:[[1,1],[0,-1.2]], WK:[[1,1],[1,-1]], WV:[[1,0],[0,2]], P:[[0.1,0.2],[0.2,-0.1],[-0.1,-0.2],[-0.2,0.1]], orig:['粮油','店','买了','小米'], th:10};
+const mv = (W, v) => [W[0][0] * v[0] + W[0][1] * v[1], W[1][0] * v[0] + W[1][1] * v[1]];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1];
+const rot = (v, a) => [Math.cos(a) * v[0] - Math.sin(a) * v[1], Math.sin(a) * v[0] + Math.cos(a) * v[1]];
+function attend(order, mode) {
+  let xs = order.map((t) => TOY.x[t]);
+  if (mode === 'abs') xs = xs.map((x, i) => [x[0] + TOY.P[i][0], x[1] + TOY.P[i][1]]);
+  let qs = xs.map((x) => mv(TOY.WQ, x)), ks = xs.map((x) => mv(TOY.WK, x));
+  const vs = xs.map((x) => mv(TOY.WV, x));
+  if (mode === 'rope') { qs = qs.map((q, i) => rot(q, i * TOY.th * R)); ks = ks.map((k, i) => rot(k, i * TOY.th * R)); }
+  const m = 3, s = ks.map((k) => dot(qs[m], k));
+  const e = s.map((v) => Math.exp(v / Math.SQRT2)), Z = e.reduce((a, b) => a + b), w = e.map((v) => v / Z);
+  const d = [0, 1].map((j) => w.reduce((a, wi, i) => a + wi * vs[i][j], 0));
+  return { s, w, xp: [xs[m][0] + d[0], xs[m][1] + d[1]], x: xs[m] };
+}
+
+/* ———— 01 打乱词序 ———— */
+const PERMS = [['粮油','店','买了'],['粮油','买了','店'],['店','粮油','买了'],['店','买了','粮油'],['买了','粮油','店'],['买了','店','粮油']];
+let ord1 = 0;
+$('#ord1').innerHTML = PERMS.map((p, i) => `<button data-i="${i}" aria-pressed="${i === 0}">${p.join(' ')}</button>`).join('');
+seg('ord1', (b) => { ord1 = +b.dataset.i; draw1(); });
+seg('mode1', draw1);
+function draw1() {
+  const mode = pressed('mode1').dataset.m, order = [...PERMS[ord1], '小米'];
+  const A = attend(order, mode), A0 = attend(TOY.orig, mode);
+  const W = vw('fig1'), narrow = W < 600, H = narrow ? 470 : 260;
+  const svg = $('#fig1'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  let s = '';
+  const bw = narrow ? W - 150 : W * 0.5 - 150, rowH = 44;
+  s += T(10, 22, '位置 · token', '--muted', 14) + T(96, 22, '分数 s 与份额 w', '--muted', 14);
+  order.forEach((t, i) => {
+    const y = 40 + i * rowH, len = bw * A.w[i] / 0.55, hi = t === '粮油';
+    s += T(10, y + 18, `${i}`, '--muted', 14) + T(28, y + 18, t, '--fg', 16);
+    s += `<rect x="96" y="${y + 2}" width="${Math.max(1, len).toFixed(1)}" height="22" rx="4" fill="${css(hi ? '--warn' : '--line')}"/>`;
+    s += T(102 + len, y + 18, narrow ? pc(A.w[i]) : `${pc(A.w[i])}（s = ${fmt(A.s[i])}）`, hi ? '--warn' : '--muted', 14);
+  });
+  // 右侧小平面：x、原句 x′、当前 x′
+  const ox = narrow ? 50 : W * 0.5 + 60, oy = narrow ? H - 30 : H - 30, u = Math.min(narrow ? 110 : 130, narrow ? W - 120 : W * 0.5 - 110, (narrow ? 230 : H - 50) / 1.85);
+  s += arrow(ox, oy, ox + 1.05 * u, oy, '--line', 1.2) + arrow(ox, oy, ox, oy - 1.8 * u, '--line', 1.2);
+  s += T(ox + 1.05 * u, oy + 20, '像手机', '--muted', 13, 'end') + T(ox + 8, oy - 1.8 * u + 4, '像粮食', '--muted', 13);
+  s += arrow(ox, oy, ox + A.x[0] * u, oy - A.x[1] * u, '--muted', 2.5);
+  s += arrow(ox, oy, ox + A0.xp[0] * u, oy - A0.xp[1] * u, '--muted', 2, '5 4');
+  s += arrow(ox, oy, ox + A.xp[0] * u, oy - A.xp[1] * u, '--warn', 3.2);
+  s += T(ox + A.xp[0] * u + 8, oy - A.xp[1] * u + 4, 'x′', '--warn', 15, 'start', 'font-style="italic" font-weight="600"');
+  s += T(ox + A.x[0] * u + 8, oy - A.x[1] * u + 14, 'x', '--muted', 15, 'start', 'font-style="italic"');
+  svg.innerHTML = s;
+  $('#r1a').textContent = pc(A.w[order.indexOf('粮油')]);
+  $('#r1b').textContent = `(${fmt(A.xp[0], 2)}, ${fmt(A.xp[1], 2)})`;
+  $('#r1c').textContent = fmt(Math.hypot(A.xp[0] - A0.xp[0], A.xp[1] - A0.xp[1]), 3);
+}
+
+/* ———— 02 正弦位置编码 ———— */
+let b2 = 10000;
+seg('b2', (b) => { b2 = +b.dataset.b; draw2(); });
+['d2', 'p2', 'k2'].forEach((id) => $('#' + id).addEventListener('input', draw2));
+const pe = (pos, d, b) => { const v = []; for (let i = 0; i < d / 2; i++) { const w = b ** (-2 * i / d); v.push(Math.sin(pos * w), Math.cos(pos * w)); } return v; };
+function hexrgb(c) { const ctx = document.createElement('canvas').getContext('2d'); ctx.fillStyle = c; const h = ctx.fillStyle; if (h[0] === '#') return [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); return h.match(/\d+/g).slice(0, 3).map(Number); }
+function draw2() {
+  const d = +$('#d2').value, pos = +$('#p2').value, k = +$('#k2').value;
+  $('#d2v').textContent = d; $('#p2v').textContent = pos; $('#k2v').textContent = k;
+  const NP = 128, W = vw('fig2'), narrow = W < 600;
+  const hx = 50, hy = 34, hw = W - hx - 12, hh = narrow ? 200 : 210;
+  const cv = document.createElement('canvas'); cv.width = d; cv.height = NP;
+  const ctx = cv.getContext('2d'), img = ctx.createImageData(d, NP);
+  const bg = hexrgb(css('--paper')), ca = hexrgb(css('--accent')), cw = hexrgb(css('--warn'));
+  for (let p = 0; p < NP; p++) { const v = pe(p, d, b2); for (let j = 0; j < d; j++) { const a = Math.abs(v[j]), c = v[j] >= 0 ? ca : cw, o = (p * d + j) * 4; for (let ch = 0; ch < 3; ch++) img.data[o + ch] = Math.round(bg[ch] * (1 - a) + c[ch] * a); img.data[o + 3] = 255; } }
+  ctx.putImageData(img, 0, 0);
+  const nC = 8, cr = narrow ? Math.min(20, (W - 40) / (nC / 2) / 2 - 10) : Math.min(26, (W - 40) / nC / 2 - 10);
+  const rowsC = narrow ? 2 : 1, cH = rowsC * (2 * cr + 44);
+  const H = hy + hh + 40 + cH + 10;
+  const svg = $('#fig2'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  let s = T(hx, 20, '维度 →', '--muted', 13) + T(hx - 8, hy + 12, '位置', '--muted', 13, 'end');
+  s += `<image href="${cv.toDataURL()}" x="${hx}" y="${hy}" width="${hw}" height="${hh}" preserveAspectRatio="none" style="image-rendering:pixelated"/>`;
+  for (const p of [0, 32, 64, 96, 127]) s += T(hx - 8, hy + (p + 0.5) / NP * hh + 4, p, '--muted', 12, 'end');
+  for (const j of [0, d / 2, d - 1]) s += T(hx + (j + 0.5) / d * hw, hy + hh + 16, j, '--muted', 12, 'middle');
+  const yy = hy + (pos + 0.5) / NP * hh, y2 = hy + (Math.min(pos + k, NP - 1) + 0.5) / NP * hh;
+  s += `<rect x="${hx - 2}" y="${(yy - hh / NP / 2 - 1).toFixed(1)}" width="${hw + 4}" height="${(hh / NP + 2).toFixed(1)}" fill="none" stroke="${css('--fg')}" stroke-width="1.5"/>`;
+  if (pos + k < NP && k > 0) s += `<rect x="${hx - 2}" y="${(y2 - hh / NP / 2 - 1).toFixed(1)}" width="${hw + 4}" height="${(hh / NP + 2).toFixed(1)}" fill="none" stroke="${css('--fg')}" stroke-width="1" stroke-dasharray="3 3"/>`;
+  // 8 对的指针
+  const pairs = [...Array(nC)].map((_, j) => Math.round(j * (d / 2 - 1) / (nC - 1)));
+  const cy0 = hy + hh + 40;
+  pairs.forEach((i, j) => {
+    const perRow = narrow ? nC / 2 : nC, r = Math.floor(j / perRow), c = j % perRow;
+    const cx = 20 + (c + 0.5) * (W - 40) / perRow, cy = cy0 + r * (2 * cr + 44) + cr + 4;
+    const w = b2 ** (-2 * i / d), a = pos * w;
+    s += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${cr.toFixed(1)}" fill="none" stroke="${css('--line')}" stroke-width="1.4"/>`;
+    s += arrow(cx, cy, cx + cr * 0.9 * Math.cos(a), cy - cr * 0.9 * Math.sin(a), '--accent', 2.2);
+    s += T(cx, cy + cr + 16, `第 ${i} 对`, '--muted', 12, 'middle');
+    const deg = w / R;
+    s += T(cx, cy + cr + 31, deg >= 1 ? `${deg.toFixed(deg >= 10 ? 1 : 2)}°/位` : `${deg.toPrecision(2)}°/位`, '--muted', 11, 'middle');
+  });
+  svg.innerHTML = s;
+  const wmin = b2 ** (-2 * (d / 2 - 1) / d);
+  $('#r2a').textContent = '57.3°';
+  $('#r2b').textContent = Math.round(2 * Math.PI / wmin).toLocaleString('en-US');
+  const a = pe(pos, d, b2), bb = pe(pos + k, d, b2);
+  $('#r2c').textContent = fmt(a.reduce((acc, v, i) => acc + v * bb[i], 0), 3);
+}
+
+/* ———— 03 RoPE 旋转盘 ———— */
+let t3 = 10;
+seg('t3', (b) => { t3 = +b.dataset.t; draw3(); });
+['m3', 'n3'].forEach((id) => $('#' + id).addEventListener('input', draw3));
+$('#go3').addEventListener('click', () => { const m = $('#m3'), n = $('#n3'); if (+m.value < 60 && +n.value < 60) { m.value = +m.value + 1; n.value = +n.value + 1; } draw3(); });
+$('#reset3').addEventListener('click', () => { $('#m3').value = 3; $('#n3').value = 0; draw3(); });
+const Q3 = [1.0, -0.6], K3 = [1, -1];
+const phi0 = (Math.atan2(Q3[1], Q3[0]) - Math.atan2(K3[1], K3[0])) / R;   // 14.04°
+const score3 = (D, th) => Math.hypot(...Q3) * Math.hypot(...K3) * Math.cos((phi0 + D * th) * R);
+function draw3() {
+  const m = +$('#m3').value, n = +$('#n3').value, D = m - n; $('#m3v').textContent = m; $('#n3v').textContent = n;
+  const W = vw('fig3'), narrow = W < 600, H = narrow ? 580 : 350;
+  const svg = $('#fig3'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const cx = narrow ? W / 2 : 160, cy = 160, u = 105;
+  let s = `<circle cx="${cx}" cy="${cy}" r="${u * 1.43}" fill="none" stroke="${css('--line')}" stroke-width="1"/>` + L_(cx - 150, cy, cx + 150, cy) + L_(cx, cy - 150, cx, cy + 150);
+  const q = rot(Q3, m * t3 * R), k = rot(K3, n * t3 * R);
+  s += arrow(cx, cy, cx + Q3[0] * u, cy - Q3[1] * u, '--warn', 1.6, '4 4') + arrow(cx, cy, cx + K3[0] * u, cy - K3[1] * u, '--accent', 1.6, '4 4');
+  s += arrow(cx, cy, cx + k[0] * u, cy - k[1] * u, '--accent', 3.2) + arrow(cx, cy, cx + q[0] * u, cy - q[1] * u, '--warn', 3.6);
+  s += T(cx + q[0] * u * 1.12, cy - q[1] * u * 1.12 + 5, 'q', '--warn', 17, 'middle', 'font-style="italic" font-weight="600"');
+  s += T(cx + k[0] * u * 1.1, cy - k[1] * u * 1.1 + 5, 'k', '--accent', 17, 'middle', 'font-style="italic" font-weight="600"');
+  s += T(cx, cy + 172, `q 转 ${fmt(m * t3, 1)}°，k 转 ${fmt(n * t3, 1)}°`, '--muted', 14, 'middle');
+  // 右：分数随位置差
+  const gx = narrow ? 40 : 340, gy = narrow ? 390 : 40, gw = W - gx - 16, gh = narrow ? 150 : 230, Dm = 60;
+  const X = (d) => gx + (d + Dm) / (2 * Dm) * gw, Y = (v) => gy + gh / 2 - v / 1.8 * gh / 2;
+  s += L_(gx, Y(0), gx + gw, Y(0)) + L_(X(0), gy, X(0), gy + gh);
+  let pts = []; for (let i = 0; i <= 600; i++) { const d = -Dm + i * 2 * Dm / 600; pts.push(`${X(d).toFixed(1)},${Y(score3(d, t3)).toFixed(1)}`); }
+  s += `<polyline points="${pts.join(' ')}" fill="none" stroke="${css('--accent')}" stroke-width="2"/>`;
+  for (let d = -Dm; d <= Dm; d++) s += `<circle cx="${X(d).toFixed(1)}" cy="${Y(score3(d, t3)).toFixed(1)}" r="1.6" fill="${css('--accent')}"/>`;
+  if (Math.abs(D) <= Dm) s += `<circle cx="${X(D).toFixed(1)}" cy="${Y(score3(D, t3)).toFixed(1)}" r="7" fill="${css('--warn')}"/>`;
+  for (const d of [-60, -30, 0, 30, 60]) s += T(X(d), gy + gh + 18, String(d).replace('-', '−'), '--muted', 12, 'middle');
+  s += T(gx + gw, gy + gh + 36, '位置差 m − n', '--muted', 13, 'end') + T(gx + 4, gy - 8, '分数', '--muted', 13);
+  svg.innerHTML = s;
+  const ang = ((phi0 + D * t3) % 360 + 540) % 360 - 180;
+  $('#r3a').textContent = String(D).replace('-', '−');
+  $('#r3b').textContent = fmt(ang, 2) + '°';
+  $('#r3c').textContent = fmt(score3(D, t3), 3);
+  let nxt = '—'; for (let d = D + 1; d <= D + 2000; d++) if (Math.abs(score3(d, t3) - score3(D, t3)) < 5e-4 && Math.abs(((d - D) * t3) % 360) < 1e-6) { nxt = String(d).replace('-', '−'); break; }
+  $('#r3d').textContent = nxt;
+}
+
+/* ———— 04 多频率叠加 ———— */
+const NS = [1, 2, 4, 8, 16, 32, 64];
+$('#n4').innerHTML = NS.map((n) => `<button data-n="${n}" aria-pressed="${n === 64}">${n}</button>`).join('');
+let n4 = 64, b4 = 10000, x4 = 100;
+seg('n4', (b) => { n4 = +b.dataset.n; draw4(); });
+seg('b4', (b) => { b4 = +b.dataset.b; draw4(); });
+seg('x4', (b) => { x4 = +b.dataset.x; const r = $('#dd4'); r.max = x4; r.step = x4 / 100; r.value = Math.round(x4 * 0.3); draw4(); });
+$('#dd4').addEventListener('input', draw4);
+function draw4() {
+  const DD = +$('#dd4').value; $('#dd4v').textContent = DD.toLocaleString('en-US');
+  const d = 2 * n4, th = [...Array(n4)].map((_, i) => b4 ** (-2 * i / d));
+  const f = (D) => th.reduce((a, t) => a + Math.cos(D * t), 0) / n4;
+  const W = vw('fig4'), H = 400, gx = 44, gy = 20, gw = W - gx - 16, gh = 190;
+  const svg = $('#fig4'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const X = (D) => gx + D / x4 * gw, Y = (v) => gy + (1 - v) / 2 * gh;
+  let s = L_(gx, Y(0), gx + gw, Y(0)) + L_(gx, gy, gx, gy + gh);
+  s += T(gx - 6, Y(1) + 4, '1', '--muted', 12, 'end') + T(gx - 6, Y(0) + 4, '0', '--muted', 12, 'end') + T(gx - 6, Y(-1) + 4, '−1', '--muted', 12, 'end');
+  const N = 1200; let pts = []; for (let i = 0; i <= N; i++) { const D = i * x4 / N; pts.push(`${X(D).toFixed(1)},${Y(f(D)).toFixed(1)}`); }
+  s += `<polyline points="${pts.join(' ')}" fill="none" stroke="${css('--warn')}" stroke-width="2"/>`;
+  s += L_(X(DD), gy, X(DD), gy + gh, '--fg', 1, '3 3') + `<circle cx="${X(DD).toFixed(1)}" cy="${Y(f(DD)).toFixed(1)}" r="6" fill="${css('--warn')}"/>`;
+  for (let j = 0; j <= 4; j++) s += T(X(x4 * j / 4), gy + gh + 16, (x4 * j / 4).toLocaleString('en-US'), '--muted', 12, 'middle');
+  s += T(gx + gw, gy + gh + 34, '位置差 m − n', '--muted', 13, 'end');
+  // 每一对的 cos
+  const by = gy + gh + 120, bh = 50, bwid = gw / n4;
+  s += L_(gx, by, gx + gw, by) + T(gx, by - bh - 10, `位置差 ${DD.toLocaleString('en-US')} 时，每一对的 cos（左快右慢）`, '--muted', 13);
+  th.forEach((t, i) => { const v = Math.cos(DD * t), h = Math.abs(v) * bh; s += `<rect x="${(gx + i * bwid + bwid * 0.12).toFixed(1)}" y="${(v >= 0 ? by - h : by).toFixed(1)}" width="${Math.max(1, bwid * 0.76).toFixed(1)}" height="${Math.max(0.5, h).toFixed(1)}" fill="${css(v >= 0 ? '--accent' : '--warn')}"/>`; });
+  svg.innerHTML = s;
+  $('#r4a').textContent = fmt(f(DD), 3);
+  let back = '范围内没有'; for (let i = 1; i <= 20000; i++) { const D = i * x4 / 20000; if (D > 1 && f(D) >= 0.95 && f(D - x4 / 20000) < f(D)) { let dd = D; back = '约 ' + (dd < 100 ? dd.toFixed(1) : Math.round(dd).toLocaleString('en-US')); break; } }
+  $('#r4b').textContent = back;
+  { const lam = 2 * Math.PI / th[n4 - 1]; $('#r4c').textContent = lam.toLocaleString('en-US', { maximumFractionDigits: lam < 100 ? 1 : 0 }); }
+}
+
+/* ———— 05 超出训练长度 ———— */
+const MULT = [1, 2, 4, 8, 16, 32];
+let m5 = 'raw', b5 = 500000, l5 = 8192;
+seg('m5', (b) => { m5 = b.dataset.m; draw5(); });
+seg('b5', (b) => { b5 = +b.dataset.b; draw5(); });
+seg('l5', (b) => { l5 = +b.dataset.l; draw5(); });
+$('#tl5').addEventListener('input', draw5);
+function factors(method, b, L, s, d = 128) {
+  const th = [...Array(d / 2)].map((_, i) => b ** (-2 * i / d));
+  return th.map((t, i) => {
+    const lam = 2 * Math.PI / t;
+    if (method === 'raw' || s <= 1 && method !== 'llama3') return 1;
+    if (method === 'pi') return 1 / s;
+    if (method === 'ntk') { const bn = b * s ** (d / (d - 2)); return bn ** (-2 * i / d) / t; }
+    if (method === 'yarn') { const r = L / lam; if (r < 1) return 1 / s; if (r > 32) return 1; const g = (r - 1) / 31; return (1 - g) / s + g; }
+    if (method === 'llama3') { const Lo = 8192; if (lam < Lo / 4) return 1; if (lam > Lo / 1) return 1 / 8; const sm = (Lo / lam - 1) / (4 - 1); return (1 - sm) / 8 + sm; }
+  });
+}
+function draw5() {
+  let b = b5, L = l5;
+  if (m5 === 'llama3') { b = 500000; L = 8192; }
+  const Tl = L * MULT[+$('#tl5').value]; $('#tl5v').textContent = Tl.toLocaleString('en-US');
+  const s = Tl / L, d = 128, th = [...Array(64)].map((_, i) => b ** (-2 * i / d)), fac = factors(m5, b, L, s);
+  const trainT = th.map((t) => (L - 1) * t / (2 * Math.PI)), testT = th.map((t, i) => (Tl - 1) * t * fac[i] / (2 * Math.PI));
+  const unseen = th.map((_, i) => trainT[i] < 1 && testT[i] > trainT[i] * 1.001);
+  const W = vw('fig5'), H = 300, gx = 50, gy = 16, gw = W - gx - 14, gh = 230;
+  const lo = -4, hi = 5, Y = (v) => gy + gh - (Math.log10(Math.max(v, 1e-4)) - lo) / (hi - lo) * gh;
+  const svg = $('#fig5'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  let st = '';
+  for (let e = lo; e <= hi; e += 1) st += e === 0 ? T(gx - 6, Y(1) + 4, '1', '--muted', 11, 'end') : e === 1 ? T(gx - 6, Y(10) + 4, '10', '--muted', 11, 'end') : T(gx - 6, Y(10 ** e) + 4, `10<tspan dy="-5" font-size="8">${String(e).replace('-', '−')}</tspan>`, '--muted', 11, 'end');
+  st += L_(gx, Y(1), gx + gw, Y(1), '--fg', 1, '4 4') + T(gx + gw, Y(1) - 5, '一圈', '--fg', 12, 'end');
+  const bw = gw / 64;
+  for (let i = 0; i < 64; i++) {
+    const x = gx + i * bw;
+    st += `<rect x="${(x + bw * 0.1).toFixed(1)}" y="${Y(testT[i]).toFixed(1)}" width="${(bw * 0.8).toFixed(1)}" height="${(gy + gh - Y(testT[i])).toFixed(1)}" fill="${css(unseen[i] ? '--warn' : '--accent')}" fill-opacity="0.85"/>`;
+    st += `<rect x="${(x + bw * 0.38).toFixed(1)}" y="${Y(trainT[i]).toFixed(1)}" width="${(bw * 0.24).toFixed(1)}" height="${(gy + gh - Y(trainT[i])).toFixed(1)}" fill="${css('--muted')}"/>`;
+  }
+  for (const i of [0, 16, 32, 48, 63]) st += T(gx + (i + 0.5) * bw, gy + gh + 16, i, '--muted', 12, 'middle');
+  st += T(gx + gw, gy + gh + 34, '第几对 i（左快右慢）', '--muted', 13, 'end');
+  svg.innerHTML = st;
+  $('#r5a').textContent = unseen.filter(Boolean).length;
+  $('#r5b').textContent = fmt(th[0] * fac[0] / R, 1) + '°';
+  $('#r5c').textContent = m5 === 'llama3' ? `${s}（固定放慢 8 倍）` : String(s);
+  const t = 0.1 * Math.log(s) + 1;
+  { let mx = 0; th.forEach((_, i) => { if (trainT[i] < 1) mx = Math.max(mx, testT[i] / trainT[i]); }); $('#r5e').textContent = mx > 1.001 ? fmt(mx, 2) + ' 倍' : '不超过'; }
+  $('#r5d').textContent = m5 === 'yarn' && s > 1 ? fmt(t * t, 3) : '—';
+}
+
+const all = () => { draw1(); draw2(); draw3(); draw4(); draw5(); };
+all();
+addEventListener('resize', all);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>
