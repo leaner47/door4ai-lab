@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-21 23:58 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
+最后更新：2026-10-22 10:50 America/New_York · 更新者：Claude（会话 session_01QvBhNRgUqPZf8fhAnjTAx7）
 
 ---
 
@@ -197,6 +197,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-22 · Claude（session_01QvBhNRgUqPZf8fhAnjTAx7）** — 本人反馈左右页边距很糟糕（大屏上只有 40px，一行一千四百多 px）。全站页边距由 `clamp(16px,3vw,40px)` 改为 `clamp(18px,9vw - 16px,200px)`（390 宽 ≈ 19px，1512 宽 ≈ 120px，1920 宽 ≈ 157px）：`Base.astro` 页眉 / main / 页脚 / `.post-body` / 资源页，全部 28 个实验页 `.wrap`，skill 与实验页模板。本地检查 1512、1920、390 宽：页眉 logo、实验标题、正文左边缘对齐，无横向滚动。
 
 - **2026-10-21 · Claude（session_01QvBhNRgUqPZf8fhAnjTAx7）** — 按新标准重写样板讲 `attention-qkv`：新增 `labs-src/attention-qkv/toy.py`（贯穿全文的四词小例子「粮油 店 买了 小米」，二维 x、W_Q/W_K/W_V、分数 1.6/0.48/0.08/1.0、softmax 47.8/15.6/10.4/26.2 %、÷√2 后 40.8/18.5/13.9/26.7 %、x′≈(0.74, 1.66)；生成 6 张 SVG 图）与 `article.src.md`（八步：缩小问题 → q → k → 点积 → softmax → 除以 √d_k（方差推导 + Qwen 实测）→ v → 加权求和与残差，每步手算表格 + 3 个「停一下」），生成 `src/content/blog/attention-qkv.md`。实验 03/04/06 改用同一组数字（去掉原来的缩放系数 G=0.55）。删除 `public/videos/attention-qkv/` 与 `manim-src/attention-qkv/`。skill 第 5 节补「标准做法」与 `<summary>` 里不能用 `$…$`。本地 build 通过；1512 浅色 / 390 深色无横向滚动、表格不溢出、无脚本错误。
 

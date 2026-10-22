@@ -33,7 +33,7 @@ description: 把本人提出的一个问题（如「X 是什么」「为什么 Y
 - 字体：拉丁与数字 Times New Roman，中文苹方 / 黑体。
 - **科学单位一律用英文缩写**：s、ms、μs、ns、m、km、kg、g、Hz、W 等，数字与单位之间空一格（`300 s`、`204 km/ms`、`1 TB/s`、`token/s`）。正文、实验页文字、JS 拼出的读数、图里的标注都一样。「秒级」这类量级说法可以保留中文。
 - **不用横线分隔内容**：段落、小节、列表项之间靠留白；要突出某一块用圆角浅底（`var(--paper)`），不加 `border-top/bottom` 分隔线（表格行线、卡片外框除外）。
-- **文字铺满版面**：不给段落、列表、导语设 `max-width`（不要 68ch 之类），只留左右页边距 `clamp(16px,3vw,40px)`（与页眉对齐）。表单可以有自己的宽度。
+- **文字铺满版面**：不给段落、列表、导语设 `max-width`（不要 68ch 之类），只留左右页边距 `clamp(18px,9vw - 16px,200px)`（与页眉对齐）。表单可以有自己的宽度。
 - 手机宽度 390px 不能横向滚动；深浅两色都要能看。
 - **公式按标准数学排版**（KaTeX），要和教科书上写出来的一样：分数线、上下标、根号、求和号、斜体变量。不要写 `QKᵀ/√d`、`W<sub>Q</sub>·x`、`e^s / Σ e^s` 这种纯文本或 HTML 拼法。
   - 文章 markdown：行内 `$q = W_Q\,x$`，独立公式用 `$$ ... $$`（构建时渲染）。**正文里的美元金额写成 `\$`**。
@@ -47,7 +47,7 @@ description: 把本人提出的一个问题（如「X 是什么」「为什么 Y
 - 设计 token（`--bg --paper --fg --muted --line --accent --warn --ok`，深色 `#000` / 卡片 `#111214`，浅色 `#f7f3ea` / 卡片 `#fffdf8`），跟随 `<html data-theme>` 与系统深浅色。
 - 图形尺寸上限脚本（`</body>` 前那段「图形尺寸上限」）：每张图（`.lab` 里的 svg/canvas、figure 里的图、`.clip` 视频）按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px，嵌在文章 iframe 里时取外层页面的视口），文字、控件、读数照样铺满。**不要删**；画布高度若由代码按宽度计算，要监听 `resize` 重画（脚本改了尺寸会触发一次 resize）。在 1512 × 860（MacBook Pro 14 寸）下检查每张图都不超过一屏的 62%。
 - 嵌入检测与主题同步脚本（`html.embedded`、读 `localStorage` 的 `d4a-theme`）。**不要删。**
-- 版心 `.wrap{box-sizing:border-box;padding-inline:clamp(16px,3vw,40px)}`（不设 max-width，随窗口铺满），开头 `header.lab-intro`。
+- 版心 `.wrap{box-sizing:border-box;padding-inline:clamp(18px,9vw - 16px,200px)}`（不设 max-width，随窗口铺满），开头 `header.lab-intro`。
 
 每个实验 = 编号小标题 `<h2><span class="n">01</span>…</h2>` → 一两段说明 → `.lab` 卡片（控件条 → 画图区 SVG/canvas → 读数行）→ 一句「注意看什么」的 `.note`。一般 4–6 个实验，从直觉到细节递进。
 

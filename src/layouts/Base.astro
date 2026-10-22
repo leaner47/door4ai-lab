@@ -44,7 +44,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     html,body{height:100%}
     body{display:flex;flex-direction:column;min-height:100dvh}
     .wrap{flex:1;display:flex;flex-direction:column;width:100%}
-    header.site{display:flex;align-items:center;gap:16px 28px;flex-wrap:wrap;padding:16px clamp(16px,3vw,40px)}
+    header.site{display:flex;align-items:center;gap:16px 28px;flex-wrap:wrap;padding:16px clamp(18px,9vw - 16px,200px)}
     header.site nav{margin-left:auto}
     .acts{display:flex;align-items:center;gap:14px}
     .acct{position:relative}
@@ -72,9 +72,9 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     header.site nav a{color:var(--muted);text-decoration:none;font-size:15px}
     @media (max-width:560px){header.site{padding-top:12px;padding-bottom:10px;row-gap:4px}}
     header.site nav a:hover{color:var(--fg)}
-    main{flex:1;display:flex;flex-direction:column;width:100%;padding:40px clamp(16px,3vw,40px) 80px;box-sizing:border-box}
+    main{flex:1;display:flex;flex-direction:column;width:100%;padding:40px clamp(18px,9vw - 16px,200px) 80px;box-sizing:border-box}
     main.full{max-width:none;padding:0}
-    footer.site{padding:20px clamp(16px,3vw,40px) 28px;color:var(--muted);font-size:14px}
+    footer.site{padding:20px clamp(18px,9vw - 16px,200px) 28px;color:var(--muted);font-size:14px}
     .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
     h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;text-wrap:balance}
     .prose h2{font-size:22px;margin:40px 0 8px}
@@ -107,7 +107,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     .prose summary{cursor:pointer;font-weight:700}
     /* 文章页里的实验：不加边框，整宽嵌入，看起来和单独打开实验页一样 */
     .lab-embed{display:block;width:100%;height:600px;border:0;overflow:hidden;background:transparent}
-    .post-body{width:100%;padding:0 clamp(16px,3vw,40px) 80px;box-sizing:border-box}
+    .post-body{width:100%;padding:0 clamp(18px,9vw - 16px,200px) 80px;box-sizing:border-box}
     .post-head{padding-top:40px;padding-bottom:0;margin-bottom:0}
     .post-head h1{margin:8px 0 12px}
     .post-head .lede{color:var(--muted);margin:0}
@@ -164,7 +164,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     .act-legend{display:inline-flex;align-items:center;gap:3px;margin-left:auto}
     .act-legend i{margin:0 1px}
     @media (max-width:520px){.postlist li{grid-template-columns:44px 1fr}.postlist .num{font-size:34px}.postlist a.t{font-size:20px}}
-    .reshead{max-width:900px;margin:0 auto;padding:0 clamp(16px,3vw,40px);box-sizing:border-box}
+    .reshead{max-width:900px;margin:0 auto;padding:0 clamp(18px,9vw - 16px,200px);box-sizing:border-box}
     main.full .reshead:first-child{padding-top:40px}
     .resgroup{margin-top:0;padding-top:28px}
     .resgroup:first-child{border-top:0;padding-top:16px}
@@ -172,7 +172,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     .cardwrap{margin:0;display:flex;flex-direction:column;align-items:center;gap:10px}
     .cardwrap figcaption{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center;line-height:1.4;font-variant-numeric:tabular-nums;white-space:nowrap}
     /* flat card row: horizontal scroll with snap, centered when it fits */
-    .cardrow{display:flex;gap:26px;padding:22px clamp(16px,3vw,40px) 18px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-behavior:smooth;scroll-padding-inline:clamp(16px,3vw,40px);-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+    .cardrow{display:flex;gap:26px;padding:22px clamp(18px,9vw - 16px,200px) 18px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-behavior:smooth;scroll-padding-inline:clamp(18px,9vw - 16px,200px);-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
     .cardrow::-webkit-scrollbar{height:6px}
     .cardrow::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
     .cardrow > .cardwrap{flex:0 0 auto;scroll-snap-align:center}
