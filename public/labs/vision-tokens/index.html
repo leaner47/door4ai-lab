@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>看图实验室</title>
+<link rel="stylesheet" href="/vendor/katex/katex.min.css">
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(18px,9vw - 16px,200px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+p code,li code{font-size:.88em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+ul,ol{padding-left:1.2em}
+.aside{border-left:3px solid var(--accent);padding:4px 0 4px 16px;margin:16px 0;font-size:15.5px}
+.aside b{display:block;margin-bottom:2px}
+.eq{margin:18px 0;overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.eq .katex-display{margin:0}
+.katex{font-size:1.08em}
+.eq .katex-display>.katex{font-size:1.22em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+.seg.q button[aria-pressed=true]{background:var(--warn)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px}
+.toggle input{accent-color:var(--warn)}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn b{color:var(--warn)} .ro.ok b{color:var(--ok)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.sum{font-size:15px;margin-top:10px;line-height:1.9}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.num{text-align:right}
+.tw{overflow-x:auto}
+.key{margin-top:40px;border-top:1px solid var(--line);padding-top:20px}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+.grid-ed rect.px{cursor:pointer}
+.row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;align-items:start}
+.plist{font-size:14px;line-height:1.9;font-variant-numeric:tabular-nums}
+.plist b{color:var(--accent);font-weight:600;margin-right:6px}
+.mat td,.mat th{text-align:center}
+.mat td.diag{background:var(--accent-soft)}
+input[type=number]{width:84px;font:inherit;font-size:14px;padding:3px 6px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px}
+#f0{width:300px!important;max-width:100%}
+canvas.px{display:block;width:100%;image-rendering:pixelated;border-radius:4px}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">像素 · patch · ViT · CLIP · 视觉 token</div>
+  <h1>看图实验室：一张图怎样变成一串 token</h1>
+  <p class="lede">一张 4 × 4 的小图，从像素一路变成大模型里的 token。所有数字都在页面里实时计算，和文章用的是同一组数。</p>
+</header>
+
+<section id="s0">
+  <h2><span class="n">00</span>一张图就是一张数字表</h2>
+  <p>每个格子是一个像素，格子里的数是亮度：0 是黑，1 是白。点一个格子，它的亮度按 0 → 0.5 → 1 循环。</p>
+  <p>再选切块的大小。蓝框是一块；右边是每块按「先第一行、再第二行」展开成的那一串数。下面几个实验都用这张图，改了这里，后面跟着变。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>切块</label><div class="seg" id="ps"><button data-v="1" aria-pressed="false">1 × 1</button><button data-v="2" aria-pressed="true">2 × 2</button><button data-v="4" aria-pressed="false">4 × 4</button></div></div>
+      <button class="btn" id="reset">恢复成文中的图</button>
+    </div>
+    <div class="row2">
+      <svg id="f0" class="grid-ed" viewBox="0 0 260 260" role="img" aria-label="可点击编辑的 4 乘 4 像素图"></svg>
+      <div class="plist" id="plist"></div>
+    </div>
+    <div class="readout">
+      <div class="ro"><b id="r0a">–</b><span>块数（token 数）</span></div>
+      <div class="ro"><b id="r0b">–</b><span>每块几个数</span></div>
+      <div class="ro"><b>16</b><span>像素总数</span></div>
+    </div>
+    <p class="note">块切得越小，块数越多、每块的数越少；块数乘每块的数，总是 16。</p>
+  </div>
+</section>
+
+<section id="s1">
+  <h2><span class="n">01</span>每块变成一个向量</h2>
+  <p>每块的 4 个数 \(p\) 乘以矩阵 \(W_E\)，变成 2 个数：第 1 个是平均亮度，第 2 个是「左列比右列亮多少」，叫竖边。</p>
+  <div class="eq">\[ e = W_E\,p \]</div>
+  <div class="eq">\[ W_E = \begin{pmatrix} 0.25 & 0.25 & 0.25 & 0.25 \\ 0.5 & -0.5 & 0.5 & -0.5 \end{pmatrix} \]</div>
+  <p>两块内容一样，向量就一样，落在同一个点上，模型分不清它们在哪。打开位置向量，每块加上自己位置的那一个：\(h = e + \text{pos}\)。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <label class="toggle"><input type="checkbox" id="usepos"> 加上位置向量</label>
+    </div>
+    <svg id="f1" viewBox="0 0 480 330" role="img" aria-label="四块的向量画在亮度和竖边平面上"></svg>
+    <div class="tw"><table id="t1"></table></div>
+    <div class="readout">
+      <div class="ro warn"><b id="r1a">–</b><span>落在同一点的块</span></div>
+    </div>
+    <p class="note">在 00 里把右上和右下改成不一样，它们就不再重合；关掉位置向量、把两块改成一样，它们又重合了。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>平均会丢掉位置</h2>
+  <p>把一整张图变成一个向量，最简单的办法是四块的向量取平均。点「打乱四块」，右边那张图的四块换了位置，内容不变。</p>
+  <div class="lab">
+    <div class="ctrls"><button class="btn" id="shuf">打乱四块</button></div>
+    <svg id="f2" viewBox="0 0 480 200" role="img" aria-label="原图和打乱后的图，以及它们的平均向量"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r2a">–</b><span>原图的平均向量</span></div>
+      <div class="ro"><b id="r2b">–</b><span>打乱后的平均向量</span></div>
+      <div class="ro warn"><b id="r2c">–</b><span>四个视觉 token 是否相同</span></div>
+    </div>
+    <p class="note">平均向量永远一样：加法不在乎顺序。所以大模型拿到的是每一块各自的 token，而不是一个平均值。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>CLIP 怎么打分</h2>
+  <p>一批里有 3 张图、3 句描述。图 A 是 00 里的那张，图 B 是它左右翻转，图 C 全亮。每张图的向量是四块的平均；每句话的向量由文字模型给出。两两算余弦相似度，每一行除以温度 \(\tau\) 再做 softmax，就是「这张图配的是哪句话」的概率：</p>
+  <div class="eq">\[ P(j \mid i) = \frac{e^{\cos_{ij}/\tau}}{\sum_{k} e^{\cos_{ik}/\tau}} \]</div>
+  <div class="eq">\[ L_i = -\ln P(i \mid i) \]</div>
+  <p>拖「左边亮」的方向，「右边亮」会跟着上下对称地变。训练做的事，就是把这些方向和图像那边的参数一起调，让每行对角线上的概率尽量接近 100%。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="tau">温度 \(\tau\)</label><input id="tau" type="range" min="0" max="100" step="1" value="50"><b id="tauv">0.1</b></div>
+      <div class="ctrl"><label for="ang">「左边亮」的方向</label><input id="ang" type="range" min="0" max="90" step="0.01" value="53.13"><b id="angv">53.1°</b></div>
+    </div>
+    <svg id="f3" viewBox="0 0 480 250" role="img" aria-label="三个图向量和三个文字向量画在同一平面上"></svg>
+    <div class="tw"><table class="mat" id="t3"></table></div>
+    <div class="readout">
+      <div class="ro"><b id="r3a">–</b><span>图 A 选对的概率</span></div>
+      <div class="ro warn"><b id="r3b">–</b><span>这一批的平均损失</span></div>
+    </div>
+    <p class="note">温度越小，概率越「尖」：选对的接近 100%，选错的被压到 0。温度太大，三个选项都在 33% 附近，分不出高低。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>文字 token 去看图</h2>
+  <p>每块的 \(h\) 经过投影 \(z = W_P\,h\)（\(W_P = \begin{pmatrix} 1 & 1 \\ -1 & 1 \end{pmatrix}\)）变成视觉 token。问题里的一个词带着查询 \(q\)，和每个视觉 token 做点积，除以 \(\sqrt{2}\)，再做 softmax，得到它分给每块的注意力份额。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>问题</label><div class="seg q" id="qs"><button data-q="1,1" aria-pressed="true">竖杠在哪</button><button data-q="1,-1" aria-pressed="false">哪里最亮</button><button data-q="-1,0" aria-pressed="false">哪里是黑的</button></div></div>
+    </div>
+    <svg id="f4" viewBox="0 0 480 230" role="img" aria-label="注意力份额叠在图上"></svg>
+    <div class="tw"><table id="t4"></table></div>
+    <div class="readout">
+      <div class="ro warn"><b id="r4a">–</b><span>分得最多的块</span></div>
+    </div>
+    <p class="note">同一组视觉 token，问题一换，注意力就落到别处。回 00 改图，比如把竖杠画到右边，再看「竖杠在哪」。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>一张图要多少 token</h2>
+  <p>Claude 的文档里，每 28 × 28 像素是一个视觉 token：</p>
+  <div class="eq">\[ \text{token 数} = \left\lceil \frac{\text{宽}}{28} \right\rceil \times \left\lceil \frac{\text{高}}{28} \right\rceil \]</div>
+  <p>图太大会先等比例缩小，直到长边和 token 数都不超过上限（标准档长边 1568 px、最多 1568 个 token；高分辨率档长边 2576 px、最多 4784 个 token）。下面按这个规则算。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label>常见尺寸</label><div class="seg" id="pre"><button data-wh="1000,1000" aria-pressed="false">1000 × 1000</button><button data-wh="1920,1080" aria-pressed="true">1920 × 1080</button><button data-wh="3840,2160" aria-pressed="false">3840 × 2160</button><button data-wh="400,300" aria-pressed="false">400 × 300</button></div></div>
+      <div class="ctrl"><label for="iw">宽</label><input id="iw" type="number" min="1" max="8000" value="1920"><label for="ih">高</label><input id="ih" type="number" min="1" max="8000" value="1080"></div>
+      <div class="ctrl"><label>档位</label><div class="seg" id="tier"><button data-t="std" aria-pressed="true">标准</button><button data-t="hi" aria-pressed="false">高分辨率</button></div></div>
+    </div>
+    <svg id="f5" viewBox="0 0 480 280" role="img" aria-label="缩放后的图和 28 像素一块的网格"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r5a">–</b><span>缩放后的尺寸（px）</span></div>
+      <div class="ro"><b id="r5b">–</b><span>网格（列 × 行）</span></div>
+      <div class="ro warn"><b id="r5c">–</b><span>视觉 token</span></div>
+    </div>
+    <p>缩小会让小字变糊。下面先在原图大小下写一行字，再按上面算出的比例缩小，最后放大回来给你看，红线是 28 × 28 的块。</p>
+    <div class="ctrls">
+      <div class="ctrl"><label for="fs">原图里的字高</label><input id="fs" type="range" min="8" max="40" step="1" value="12"><b id="fsv">12 px</b></div>
+    </div>
+    <canvas id="c5" class="px" width="480" height="200" aria-label="缩小之后的文字"></canvas>
+    <div class="readout">
+      <div class="ro warn"><b id="r5d">–</b><span>缩小后的字高</span></div>
+      <div class="ro"><b id="r5e">–</b><span>一块竖着能放几行</span></div>
+    </div>
+    <p class="note">字高缩到 5 px 左右，笔画就开始粘在一起。要模型读小字，先把那一块裁出来再发，比发整张大图有效。</p>
+  </div>
+</section>
+
+</div>
+<script src="/vendor/katex/katex.min.js"></script>
+<script src="/vendor/katex/auto-render.min.js"></script>
+<script>
+try{renderMathInElement(document.body,{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});}catch(e){}
+const $ = (s) => document.querySelector(s);
+const K = (tex) => { try { return katex.renderToString(tex, { throwOnError: false }); } catch (e) { return tex; } };
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const NS = 'http://www.w3.org/2000/svg';
+/* 文中的数（labs-src/vision-tokens/toy.py） */
+const IMG0 = [[1,1,0,0],[1,1,0,0],[1,0,0,0],[1,0,0,0]];
+const NAMES = ['左上','右上','左下','右下'];
+const CORNER = [[0,0],[0,2],[2,0],[2,2]];
+const POS = [[-0.1,0.1],[0.1,0.1],[-0.1,-0.1],[0.1,-0.1]];
+const WP = [[1,1],[-1,1]];
+let img = IMG0.map(r => r.slice());
+let ps = 2;
+const f = (v, d = 3) => { if (Math.abs(v) < 5e-4) return '0'; let t = v.toFixed(d).replace(/0+$/, '').replace(/\.$/, ''); return t.replace('-', '−'); };
+const vec = (v) => `(${f(v[0])}, ${f(v[1])})`;
+const pct = (v) => (v * 100).toFixed(1) + '%';
+const patches = (m) => CORNER.map(([r, c]) => [m[r][c], m[r][c+1], m[r+1][c], m[r+1][c+1]]);
+const embed = (p) => [(p[0]+p[1]+p[2]+p[3]) / 4, (p[0]-p[1]+p[2]-p[3]) / 2];
+const addPos = (E) => E.map((e, i) => [e[0] + POS[i][0], e[1] + POS[i][1]]);
+const mean = (V) => [V.reduce((s, v) => s + v[0], 0) / V.length, V.reduce((s, v) => s + v[1], 0) / V.length];
+const softmax = (xs) => { const m = Math.max(...xs); const e = xs.map(x => Math.exp(x - m)); const s = e.reduce((a, b) => a + b, 0); return e.map(v => v / s); };
+const gray = (v) => { const g = Math.round(255 * v); return `rgb(${g},${g},${g})`; };
+function T(x, y, s, col = '--fg', size = 15, anchor = 'start', w = '') { return `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}" fill="${css(col)}"${w ? ` font-weight="${w}"` : ''}>${s}</text>`; }
+function arrow(x1, y1, x2, y2, col, w = 2.4) {
+  const a = Math.atan2(y2 - y1, x2 - x1), L = 10, k = 0.42, c = css(col);
+  const bx = x2 - L * Math.cos(a), by = y2 - L * Math.sin(a);
+  return `<line x1="${x1}" y1="${y1}" x2="${bx}" y2="${by}" stroke="${c}" stroke-width="${w}"/><path d="M${x2} ${y2} L${x2 - L*Math.cos(a-k)} ${y2 - L*Math.sin(a-k)} L${x2 - L*Math.cos(a+k)} ${y2 - L*Math.sin(a+k)} z" fill="${c}"/>`;
+}
+function drawImg(m, x, y, s, gap = 0, nums = false) {
+  let b = '';
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+    const X = x + c * s + (c >= 2 ? gap : 0), Y = y + r * s + (r >= 2 ? gap : 0);
+    b += `<rect class="px" data-r="${r}" data-c="${c}" x="${X}" y="${Y}" width="${s}" height="${s}" fill="${gray(m[r][c])}" stroke="${css('--muted')}" stroke-width="1"/>`;
+    if (nums) b += `<text x="${X + s/2}" y="${Y + s/2 + 6}" font-size="17" text-anchor="middle" fill="${m[r][c] > 0.5 ? '#111' : '#eee'}" pointer-events="none">${f(m[r][c])}</text>`;
+  }
+  return b;
+}
+
+/* 00 */
+function draw0() {
+  const s = 60, x0 = 10, y0 = 10;
+  let b = drawImg(img, x0, y0, s, 0, true);
+  const n = 4 / ps;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++)
+    b += `<rect x="${x0 + j*ps*s + 2}" y="${y0 + i*ps*s + 2}" width="${ps*s - 4}" height="${ps*s - 4}" rx="5" fill="none" stroke="${css('--accent')}" stroke-width="3" pointer-events="none"/>`;
+  $('#f0').innerHTML = b;
+  const list = [];
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    const v = [];
+    for (let r = 0; r < ps; r++) for (let c = 0; c < ps; c++) v.push(f(img[i*ps + r][j*ps + c]));
+    const name = ps === 2 ? NAMES[i*2 + j] : ps === 4 ? '整张' : `第 ${i + 1} 行第 ${j + 1} 列`;
+    list.push(`<div><b>${name}</b>(${v.join(', ')})</div>`);
+  }
+  $('#plist').innerHTML = list.join('');
+  $('#r0a').textContent = n * n; $('#r0b').textContent = ps * ps;
+}
+$('#f0').addEventListener('click', (ev) => {
+  const t = ev.target.closest('rect.px'); if (!t) return;
+  const r = +t.dataset.r, c = +t.dataset.c; img[r][c] = img[r][c] === 0 ? 0.5 : img[r][c] === 0.5 ? 1 : 0; all();
+});
+$('#reset').addEventListener('click', () => { img = IMG0.map(r => r.slice()); shuf = [1,0,2,3]; all(); });
+document.querySelectorAll('#ps button').forEach(b => b.addEventListener('click', () => {
+  ps = +b.dataset.v; document.querySelectorAll('#ps button').forEach(x => x.setAttribute('aria-pressed', x === b)); draw0();
+}));
+
+/* 01 */
+function draw1() {
+  const E = patches(img).map(embed), usePos = $('#usepos').checked, V = usePos ? addPos(E) : E;
+  const ox = 120, oy = 170, u = 130;
+  let b = arrow(ox - 0.4*u, oy, ox + 1.25*u + 12, oy, '--line', 1.5) + arrow(ox, oy + 1.15*u, ox, oy - 1.15*u - 6, '--line', 1.5);
+  b += T(ox + 1.25*u + 12, oy + 22, '亮度', '--muted', 15, 'end') + T(ox + 8, oy - 1.15*u, '竖边', '--muted', 15);
+  const groups = {};
+  V.forEach((v, i) => { const k = v.map(x => x.toFixed(3)).join(); (groups[k] = groups[k] || []).push(i); });
+  Object.values(groups).forEach((ids) => {
+    const v = V[ids[0]], px = ox + v[0]*u, py = oy - v[1]*u, same = ids.length > 1, col = same ? '--warn' : '--accent';
+    b += Math.hypot(...v) > 0.02 ? arrow(ox, oy, px, py, col) : `<circle cx="${px}" cy="${py}" r="5" fill="${css(col)}"/>`;
+    const right = px < 330, near = Math.hypot(...v) < 0.2;
+    b += T(px + (near ? -8 : right ? 10 : -10), py + (near ? (v[1] < 0 ? 26 : -12) : v[1] < 0 ? 20 : -8), `${ids.map(i => NAMES[i]).join('、')} ${vec(v)}`, col, 15, near ? 'end' : right ? 'start' : 'end', same ? 600 : '');
+  });
+  $('#f1').innerHTML = b;
+  let t = `<tr><th>块</th><th>展开的 4 个数 ${K('p')}</th><th>${K('e = W_E\\,p')}</th>${usePos ? `<th>${K('\\text{pos}')}</th><th>${K('h = e + \\text{pos}')}</th>` : ''}</tr>`;
+  patches(img).forEach((p, i) => { t += `<tr><td>${NAMES[i]}</td><td>(${p.map(x => f(x)).join(', ')})</td><td>${vec(E[i])}</td>${usePos ? `<td>${vec(POS[i])}</td><td>${vec(V[i])}</td>` : ''}</tr>`; });
+  $('#t1').innerHTML = t;
+  const dup = Object.values(groups).filter(g => g.length > 1).map(g => g.map(i => NAMES[i]).join('、'));
+  $('#r1a').textContent = dup.length ? dup.join('；') : '没有';
+}
+$('#usepos').addEventListener('change', draw1);
+
+/* 02 */
+let shuf = [1, 0, 2, 3];
+function shuffled() {
+  const P = patches(img), m = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+  shuf.forEach((src, dst) => { const [r, c] = CORNER[dst], p = P[src]; m[r][c] = p[0]; m[r][c+1] = p[1]; m[r+1][c] = p[2]; m[r+1][c+1] = p[3]; });
+  return m;
+}
+function draw2() {
+  const m2 = shuffled();
+  const H1 = addPos(patches(img).map(embed)), H2 = addPos(patches(m2).map(embed));
+  const a = mean(patches(img).map(embed)), b2 = mean(patches(m2).map(embed));
+  let b = drawImg(img, 20, 20, 30, 4) + drawImg(m2, 200, 20, 30, 4);
+  b += T(82, 168, '原图', '--muted', 15, 'middle') + T(262, 168, '打乱后', '--muted', 15, 'middle');
+  b += `<rect x="372" y="62" width="100" height="58" rx="8" fill="${css('--paper')}" stroke="${css('--warn')}" stroke-width="2"/>`;
+  b += T(422, 86, '平均都是', '--warn', 14, 'middle') + T(422, 108, vec(a), '--warn', 15, 'middle', 600);
+  $('#f2').innerHTML = b;
+  $('#r2a').textContent = vec(a); $('#r2b').textContent = vec(b2);
+  const same = H1.every((h, i) => Math.abs(h[0] - H2[i][0]) < 1e-9 && Math.abs(h[1] - H2[i][1]) < 1e-9);
+  $('#r2c').textContent = same ? '相同' : '不同';
+}
+$('#shuf').addEventListener('click', () => {
+  for (let k = 0; k < 20; k++) { const p = [0,1,2,3].sort(() => Math.random() - 0.5); if (p.join() !== shuf.join()) { shuf = p; break; } }
+  draw2();
+});
+
+/* 03 */
+const tauOf = (v) => Math.pow(10, -2 + 2 * v / 100);       // 0.01 … 1，中间 0.1
+function draw3() {
+  const tau = tauOf(+$('#tau').value), ang = +$('#ang').value * Math.PI / 180;
+  $('#tauv').textContent = tau < 0.1 ? tau.toFixed(3) : tau.toFixed(2); $('#angv').textContent = (+$('#ang').value).toFixed(1) + '°';
+  const mB = img.map(r => r.slice().reverse()), mC = img.map(r => r.map(() => 1));
+  const I = [mean(patches(img).map(embed)), mean(patches(mB).map(embed)), mean(patches(mC).map(embed))];
+  const Tt = [[Math.cos(ang), Math.sin(ang)], [Math.cos(ang), -Math.sin(ang)], [1, 0]];
+  const caps = ['左边亮', '右边亮', '全亮'], ims = ['A', 'B', 'C'];
+  const cos = I.map(v => { const n = Math.hypot(...v); return Tt.map(t => n < 1e-9 ? 0 : (v[0]*t[0] + v[1]*t[1]) / n); });
+  const P = cos.map(row => softmax(row.map(c => c / tau)));
+  const L = P.map((row, i) => -Math.log(Math.max(row[i], 1e-300)));
+  // 图：向量方向
+  const ox = 150, oy = 125, u = 100;
+  let b = arrow(ox - 1.1*u, oy, ox + 1.2*u + 10, oy, '--line', 1.5) + arrow(ox, oy + 1.1*u, ox, oy - 1.1*u, '--line', 1.5);
+  Tt.forEach((t, j) => { b += arrow(ox, oy, ox + t[0]*u, oy - t[1]*u, '--ok', 2.2); b += T(ox + t[0]*u + 8, oy - t[1]*u + (j === 1 ? 18 : j === 2 ? 20 : -4), `「${caps[j]}」`, '--ok', 14); });
+  const labs = [];
+  I.forEach((v, i) => { const n = Math.hypot(...v); if (n < 1e-9) return; const x = ox + v[0]/n*u*0.8, y = oy - v[1]/n*u*0.8;
+    b += arrow(ox, oy, x, y, '--accent', 3); labs.push({ x: x + 10, y: y - 6, t: `图 ${ims[i]}` }); });
+  labs.sort((a, c) => a.y - c.y);
+  for (let k = 1; k < labs.length; k++) if (labs[k].y - labs[k-1].y < 18) labs[k].y = labs[k-1].y + 18;   // 标签不重叠
+  labs.forEach(l => { b += T(l.x, l.y, l.t, '--accent', 14, 'start', 600); });
+  b += T(330, 40, '蓝：图向量（方向）', '--accent', 14) + T(330, 62, '绿：文字向量', '--ok', 14);
+  $('#f3').innerHTML = b;
+  let t = `<tr><th></th>${caps.map(c => `<th>「${c}」</th>`).join('')}<th>损失</th></tr>`;
+  ims.forEach((n, i) => { t += `<tr><td>图 ${n}</td>${cos[i].map((c, j) => `<td class="${i === j ? 'diag' : ''}">${f(c)}<br><span style="color:var(--muted)">${pct(P[i][j])}</span></td>`).join('')}<td>${L[i].toFixed(3)}</td></tr>`; });
+  $('#t3').innerHTML = t;
+  $('#r3a').textContent = pct(P[0][0]); $('#r3b').textContent = (L.reduce((a, b) => a + b, 0) / 3).toFixed(3);
+}
+['#tau', '#ang'].forEach(s => $(s).addEventListener('input', draw3));
+
+/* 04 */
+let q = [1, 1];
+function draw4() {
+  const H = addPos(patches(img).map(embed));
+  const Z = H.map(h => [WP[0][0]*h[0] + WP[0][1]*h[1], WP[1][0]*h[0] + WP[1][1]*h[1]]);
+  const S = Z.map(z => q[0]*z[0] + q[1]*z[1]), SS = S.map(s => s / Math.SQRT2), W = softmax(SS);
+  const top = W.indexOf(Math.max(...W));
+  let b = drawImg(img, 30, 20, 45, 10);
+  CORNER.forEach(([r, c], i) => {
+    const x = 30 + c*45 + (c ? 10 : 0), y = 20 + r*45 + (r ? 10 : 0);
+    b += `<rect x="${x}" y="${y}" width="90" height="90" rx="4" fill="${css('--warn')}" fill-opacity="${Math.min(0.55, W[i]*0.9).toFixed(2)}" stroke="${css('--warn')}" stroke-width="${1 + 5*W[i]}"/>`;
+    b += `<text x="${x + 45}" y="${y + 51}" font-size="16" text-anchor="middle" font-weight="600" fill="${css('--fg')}" paint-order="stroke" stroke="${css('--bg')}" stroke-width="4">${pct(W[i])}</text>`;
+  });
+  const mx = Math.max(...W);
+  W.forEach((w, i) => { const y = 34 + i*40;
+    b += T(300, y + 16, NAMES[i], '--fg', 15, 'end');
+    b += `<rect x="310" y="${y}" width="${Math.max(1, 100*w/mx)}" height="22" rx="4" fill="${css(i === top ? '--warn' : '--line')}"/>`;
+    b += T(316 + 100*w/mx, y + 17, pct(w), i === top ? '--warn' : '--muted', 15); });
+  $('#f4').innerHTML = b;
+  let t = `<tr><th>块</th><th>${K('h')}</th><th>${K('z = W_P\\,h')}</th><th>${K('s = q \\cdot z')}</th><th>${K('s / \\sqrt{2}')}</th><th>份额</th></tr>`;
+  Z.forEach((z, i) => { t += `<tr><td>${NAMES[i]}</td><td>${vec(H[i])}</td><td>${vec(z)}</td><td>${f(S[i])}</td><td>${f(SS[i])}</td><td>${pct(W[i])}</td></tr>`; });
+  $('#t4').innerHTML = t;
+  $('#r4a').textContent = `${NAMES[top]} ${pct(W[top])}`;
+}
+document.querySelectorAll('#qs button').forEach(b => b.addEventListener('click', () => {
+  q = b.dataset.q.split(',').map(Number); document.querySelectorAll('#qs button').forEach(x => x.setAttribute('aria-pressed', x === b)); draw4();
+}));
+
+/* 05 */
+let tier = 'std';
+function fitSize(w, h) {
+  const LE = tier === 'std' ? 1568 : 2576, CAP = tier === 'std' ? 1568 : 4784;
+  const ok = (s) => { const W = Math.max(1, Math.round(w*s)), H = Math.max(1, Math.round(h*s)); return Math.ceil(W/28) * Math.ceil(H/28) <= CAP && Math.max(W, H) <= LE; };
+  let s = 1;
+  if (!ok(1)) { let lo = 0, hi = 1; for (let k = 0; k < 60; k++) { const mid = (lo + hi) / 2; ok(mid) ? lo = mid : hi = mid; } s = lo; }
+  const W = Math.max(1, Math.round(w*s)), H = Math.max(1, Math.round(h*s));
+  return { s, W, H, cols: Math.ceil(W/28), rows: Math.ceil(H/28) };
+}
+function draw5() {
+  const w = Math.min(8000, Math.max(1, +$('#iw').value || 1)), h = Math.min(8000, Math.max(1, +$('#ih').value || 1));
+  const r = fitSize(w, h);
+  $('#r5a').textContent = r.s < 1 ? `${r.W} × ${r.H}` : `${r.W} × ${r.H}（未缩放）`;
+  $('#r5b').textContent = `${r.cols} × ${r.rows}`;
+  $('#r5c').textContent = (r.cols * r.rows).toLocaleString('en-US');
+  // 图：原图外框 + 缩放后的网格
+  const k = Math.min(440 / w, 250 / h), ox = 20, oy = 15;
+  let b = `<rect x="${ox}" y="${oy}" width="${w*k}" height="${h*k}" fill="none" stroke="${css('--muted')}" stroke-dasharray="5 4"/>`;
+  const gw = r.W * k * (w / r.W) * r.s, gh = r.H * k * (h / r.H) * r.s;   // 缩放后在同一比例尺下的大小
+  b += `<rect x="${ox}" y="${oy}" width="${gw}" height="${gh}" fill="${css('--accent-soft')}" stroke="${css('--accent')}" stroke-width="2"/>`;
+  const step = 28 * (gw / r.W);
+  if (step > 2.2) {
+    for (let i = 1; i < r.cols; i++) b += `<line x1="${ox + i*step}" y1="${oy}" x2="${ox + i*step}" y2="${oy + Math.min(gh, r.rows*step)}" stroke="${css('--accent')}" stroke-width="0.6" opacity=".6"/>`;
+    for (let j = 1; j < r.rows; j++) b += `<line x1="${ox}" y1="${oy + j*step}" x2="${ox + Math.min(gw, r.cols*step)}" y2="${oy + j*step}" stroke="${css('--accent')}" stroke-width="0.6" opacity=".6"/>`;
+  }
+  b += T(ox + w*k, oy + h*k + 20, `原图 ${w} × ${h}`, '--muted', 14, 'end');
+  if (r.s < 1) b += T(ox + 6, oy + gh - 8, `缩放后 ${r.W} × ${r.H}`, '--accent', 14, 'start', 600);
+  $('#f5').setAttribute('viewBox', `0 0 480 ${Math.round(oy + h*k + 30)}`);
+  $('#f5').innerHTML = b;
+  // 小字
+  const fs = +$('#fs').value; $('#fsv').textContent = fs + ' px';
+  const small = fs * r.s;
+  $('#r5d').textContent = small.toFixed(1) + ' px'; $('#r5e').textContent = (28 / small).toFixed(1) + ' 行';
+  const txt = 'Attention is all you need. 注意力就是一切 0123456789';
+  const srcW = Math.ceil(fs * 30), srcH = Math.ceil(fs * 3.2);
+  const src = document.createElement('canvas'); src.width = srcW; src.height = srcH;
+  const g = src.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, srcW, srcH); g.fillStyle = '#111';
+  g.font = `${fs}px "PingFang SC","Heiti SC","Noto Sans SC",sans-serif`; g.textBaseline = 'middle'; g.fillText(txt, fs * 0.5, srcH / 2);
+  const dw = Math.max(1, Math.round(srcW * r.s)), dh = Math.max(1, Math.round(srcH * r.s));
+  const mid = document.createElement('canvas'); mid.width = dw; mid.height = dh;
+  const mg = mid.getContext('2d'); mg.imageSmoothingEnabled = true; mg.imageSmoothingQuality = 'high'; mg.drawImage(src, 0, 0, dw, dh);
+  const cv = $('#c5'), cw = Math.max(320, Math.round(cv.getBoundingClientRect().width || 480));
+  const zoom = cw / srcW; const ch = Math.round(srcH * zoom);
+  cv.width = cw; cv.height = ch;
+  const c = cv.getContext('2d'); c.imageSmoothingEnabled = false; c.drawImage(mid, 0, 0, cw, ch);
+  c.strokeStyle = 'rgba(220,60,40,.8)'; c.lineWidth = 1;
+  const blk = 28 / r.s * zoom;   // 一个 token 的边长，换算到显示尺寸
+  for (let x = blk; x < cw; x += blk) { c.beginPath(); c.moveTo(Math.round(x) + .5, 0); c.lineTo(Math.round(x) + .5, ch); c.stroke(); }
+  for (let y = blk; y < ch; y += blk) { c.beginPath(); c.moveTo(0, Math.round(y) + .5); c.lineTo(cw, Math.round(y) + .5); c.stroke(); }
+}
+document.querySelectorAll('#pre button').forEach(b => b.addEventListener('click', () => {
+  const [w, h] = b.dataset.wh.split(','); $('#iw').value = w; $('#ih').value = h;
+  document.querySelectorAll('#pre button').forEach(x => x.setAttribute('aria-pressed', x === b)); draw5();
+}));
+document.querySelectorAll('#tier button').forEach(b => b.addEventListener('click', () => {
+  tier = b.dataset.t; document.querySelectorAll('#tier button').forEach(x => x.setAttribute('aria-pressed', x === b)); draw5();
+}));
+['#iw', '#ih'].forEach(s => $(s).addEventListener('input', () => { document.querySelectorAll('#pre button').forEach(x => x.setAttribute('aria-pressed', 'false')); draw5(); }));
+$('#fs').addEventListener('input', draw5);
+addEventListener('resize', draw5);
+
+const all = () => { draw0(); draw1(); draw2(); draw3(); draw4(); draw5(); };
+all();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>
