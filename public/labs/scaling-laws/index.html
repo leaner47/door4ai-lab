@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>Scaling Laws 实验室 · Door4AI Lab</title>
+<link rel="stylesheet" href="/vendor/katex/katex.min.css">
+<style>
+:root{
+  --bg:#f7f3ea; --paper:#fffdf8; --fg:#1d2126; --muted:#5f6670; --line:#d9d6cd;
+  --accent:#1f5fd1; --accent-soft:#dfe8fb; --warn:#c2541b; --warn-soft:#fbe6d9; --ok:#2a8a5c;
+  --sans:"Times New Roman",Times,"PingFang SC","Heiti SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#000; --paper:#111214; --fg:#e8e6df; --muted:#9aa1ab; --line:#333941;
+  --accent:#6f9cf0; --accent-soft:#23334f; --warn:#f08a56; --warn-soft:#4a2a1a; --ok:#5ec48f; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:17px;line-height:1.8;margin:0}
+.wrap{box-sizing:border-box;padding-inline:clamp(18px,9vw - 16px,200px);padding-block:40px 80px}
+header{margin-bottom:48px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:8px 0 12px;font-weight:700;text-wrap:balance}
+.lede{color:var(--muted);margin:0}
+section{margin-top:64px}
+h2{font-size:22px;margin:0 0 6px;font-weight:700;text-wrap:balance}
+h2 .n{color:var(--accent);font-weight:600;margin-right:10px;font-size:18px}
+p{margin:12px 0}
+p code,li code{font-size:.88em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+ul,ol{padding-left:1.2em}
+.aside{border-left:3px solid var(--accent);padding:4px 0 4px 16px;margin:16px 0;font-size:15.5px}
+.aside b{display:block;margin-bottom:2px}
+.eq{margin:18px 0;overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.eq .katex-display{margin:0}
+.katex{font-size:1.08em}
+.eq .katex-display>.katex{font-size:1.22em}
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-bottom:14px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+.seg.q button[aria-pressed=true]{background:var(--warn)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px}
+.toggle input{accent-color:var(--warn)}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;font-variant-numeric:tabular-nums}
+.ro{border-top:2px solid var(--line);padding-top:6px}
+.ro b{display:block;font-size:20px;font-weight:600}
+.ro span{font-size:12px;color:var(--muted)}
+.ro.warn b{color:var(--warn)} .ro.ok b{color:var(--ok)}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.sum{font-size:15px;margin-top:10px;line-height:1.9}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.num{text-align:right}
+.tw{overflow-x:auto}
+.key{margin-top:40px;border-top:1px solid var(--line);padding-top:20px}
+.clip{margin:20px 0}
+.clip video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;background:#111214}
+.ctrl input[type=range]{width:170px}
+.ctrl b{font-variant-numeric:tabular-nums;font-weight:600;min-width:4.5em}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;color:var(--muted);margin-top:8px}
+.legend u.sw{display:inline-block;width:16px;height:4px;border-radius:2px;vertical-align:middle;margin-right:6px;text-decoration:none}
+.legend u.sw.d{background:none;border-top:2px dashed currentColor;height:0}
+.detail{background:var(--bg);border-radius:8px;padding:12px 14px;margin-top:12px;font-size:15px}
+@media (max-width:520px){.ctrl input[type=range]{width:140px}}
+</style>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embedded");try{var t=localStorage.getItem("d4a-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script></head>
+<body>
+<div class="wrap">
+<header class="lab-intro">
+  <div class="eyebrow">6ND · 幂律 · Chinchilla · 过训练 · 涌现</div>
+  <h1>Scaling Laws 实验室</h1>
+  <p class="lede">参数、数据、算力三者之间的账：要做多少次运算，钱该花在模型上还是数据上，把推理算进去以后又该怎么配。每个数字都在页面里真实算出来。</p>
+</header>
+
+<section id="s1">
+  <h2><span class="n">01</span>6ND 算力计算器</h2>
+  <p>训练时每个 token 要做三件事：前向，每个参数一次乘法一次加法，\(2N\) 次运算；反向传给上一层，又是 \(2N\)；反向算每个参数的梯度，再 \(2N\)。读了 \(D\) 个 token，总运算就是</p>
+  <div class="eq">\[ C \approx 6ND \]</div>
+  <p>总运算除以显卡每秒能做的运算，就是要跑多少秒。显卡不会一直跑满峰值，实际用上的比例叫利用率（MFU）。所以卡时 = \(C \div (\text{峰值} \times \text{利用率}) \div 3600\)，再除以卡数就是要训多少小时。</p>
+  <p>选一个公开模型，或者自己拖 \(N\) 和 \(D\)。有官方卡时的模型，下面第三根条是官方数字，可以和算出来的对照。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="seg" id="p1" role="group" aria-label="预设模型"></div>
+    </div>
+    <div class="ctrls">
+      <div class="ctrl"><label for="n1">参数量 <i>N</i></label><input id="n1" type="range" min="8" max="12.3" step="0.0001" value="9.905"><b id="n1v"></b></div>
+      <div class="ctrl"><label for="d1">训练 token <i>D</i></label><input id="d1" type="range" min="9" max="14" step="0.0001" value="13.176"><b id="d1v"></b></div>
+    </div>
+    <div class="ctrls">
+      <div class="seg" id="g1" role="group" aria-label="显卡"></div>
+      <div class="ctrl"><label for="m1">利用率</label><input id="m1" type="range" min="10" max="70" step="1" value="40"><b id="m1v"></b></div>
+      <div class="ctrl"><label for="k1">卡数</label><input id="k1" type="range" min="8" max="15" step="0.25" value="13.29"><b id="k1v"></b></div>
+    </div>
+    <svg id="fig1" viewBox="0 0 800 240" role="img" aria-label="每个 token 的运算构成与换算出的卡时"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r1a">–</b><span>总运算 <i>C</i>（FLOPs）</span></div>
+      <div class="ro"><b id="r1b">–</b><span>按所选利用率的卡时</span></div>
+      <div class="ro ok"><b id="r1c">–</b><span>用这么多卡要训</span></div>
+      <div class="ro warn"><b id="r1d">–</b><span>官方卡时反推的利用率</span></div>
+    </div>
+    <p class="note">注意看：Llama-3-8B 按 40% 利用率算约 51 万卡时，官方是 130 万卡时；6ND 是「最少要做的运算」，真实账单常常是它的 2–3 倍。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>对数坐标下的幂律</h2>
+  <p>Kaplan 等人 2020 年发现，损失随参数量按幂律下降：</p>
+  <div class="eq">\[ L(N) = \left(\frac{N_c}{N}\right)^{\alpha}, \qquad N_c = 8.8 \times 10^{13} \]</div>
+  <p>他们测出 \(\alpha \approx 0.076\)。把 \(N\) 换成 \(10N\)，括号里的数变成原来的 \(1/10\)，损失就乘 \(10^{-\alpha}\)，和从哪个 \(N\) 开始无关。两边取对数：\(\ln L = \alpha \ln N_c - \alpha \ln N\)，以 \(\ln N\) 为横轴、\(\ln L\) 为纵轴，就是一条斜率为 \(-\alpha\) 的直线。</p>
+  <p>拖 \(\alpha\)，在普通坐标和对数坐标之间切换。橙色三角形标出参数乘 10 时损失降了多少。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="a2">指数 <i>α</i></label><input id="a2" type="range" min="0.03" max="0.3" step="0.001" value="0.076"><b id="a2v"></b></div>
+      <div class="seg" id="ax2" role="group" aria-label="坐标"><button aria-pressed="false" data-v="lin">普通坐标</button><button aria-pressed="true" data-v="log">对数坐标</button></div>
+    </div>
+    <svg id="fig2" viewBox="0 0 800 300" role="img" aria-label="损失随参数量的幂律曲线"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r2a">–</b><span><i>L</i>(1B)</span></div>
+      <div class="ro"><b id="r2b">–</b><span><i>L</i>(10B)</span></div>
+      <div class="ro ok"><b id="r2c">–</b><span>参数每乘 10，损失乘</span></div>
+      <div class="ro warn"><b id="r2d">–</b><span>损失降一半，参数要乘</span></div>
+    </div>
+    <p class="note">注意看：在对数坐标里，不管 α 是多少都是直线，α 只改变斜率；在普通坐标里，变化全挤在最左边。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>给定算力，拖参数量</h2>
+  <p>Chinchilla 把损失写成三项：去不掉的部分 \(E\)、模型太小的代价、数据太少的代价：</p>
+  <div class="eq">\[ L(N, D) = E + \frac{A}{N^{\alpha}} + \frac{B}{D^{\beta}} \]</div>
+  <p>算力 \(C\) 固定时，选定 \(N\) 就定了 \(D = C / (6N)\)，损失只剩 \(N\) 一个变量。\(N\) 太大，数据不够；\(N\) 太小，模型不够。令导数为 0 得到谷底：</p>
+  <div class="eq">\[ N_{\text{opt}} = \left(\frac{\alpha A}{\beta B}\right)^{\frac{1}{\alpha+\beta}} \left(\frac{C}{6}\right)^{\frac{\beta}{\alpha+\beta}} \]</div>
+  <p>默认算力是 Chinchilla 与 Gopher 的预算 \(5.76 \times 10^{23}\) FLOPs。拖 \(N\) 看点在 U 形上走，拖算力看谷底移动。系数可以在 Besiroglu 等人 2024 年的重新拟合和 Hoffmann 等人原论文之间切换。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="c3">算力 <i>C</i></label><input id="c3" type="range" min="20" max="26" step="0.01" value="23.76"><b id="c3v"></b></div>
+      <div class="ctrl"><label for="n3">参数量 <i>N</i></label><input id="n3" type="range" min="8" max="13" step="0.001" value="10.845"><b id="n3v"></b></div>
+      <div class="seg" id="f3" role="group" aria-label="系数"><button aria-pressed="true" data-v="epoch">重新拟合（2024）</button><button aria-pressed="false" data-v="orig">原论文（2022）</button></div>
+    </div>
+    <svg id="fig3" viewBox="0 0 800 300" role="img" aria-label="算力固定时损失随参数量的 U 形曲线"></svg>
+    <div class="legend"><span><u class="sw" style="background:var(--accent)"></u>两项之和 <i>L</i> − <i>E</i></span><span style="color:var(--muted)"><u class="sw d"></u>模型太小 <i>A</i>/<i>N</i><sup><i>α</i></sup></span><span style="color:var(--warn)"><u class="sw d"></u>数据太少 <i>B</i>/<i>D</i><sup><i>β</i></sup></span></div>
+    <div class="readout">
+      <div class="ro"><b id="r3a">–</b><span>这个 <i>N</i> 能读的 token</span></div>
+      <div class="ro"><b id="r3b">–</b><span>每参数 token</span></div>
+      <div class="ro"><b id="r3c">–</b><span>损失 <i>L</i></span></div>
+      <div class="ro ok"><b id="r3d">–</b><span>最优 <i>N</i> / <i>D</i></span></div>
+      <div class="ro ok"><b id="r3e">–</b><span>最优每参数 token</span></div>
+    </div>
+    <p class="note">注意看：用重新拟合的系数，算力从 10<sup>20</sup> 拖到 10<sup>26</sup>，最优每参数 token 只在 16–23 之间变；切到原论文那组系数，同样的预算给出约 59，而且随算力明显变大，和论文自己用另外两种方法得出的约 20 对不上，这正是它被重新拟合的原因。</p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>把推理算进去</h2>
+  <p>模型上线后，每生成一个 token 要做一次前向，约 \(2N\) 次运算。设一生要生成 \(D_{\text{推}}\) 个 token，训练加推理的总运算是</p>
+  <div class="eq">\[ C_{\text{总}} = 6 N D_{\text{训}} + 2 N D_{\text{推}} \]</div>
+  <p>定一个要达到的损失：Llama-3-8B 的配置（8.03B 参数、15 T token）在实验 03 的公式（重新拟合系数）里的值 2.0218。对每个 \(N\)，从 \(L(N, D_{\text{训}}) = 2.0218\) 反解出需要的训练数据，再算总运算。蓝线是总运算，灰虚线是其中的训练部分，橙虚线是推理部分。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="i4">一生推理 token</label><input id="i4" type="range" min="10" max="16" step="0.05" value="14"><b id="i4v"></b></div>
+      <label class="toggle"><input type="checkbox" id="z4">不算推理（<i>D</i><sub>推</sub> = 0）</label>
+    </div>
+    <svg id="fig4" viewBox="0 0 800 300" role="img" aria-label="达到同一损失时训练加推理总运算随参数量的变化"></svg>
+    <div class="legend"><span><u class="sw" style="background:var(--accent)"></u>总运算</span><span style="color:var(--muted)"><u class="sw d"></u>训练</span><span style="color:var(--warn)"><u class="sw d"></u>推理</span><span style="color:var(--ok)">● 最省的点</span></div>
+    <div class="readout">
+      <div class="ro ok"><b id="r4a">–</b><span>最省的 <i>N</i></span></div>
+      <div class="ro"><b id="r4b">–</b><span>它要的训练 token</span></div>
+      <div class="ro"><b id="r4c">–</b><span>每参数 token</span></div>
+      <div class="ro warn"><b id="r4d">–</b><span>Llama-3-8B 比最优多花</span></div>
+    </div>
+    <p class="note">注意看：不算推理时最优就是 Chinchilla 比例（约 19 个/参数），8B 要多花几倍；推理拖到 10<sup>14</sup> 附近，最优落到 8B 左右，每参数上千个 token。曲线左端在约 5B 处竖起来：再小的模型，读多少数据也到不了这个损失。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>涌现与度量</h2>
+  <p>设模型每个答案 token 猜对的概率 \(p\) 随规模平稳上升（示意：每个 token 的损失 \(\ell = c\,N^{-k}\)，取 \(10^8\) 时 \(\ell = 1.2\)、\(10^{11}\) 时 \(\ell = 0.02\)，\(p = e^{-\ell}\)）。答案有 \(L\) 个 token，三种打分：</p>
+  <ul>
+    <li><b>全对才算对</b>：各 token 独立时，得分是 \(p^{L}\)。</li>
+    <li><b>token 准确率</b>：平均每个 token 对不对，就是 \(p\)，和 \(L\) 无关。</li>
+    <li><b>编辑距离</b>：平均错几个 token，是 \(L\,(1-p)\)，图上画成「错的个数」，越低越好。</li>
+  </ul>
+  <p>拖答案长度、切换打分方式。灰线一直是每个 token 的 \(p\)，作为对照。</p>
+  <div class="lab">
+    <div class="ctrls">
+      <div class="ctrl"><label for="l5">答案长度 <i>L</i></label><input id="l5" type="range" min="1" max="20" step="1" value="5"><b id="l5v"></b></div>
+      <div class="seg" id="m5" role="group" aria-label="打分方式"><button aria-pressed="true" data-v="em">全对才算对</button><button aria-pressed="false" data-v="tok">token 准确率</button><button aria-pressed="false" data-v="ed">编辑距离</button></div>
+    </div>
+    <svg id="fig5" viewBox="0 0 800 300" role="img" aria-label="同一组输出用不同打分方式随规模的变化"></svg>
+    <div class="readout">
+      <div class="ro"><b id="r5a">–</b><span><i>N</i> = 10<sup>9</sup> 时得分</span></div>
+      <div class="ro"><b id="r5b">–</b><span><i>N</i> = 10<sup>10</sup> 时得分</span></div>
+      <div class="ro warn"><b id="r5c">–</b><span>得分从 10% 升到 90% 跨了</span></div>
+    </div>
+    <p class="note">注意看：模型没变，只换打分方式。「全对」下答案越长，曲线越陡、起跳点越靠右；token 准确率和编辑距离始终平滑。</p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2><span class="n">06</span>公开模型散点图</h2>
+  <p>横轴参数量 \(N\)，纵轴训练 token 数 \(D\)，两个轴都取对数。在这样的图上，\(D = kN\) 是一条斜率为 1 的直线；绿虚线是 Chinchilla 的每参数 20 个 token，灰虚线是每参数 1 个。点旁的数字就是 \(D/N\)。点一个点，下面列出它的 \(6ND\)、官方给的算力和卡时，以及由卡时反推的有效利用率（V100 峰值按 125 TFLOPS，H100 按 989.5 TFLOPS）。</p>
+  <div class="lab">
+    <svg id="fig6" viewBox="0 0 800 340" role="img" aria-label="公开模型的参数量与训练 token 数散点图"></svg>
+    <div class="detail" id="d6"></div>
+    <p class="note">注意看：2020–2021 年的 GPT-3、Gopher 在 20 线下面很远；Llama 3 全部在它上面，8B 高出近两个数量级。数字出处：GPT-3 论文与 Patterson 等 2021；Chinchilla 论文；Llama 3 / 3.1 模型卡与技术报告。</p>
+  </div>
+</section>
+
+</div>
+<script src="/vendor/katex/katex.min.js"></script>
+<script src="/vendor/katex/auto-render.min.js"></script>
+<script>
+try{renderMathInElement(document.body,{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});}catch(e){}
+/* 数字来自 labs-src/scaling-laws/toy.json（与文章同一组） */
+const TOY = {"H100": 989.5e12, "V100": 125e12, "A100": 312e12, "kaplan": [0.076, 8.8e13],
+  "fit": [1.8172, 482.01, 2085.43, 0.3478, 0.3658], "fit0": [1.6934, 406.4, 410.7, 0.3392, 0.2849], "CB": 5.76e23,
+  "em": [1.2 * Math.pow(1e8, Math.log10(1.2 / 0.02) / 3), Math.log10(1.2 / 0.02) / 3],
+  "models": [["GPT-3", 175e9, 300e9, 3.14e23, 3552000, "V100", "2020"], ["Gopher", 280e9, 300e9, 5.76e23, null, "TPU v3", "2021"],
+    ["Chinchilla", 70e9, 1.4e12, 5.76e23, null, "TPU v3/v4", "2022"], ["Llama-3-8B", 8.03e9, 15e12, null, 1.3e6, "H100", "2024"],
+    ["Llama-3-70B", 70.6e9, 15e12, null, 6.4e6, "H100", "2024"], ["Llama-3.1-405B", 405e9, 15.6e12, 3.8e25, 30.84e6, "H100", "2024"]]};
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const vw = (id) => { const lab = document.getElementById(id).closest('.lab'); return Math.max(320, Math.min(800, (lab ? lab.clientWidth - 36 : 800))); };
+const SUPD = {'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+const p10 = (e) => `10<sup>${e}</sup>`;
+function sci(v, k = 2) { if (!isFinite(v) || v <= 0) return '–'; let e = Math.floor(Math.log10(v)), m = v / 10 ** e; if (+m.toFixed(k) >= 10) { m /= 10; e++; } return m.toFixed(k) + ' × ' + p10(e); }
+function big(v) { for (const [u, s] of [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']]) if (v >= u) return (+(v / u).toPrecision(3)) + s; return (+v.toPrecision(3)) + ''; }
+function hrs(h) { if (h >= 1e8) return (h / 1e8).toFixed(2) + ' 亿'; if (h >= 1e4) return (h / 1e4).toFixed(1) + ' 万'; return Math.round(h).toLocaleString('en-US'); }
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const T = (x, y, s, col = '--fg', size = 14, anchor = 'start', extra = '') => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${size}" text-anchor="${anchor}" fill="${css(col)}" ${extra}>${String(s).replace(/<sup>(.*?)<\/sup>/g, (m, e) => `<tspan font-size="${(size * 0.72).toFixed(1)}" dy="-6">${e}</tspan><tspan dy="6"> </tspan>`)}</text>`;
+const Ln = (x1, y1, x2, y2, col = '--line', w = 1.2, dash = '') => `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${css(col)}" stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ''}/>`;
+const Pth = (pts, col, w = 2.5, dash = '') => pts.length ? `<path d="${pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ')}" fill="none" stroke="${css(col)}" stroke-width="${w}" stroke-linejoin="round" ${dash ? `stroke-dasharray="${dash}"` : ''}/>` : '';
+const Cir = (x, y, r, col, extra = '') => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${css(col)}" ${extra}/>`;
+const I = (s) => `<tspan font-style="italic">${s}</tspan>`;
+/* 坐标轴：x、y 可分别取对数 */
+function ax(x0, y0, w, h, xr, yr, xlog, ylog) {
+  const f = (v, r, lg) => lg ? (Math.log10(v) - Math.log10(r[0])) / (Math.log10(r[1]) - Math.log10(r[0])) : (v - r[0]) / (r[1] - r[0]);
+  return { x0, y0, w, h, X: (v) => x0 + f(v, xr, xlog) * w, Y: (v) => y0 + h - f(v, yr, ylog) * h, xr, yr, xlog, ylog,
+    frame() { return Ln(x0, y0 + h, x0 + w, y0 + h, '--muted') + Ln(x0, y0, x0, y0 + h, '--muted'); },
+    xt(v, lab) { const x = this.X(v); return Ln(x, y0 + h, x, y0 + h + 5, '--muted') + T(x, y0 + h + 20, lab, '--muted', 13, 'middle'); },
+    yt(v, lab, grid) { const y = this.Y(v); return (grid ? Ln(x0, y, x0 + w, y, '--line', 1) : '') + Ln(x0 - 5, y, x0, y, '--muted') + T(x0 - 8, y + 4, lab, '--muted', 13, 'end'); },
+    curve(fn, col, w = 2.5, dash = '', n = 220) { const pts = []; for (let i = 0; i <= n; i++) { const t = i / n; const v = xlog ? 10 ** (Math.log10(xr[0]) + t * (Math.log10(xr[1]) - Math.log10(xr[0]))) : xr[0] + t * (xr[1] - xr[0]); const y = fn(v); if (y == null || !isFinite(y)) continue; const yy = this.Y(Math.min(Math.max(y, ylog ? yr[0] * 0.5 : yr[0] - (yr[1] - yr[0])), ylog ? yr[1] * 2 : yr[1] + (yr[1] - yr[0]))); pts.push([this.X(v), yy]); } return Pth(pts, col, w, dash); } };
+}
+function seg(id, cb) { const el = document.getElementById(id); el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; el.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); cb(b.dataset.v); }); }
+const segv = (id) => document.querySelector(`#${id} button[aria-pressed=true]`).dataset.v;
+const clip = (s) => `<defs><clipPath id="${s.id}"><rect x="${s.x0}" y="${s.y0 - 2}" width="${s.w}" height="${s.h + 4}"/></clipPath></defs>`;
+
+/* ———— 01 计算器 ———— */
+const GPUS = { H100: TOY.H100, A100: TOY.A100, V100: TOY.V100 };
+const PRE = [['GPT-3', 175e9, 300e9, 'V100', 3552000, 10000], ['Chinchilla', 70e9, 1.4e12, 'H100', null, 4096], ['Llama-3-8B', 8.03e9, 15e12, 'H100', 1.3e6, 16384], ['Llama-3-70B', 70.6e9, 15e12, 'H100', 6.4e6, 16384], ['Llama-3.1-405B', 405e9, 15.6e12, 'H100', 30.84e6, 16384], ['自定义', null]];
+let pre1 = 2, gpu1 = 'H100';
+$('#p1').innerHTML = PRE.map((p, i) => `<button aria-pressed="${i === pre1}" data-v="${i}">${p[0]}</button>`).join('');
+$('#g1').innerHTML = Object.keys(GPUS).map(g => `<button aria-pressed="${g === gpu1}" data-v="${g}">${g}</button>`).join('');
+function setPre(i) { pre1 = i; const p = PRE[i]; if (p[1] == null) return; $('#n1').value = Math.log10(p[1]); $('#d1').value = Math.log10(p[2]); $('#k1').value = Math.log2(p[5]); gpu1 = p[3]; $('#g1').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === gpu1)); }
+seg('p1', (v) => { setPre(+v); draw1(); });
+seg('g1', (v) => { gpu1 = v; draw1(); });
+['n1', 'd1'].forEach(id => $('#' + id).addEventListener('input', () => { pre1 = 5; $('#p1').querySelectorAll('button').forEach((b, i) => b.setAttribute('aria-pressed', i === 5)); draw1(); }));
+['m1', 'k1'].forEach(id => $('#' + id).addEventListener('input', draw1));
+function draw1() {
+  const N = 10 ** +$('#n1').value, D = 10 ** +$('#d1').value, mfu = +$('#m1').value / 100, K = Math.round(2 ** +$('#k1').value);
+  $('#n1v').textContent = big(N); $('#d1v').textContent = big(D); $('#m1v').textContent = Math.round(mfu * 100) + '%'; $('#k1v').textContent = K.toLocaleString('en-US') + ' 张';
+  const C = 6 * N * D, peak = GPUS[gpu1];
+  const h100 = C / peak / 3600, hm = h100 / mfu, days = hm / K / 24;
+  const p = PRE[pre1], rep = (p[1] != null && p[3] === gpu1) ? p[4] : null;
+  $('#r1a').innerHTML = sci(C); $('#r1b').textContent = hrs(hm) + ' 卡时';
+  $('#r1c').textContent = days >= 2 ? days.toFixed(1) + ' 天' : (days * 24).toFixed(1) + ' 小时';
+  $('#r1d').textContent = rep ? (h100 / rep * 100).toFixed(1) + '%' : '–';
+  const W = vw('fig1'), H = 240; const svg = $('#fig1'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  let s = T(0, 16, '每个 token 的运算', '--muted', 13);
+  const u = (W - 120) / 6, parts = [['前向', '--accent'], ['反向 ① 传给上一层', '--warn'], ['反向 ② 参数梯度', '--warn']];
+  const narrow1 = W < 560; parts.forEach(([nm, col], i) => { if (narrow1) nm = ['前向', '反向 ①', '反向 ②'][i]; const x = i * 2 * u; s += `<rect x="${x}" y="26" width="${2 * u - 4}" height="30" rx="5" fill="${css(col)}"/>` + T(x + u - 2, 47, '2' + I('N'), '--bg', 15, 'middle') + T(x + u - 2, 74, nm, col, 13, 'middle'); });
+  s += T(6 * u + 8, 47, '= 6' + I('N'), '--fg', 16);
+  const rows = [['利用率 100%', h100, '--line'], [`利用率 ${Math.round(mfu * 100)}%`, hm, '--accent']]; if (rep) rows.push(['官方报告', rep, '--fg']);
+  const mx = Math.max(...rows.map(r => r[1])); const lw = 96, bw = W - lw - 90;
+  s += T(0, 108, `换算成 ${gpu1} 卡时`, '--muted', 13);
+  rows.forEach(([lab, h, col], i) => { const y = 118 + i * 38; const w = Math.max(2, bw * h / mx); s += T(lw - 8, y + 18, lab, '--muted', 13, 'end') + `<rect x="${lw}" y="${y}" width="${w.toFixed(1)}" height="24" rx="4" fill="${css(col)}"/>` + T(lw + w + 6, y + 17, hrs(h), col === '--line' ? '--muted' : col, 13); });
+  svg.innerHTML = s;
+}
+
+/* ———— 02 幂律 ———— */
+seg('ax2', draw2); $('#a2').addEventListener('input', () => draw2());
+function draw2() {
+  const a = +$('#a2').value, Nc = TOY.kaplan[1], log = segv('ax2') === 'log';
+  $('#a2v').textContent = a.toFixed(3);
+  const L = (n) => (Nc / n) ** a;
+  $('#r2a').textContent = L(1e9).toFixed(3); $('#r2b').textContent = L(1e10).toFixed(3);
+  $('#r2c').textContent = (10 ** -a).toFixed(3) + '（降 ' + ((1 - 10 ** -a) * 100).toFixed(1) + '%）';
+  $('#r2d').innerHTML = sci(2 ** (1 / a), 1) + ' 倍';
+  const W = vw('fig2'), H = 300; const svg = $('#fig2'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const lo = L(1e10), hi = L(1e6);
+  const yr = log ? [lo * 0.85, hi * 1.15] : [0, hi * 1.1];
+  const A = ax(56, 30, W - 80, H - 76, log ? [1e6, 1e10] : [0, 1e10], yr, log, log); A.id = 'c2';
+  let s = clip(A) + A.frame();
+  if (log) { for (let e = 6; e <= 10; e++) s += A.xt(10 ** e, p10(e)); }
+  else { [0, 2.5e9, 5e9, 7.5e9, 1e10].forEach(v => s += A.xt(v, v ? big(v) : '0')); }
+  const tk = []; const step = (yr[1] - yr[0]) > 6 ? 2 : ((yr[1] - yr[0]) > 2 ? 1 : 0.5); for (let v = Math.ceil(yr[0] / step) * step; v <= yr[1]; v += step) if (v > 0 || !log) tk.push(v);
+  tk.forEach(v => s += A.yt(v, (+v.toFixed(1)) + '', true));
+  s += `<g clip-path="url(#c2)">` + A.curve(L, '--accent', 3, '', 400) + '</g>';
+  const x1 = A.X(1e9), x2 = A.X(1e10), y1 = A.Y(L(1e9)), y2 = A.Y(L(1e10));
+  s += Ln(x1, y1, x2, y1, '--warn', 1.5, '4 3') + Ln(x2, y1, x2, y2, '--warn', 1.5, '4 3') + Cir(x1, y1, 4.5, '--warn') + Cir(x2, y2, 4.5, '--warn');
+  s += T(x2 - 8, y2 + 5, '× ' + (10 ** -a).toFixed(3), '--warn', 13, 'end');
+  s += T((x1 + x2) / 2, y1 - 8, log ? '× 10' : '', '--warn', 13, 'middle');
+  s += T(A.x0 + A.w / 2, H - 6, I('N') + (log ? '（对数刻度）' : '（普通刻度）'), '--muted', 13, 'middle') + T(4, 14, I('L') + (log ? '（对数刻度）' : ''), '--muted', 13);
+  svg.innerHTML = s;
+}
+
+/* ———— 03 U 形 ———— */
+seg('f3', () => draw3());
+['c3', 'n3'].forEach(id => $('#' + id).addEventListener('input', draw3));
+const fitOf = () => segv('f3') === 'orig' ? TOY.fit0 : TOY.fit;
+function opt(C, [E, A, B, al, be]) { const g = (al * A / (be * B)) ** (1 / (al + be)); const n = g * (C / 6) ** (be / (al + be)); return [n, C / 6 / n]; }
+function draw3() {
+  const [E, A, B, al, be] = fitOf(); const C = 10 ** +$('#c3').value; let N = 10 ** +$('#n3').value;
+  const [no, dop] = opt(C, fitOf());
+  const lo = Math.log10(no) - 2, hi = Math.log10(no) + 2;
+  $('#n3').min = lo.toFixed(2); $('#n3').max = hi.toFixed(2); if (+$('#n3').value < lo || +$('#n3').value > hi) { $('#n3').value = Math.min(hi, Math.max(lo, +$('#n3').value)); N = 10 ** +$('#n3').value; }
+  const D = C / 6 / N, tn = (n) => A / n ** al, td = (n) => B / (C / 6 / n) ** be;
+  $('#c3v').innerHTML = sci(C, 2); $('#n3v').textContent = big(N);
+  $('#r3a').textContent = big(D); $('#r3b').textContent = (D / N >= 10 ? Math.round(D / N).toLocaleString('en-US') : (D / N).toFixed(1));
+  $('#r3c').textContent = (E + tn(N) + td(N)).toFixed(4); $('#r3d').textContent = big(no) + ' / ' + big(dop); $('#r3e').textContent = (dop / no).toFixed(1);
+  const W = vw('fig3'), H = 300; const svg = $('#fig3'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const ymax = Math.max(tn(10 ** lo), td(10 ** hi)) * 0.75;
+  const X = ax(56, 30, W - 80, H - 74, [10 ** lo, 10 ** hi], [0, ymax], true, false); X.id = 'c3c';
+  let s = clip(X) + X.frame();
+  for (let e = Math.ceil(lo); e <= Math.floor(hi); e++) s += X.xt(10 ** e, big(10 ** e));
+  const st = ymax > 0.6 ? 0.2 : (ymax > 0.3 ? 0.1 : 0.05); for (let v = 0; v <= ymax + 1e-9; v += st) s += X.yt(v, v.toFixed(2), v > 0);
+  s += `<g clip-path="url(#c3c)">` + X.curve(tn, '--muted', 2, '5 4') + X.curve(td, '--warn', 2, '5 4') + X.curve(n => tn(n) + td(n), '--accent', 3) + '</g>';
+  const xo = X.X(no), yo = X.Y(tn(no) + td(no));
+  s += Ln(xo, X.y0, xo, X.y0 + X.h, '--ok', 1.3, '3 3') + T(xo + 5, X.y0 + 12, '最优 ' + big(no), '--ok', 13);
+  const xp = X.X(N), yp = X.Y(Math.min(ymax, tn(N) + td(N)));
+  s += Cir(xp, yp, 6.5, '--accent', `stroke="${css('--paper')}" stroke-width="2"`);
+  s += T(X.x0 + X.w / 2, H - 6, I('N') + '（对数刻度）', '--muted', 13, 'middle') + T(4, 12, I('L') + ' − ' + I('E'), '--muted', 13);
+  svg.innerHTML = s;
+}
+
+/* ———— 04 推理 ———— */
+const TGT = (() => { const [E, A, B, al, be] = TOY.fit; return E + A / 8.03e9 ** al + B / 15e12 ** be; })();
+['i4', 'z4'].forEach(id => $('#' + id).addEventListener('input', draw4));
+function dtr(n) { const [E, A, B, al, be] = TOY.fit; const r = TGT - E - A / n ** al; return r <= 0 ? null : (B / r) ** (1 / be); }
+function draw4() {
+  const off = $('#z4').checked; const Di = off ? 0 : 10 ** +$('#i4').value;
+  $('#i4v').innerHTML = off ? '0' : sci(Di, 1); $('#i4').disabled = off;
+  const tot = (n) => { const d = dtr(n); return d == null ? null : 6 * n * d + 2 * n * Di; };
+  let best = null; for (let i = 0; i <= 3000; i++) { const n = 10 ** (9.6 + i * 0.001); const c = tot(n); if (c != null && (!best || c < best[0])) best = [c, n]; }
+  const [cb, nb] = best, db = dtr(nb), c8 = tot(8.03e9);
+  $('#r4a').textContent = big(nb); $('#r4b').textContent = big(db); $('#r4c').textContent = Math.round(db / nb).toLocaleString('en-US'); $('#r4d').textContent = ((c8 / cb - 1) * 100).toFixed(1) + '%';
+  const W = vw('fig4'), H = 300; const svg = $('#fig4'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const xr = [4e9, 2e11]; const ymin = cb / 1.6, ymax = cb * 30;
+  const X = ax(64, 30, W - 88, H - 74, xr, [ymin, ymax], true, true); X.id = 'c4c';
+  let s = clip(X) + X.frame();
+  [5e9, 1e10, 2e10, 5e10, 1e11, 2e11].forEach(v => s += X.xt(v, big(v)));
+  for (let e = Math.floor(Math.log10(ymin)); e <= Math.ceil(Math.log10(ymax)); e++) for (const m of [1, 3]) { const v = m * 10 ** e; if (v >= ymin && v <= ymax) s += X.yt(v, (m === 1 ? '' : '3 × ') + p10(e), true); }
+  s += `<g clip-path="url(#c4c)">` + X.curve(n => { const d = dtr(n); return d == null ? null : 6 * n * d; }, '--muted', 2, '5 4') + (Di ? X.curve(n => dtr(n) == null ? null : 2 * n * Di, '--warn', 2, '5 4') : '') + X.curve(tot, '--accent', 3) + '</g>';
+  s += Cir(X.X(nb), X.Y(cb), 6.5, '--ok', `stroke="${css('--paper')}" stroke-width="2"`);
+  const x8 = X.X(8.03e9); s += Ln(x8, X.y0, x8, X.y0 + X.h, '--warn', 1.2, '3 3') + T(x8 + 5, X.y0 + 12, 'Llama-3-8B', '--warn', 13);
+  s += T(X.x0 + X.w / 2, H - 6, I('N') + '（对数刻度）', '--muted', 13, 'middle') + T(4, 12, '总运算（FLOPs）', '--muted', 13);
+  svg.innerHTML = s;
+}
+
+/* ———— 05 涌现 ———— */
+seg('m5', () => draw5()); $('#l5').addEventListener('input', draw5);
+const ptok = (n) => Math.exp(-TOY.em[0] * n ** -TOY.em[1]);
+function draw5() {
+  const L = +$('#l5').value, m = segv('m5'); $('#l5v').textContent = L + ' 个 token';
+  const score = m === 'em' ? (n) => ptok(n) ** L : m === 'tok' ? ptok : (n) => L * (1 - ptok(n));
+  const fmt = (v) => m === 'ed' ? v.toFixed(2) + ' 个错' : (v * 100).toFixed(1) + '%';
+  $('#r5a').textContent = fmt(score(1e9)); $('#r5b').textContent = fmt(score(1e10));
+  if (m === 'ed') $('#r5c').textContent = '–（越低越好）';
+  else { const find = (t) => { let lo = 1e6, hi = 1e14; for (let i = 0; i < 80; i++) { const mid = Math.sqrt(lo * hi); score(mid) < t ? lo = mid : hi = mid; } return lo; }; const a = find(0.1), b = find(0.9); $('#r5c').textContent = (Math.log10(b / a)).toFixed(2) + ' 个数量级'; }
+  const W = vw('fig5'), H = 300; const svg = $('#fig5'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const ymax = m === 'ed' ? L : 1;
+  const X = ax(56, 30, W - 80, H - 74, [1e8, 1e12], [0, ymax], true, false); X.id = 'c5c';
+  let s = clip(X) + X.frame();
+  for (let e = 8; e <= 12; e++) s += X.xt(10 ** e, p10(e));
+  if (m === 'ed') { const st = L > 10 ? 5 : (L > 4 ? 2 : 1); for (let v = 0; v <= L; v += st) s += X.yt(v, v + '', v > 0); }
+  else [0, 0.25, 0.5, 0.75, 1].forEach(v => s += X.yt(v, (v * 100) + '%', v > 0));
+  s += `<g clip-path="url(#c5c)">` + (m === 'ed' ? '' : X.curve(ptok, '--muted', 2, '5 4')) + X.curve(score, m === 'em' ? '--warn' : '--accent', 3) + '</g>';
+  s += T(X.x0 + X.w / 2, H - 6, I('N') + '（对数刻度，示意）', '--muted', 13, 'middle') + T(4, 12, m === 'ed' ? '平均错几个 token' : '得分', '--muted', 13);
+  svg.innerHTML = s;
+}
+
+/* ———— 06 散点 ———— */
+let sel6 = 3;
+function draw6() {
+  const W = vw('fig6'), H = 340; const svg = $('#fig6'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const X = ax(62, 28, W - 86, H - 72, [5e9, 1e12], [1e11, 3e13], true, true);
+  let s = X.frame();
+  [1e10, 1e11, 1e12].forEach(v => s += X.xt(v, big(v)));
+  [1e11, 1e12, 1e13].forEach(v => s += X.yt(v, big(v), true));
+  for (const [k, col] of [[20, '--ok'], [1, '--muted']]) { const lo = Math.max(5e9, 1e11 / k), hi = Math.min(1e12, 3e13 / k); s += Ln(X.X(lo), X.Y(lo * k), X.X(hi), X.Y(hi * k), col, 1.5, '5 4'); }
+  s += T(X.X(4e10) - 8, X.Y(8e11), '20 个/参数', '--ok', 13, 'end') + T(X.X(6e11) - 6, X.Y(6e11) - 8, '1 个/参数', '--muted', 13, 'end');
+  const narrow = W < 560;
+  const off = { 'GPT-3': [-8, 22, 'end'], 'Gopher': [8, 22, 'start'], 'Chinchilla': [8, 16, 'start'], 'Llama-3-8B': [8, 18, 'start'], 'Llama-3-70B': [8, 18, 'start'], 'Llama-3.1-405B': [-8, -12, 'end'] };
+  TOY.models.forEach(([nm, n, d], i) => {
+    const x = X.X(n), y = X.Y(d), col = nm.startsWith('Llama') ? '--warn' : (nm === 'Chinchilla' ? '--ok' : '--accent');
+    const r = d / n, rs = r >= 10 ? Math.round(r).toLocaleString('en-US') : r.toFixed(1);
+    const [dx, dy, an] = off[nm];
+    s += `<g data-i="${i}" style="cursor:pointer">` + Cir(x, y, 14, '--bg', 'fill-opacity="0"') + Cir(x, y, i === sel6 ? 8 : 5.5, col, i === sel6 ? `stroke="${css('--fg')}" stroke-width="2"` : '') + T(x + dx, y + dy, (narrow ? nm.replace('Llama-3.1-', '').replace('Llama-3-', 'L3-') : nm) + ' · ' + rs, col, 13, an) + '</g>';
+  });
+  s += T(X.x0 + X.w / 2, H - 6, I('N') + '（参数量）', '--muted', 13, 'middle') + T(4, 12, I('D'), '--muted', 13);
+  svg.innerHTML = s;
+  const [nm, n, d, crep, h, card, yr] = TOY.models[sel6]; const c6 = 6 * n * d;
+  const peak = card === 'V100' ? TOY.V100 : TOY.H100;
+  $('#d6').innerHTML = `<b>${nm}</b>（${yr}）　\\(N\\) = ${big(n)}，\\(D\\) = ${big(d)}，每参数 ${(d / n >= 10 ? Math.round(d / n).toLocaleString('en-US') : (d / n).toFixed(1))} 个 token<br>`
+    + `\\(6ND\\) = ${sci(c6)} FLOPs；官方给的算力：${crep ? sci(crep) + ' FLOPs（差 ' + ((c6 / crep - 1) * 100).toFixed(1).replace('-', '−') + '%）' : '未单独给出'}<br>`
+    + `训练卡时：${h ? hrs(h) + ' ' + card + ' 卡时，反推有效利用率 ' + (c6 / (h * 3600 * peak) * 100).toFixed(1) + '%' : '未公开（' + card + '）'}`;
+  try { renderMathInElement($('#d6'), { delimiters: [{ left: '\\(', right: '\\)', display: false }], throwOnError: false }); } catch (e) {}
+}
+$('#fig6').addEventListener('click', (e) => { const g = e.target.closest('g[data-i]'); if (g) { sel6 = +g.dataset.i; draw6(); } });
+
+setPre(pre1);
+const all = () => { draw1(); draw2(); draw3(); draw4(); draw5(); draw6(); };
+all();
+let lastW = 0; addEventListener('resize', () => { const w = vw('fig1'); if (w !== lastW) { lastW = w; all(); } });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+</script>
+<script>/* 图形尺寸上限：每张图按自身宽高比收窄并居中，高度不超过视口 62%（最多 620px）；文字、控件、读数仍铺满 */
+(()=>{const sel='.lab svg,.lab canvas,figure svg,figure canvas,.clip video';
+let busy=false;const fit=()=>{let redraw=false;let vh=innerHeight;try{if(window.top!==window)vh=window.top.innerHeight}catch(e){}const H=Math.min(vh*.62,620);document.querySelectorAll(sel).forEach(el=>{if(el.parentElement.closest('svg')||el.closest('button,label,.seg,.ro'))return;let w,h;if(el.tagName.toLowerCase()==='svg'){const vb=el.viewBox&&el.viewBox.baseVal;if(!vb||!vb.width)return;w=vb.width;h=vb.height}else if(el.tagName==='VIDEO'){w=16;h=9}else{w=el.width;h=el.height}if(!w||!h)return;const mw=Math.round(H*w/h)+'px';if(el.tagName==='CANVAS'&&el.style.maxWidth!==mw)redraw=true;el.style.maxWidth=mw;el.style.marginInline='auto';if(getComputedStyle(el).display==='inline')el.style.display='block'});
+/* 画布的高度由实验自己按宽度算：尺寸变了就让实验重画一次 */if(redraw&&!busy){busy=true;dispatchEvent(new Event('resize'));busy=false}};
+fit();addEventListener('load',fit);addEventListener('resize',fit);setTimeout(fit,600)})();</script>
+</body>
+</html>

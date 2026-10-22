@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-22 12:10 America/New_York · 更新者：Claude（会话 session_01SNn1T5c286bGhv3ALJ1Rff）
+最后更新：2026-10-22 12:15 America/New_York · 更新者：Claude（会话 session_011Magq82ckm1tyvEFLBiWRD）
 
 ---
 
@@ -178,6 +178,7 @@ door4ai-lab/
 - [x] 课程规划 14 讲全部上线（2026-10-19）：最后一批《AI 写代码是怎么回事》(3.8，5 实验 + 1 动画)、《多模型网关与多 Agent 编排》(135，6 实验 + 2 动画)、《Agent 框架全景》(140，纯文字)
 - [x] 模型篇补充四讲（2026-10-19）：《多头注意力与 GQA》(order 7)、《模型量化》(12)、《MoE 混合专家》(15)、《RLHF 与偏好对齐》(42)，各 6 实验 + 2 动画
 - [x] 新增《Harness 是什么：模型外面那层替它动手的程序》（order 107，Agent Loop 之后、上下文窗口之前，作为 Agent 篇总纲；5 实验 + 2 动画）；RLHF 讲末尾加「Agent 的强化学习」一节 + 实验 06（2026-10-19）
+- [x] 新增《Scaling Laws：模型、数据、算力该怎么配》（order 38，预训练之后、LoRA 之前；按新标准图文写，8 张分镜图 + 实验 01–06；无视频）（2026-10-22）
 - [x] 新增《后训练是什么：只会续写的基座模型，是怎么变成助手的》（order 41，LoRA 之后、RLHF 之前；按新标准图文写，贯穿算例「17 × 3」，7 张分镜图 + 实验 01–05；无视频）（2026-10-22）
 - [x] 新增《推理模型：为什么让模型多想一会儿，答案会更好》（order 43，RLHF 之后、模型评测之前；按新标准图文写，贯穿算例「12 个一箱 × 3 箱 − 7」，9 张分镜图 + 实验 01–06；无视频）（2026-10-22）
 - [x] 新增《Prompt 工程：怎么跟模型把话说清楚》（order 99，Agent 篇第一讲；按新标准图文写，贯穿算例「网店评论分好评 / 中评 / 差评」，8 张分镜图 + 实验 01–05；无视频）（2026-10-22）
@@ -205,6 +206,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-22 · Claude（session_011Magq82ckm1tyvEFLBiWRD）** — 按本人要求用 write-lesson 写 Scaling Laws 一讲。新增 `scaling-laws`（order 38）：`labs-src/scaling-laws/toy.py` 算出整讲数字、生成 8 张 SVG（y = Wx 前向 6 条连线 / 反向两件事 / 6N 拆成三块 + Llama-3-8B 卡时 / Kaplan 幂律普通 vs 对数坐标 / 固定 5.76e23 算力的 U 形与两项代价 / 加推理后最省模型随推理量变化 / 涌现 p 与 p⁵ / 六个公开模型 N–D 散点），填进 `article.src.md`（`{{figN}}` 与 `{{n:名字}}`）写出 `src/content/blog/scaling-laws.md`。正文：N、D、C 与 FLOPS → 2 × 3 小网络前向 2N（x = (1, 2, 3)，y = (7, 5)）→ 反向 ① Wᵀg = (1, −1, 1)、② g xᵀ（跨 token 累加）共 4N → C ≈ 6ND（Llama-3-8B 7.23e23；忽略的注意力项 13.4%）→ 卡时（H100 989.5 TFLOPS 稠密；100% 20.3 万、40% 50.7 万，官方 130 万 → 有效 15.6%）→ Kaplan L(N) = (Nc/N)^0.076（每 ×10 乘 0.839，取对数成直线、斜率验算 −0.076；N ∝ C^0.73）→ Chinchilla L = E + A/N^α + B/D^β，**用 Besiroglu 2024 重新拟合的系数**（E 1.8172、A 482.01、B 2085.43、α 0.3478、β 0.3658；原论文系数推出约 59 个/参数、与 20 不一致，实验 03 可切换）；同一算力三种花法 280B / 70B / 8B → L 1.9933 / 1.9745 / 2.0247；求导推出谷底条件 βB/D^β = αA/N^α 与 N_opt 公式，代入得 72.2B、1.33 T、18.4 个/参数，指数 0.513 / 0.487 → 过训练：C 总 = 6ND训 + 2ND推，目标 = Llama-3-8B 配置的损失 2.0218，推理 0 / 1e12 / 1e13 / 1e14 时最省 33.9B / 23.3B / 13.5B / 8.75B（19 / 43 / 192 / 1139 个/参数），1e14 时 8B 只比最优多 2.4%；Meta 原话 Chinchilla 最优约 200B token、训到 15 T 仍对数线性提升 → 涌现：Wei 2022（定义、三位数加法约 2.3e22 FLOPs、CoT 约 1e23）vs Schaeffer 2023（p⁵ 示意表、>92% 来自两种打分、编辑距离平滑），再加 Du 2024 损失阈值 → 公开模型表（GPT-3 / Gopher / Chinchilla / Llama-3-8B / 70B / 3.1-405B 的 N、D、D/N、6ND、官方 C、卡时、反推利用率 20% / — / — / 16% / 28% / 35%）；4 个「停一下」。实验页 `public/labs/scaling-laws/`（手写单文件，画布宽度随容器变）：01 6ND 计算器（预设、H100/A100/V100、利用率、卡数，和官方卡时对照）/ 02 幂律拖 α、普通 / 对数坐标 / 03 给定算力拖 N 的 U 形（两组系数）/ 04 加推理的总运算曲线 / 05 涌现：全对、token 准确率、编辑距离三种打分 × 答案长度 / 06 公开模型散点，点选看明细。事实 2026-10-22 查证：Kaplan 2020（α 0.076、Nc 8.8e13、6N、0.73/0.27、768–1.5B 参数）、Chinchilla 论文（表 2 指数、5.76e23、400+ 模型、MMLU 67.6 vs 60.0）、Besiroglu 2024 系数、Llama 3 模型卡（15T+、1.3M / 6.4M H100 卡时）、Llama 3.1 模型卡（405B 30.84M）、Llama 3 报告（405B、15.6 T、3.8e25、MFU 38–43%、402B / 16.55 T）、Meta 发布文（200B token、对数线性、2 × 24K GPU）、Patterson 2021（GPT-3 10,000 V100 × 14.8 天）、H100 数据表（1979 含稀疏）、Sardana & Frankle 2023、Wei 2022、Schaeffer 2023、Du 2024。衔接：`lora.md` 末段加「上一讲 Scaling Laws」（预训练讲已在另一会话写好指向本讲）。本地 build 47 页通过；1512 浅色 / 390 深色文章与实验页无横向滚动、KaTeX 无报错、长公式已拆行、无脚本错误；个人信息检索 0。
 
 - **2026-10-22 · Claude（session_01SNn1T5c286bGhv3ALJ1Rff）** — 按本人要求用 write-lesson 写推理模型一讲。新增 `reasoning-models`（order 43）：`labs-src/reasoning-models/toy.py` 算出整讲数字、生成 9 张 SVG（Wei 2022 GSM8K 直接答 vs 思维链 / 直接答 1 次前向 vs 分步答 22 个 token 各 1 次前向 / 串行层数 32 vs 704 / k = 5 二项分布 / 投票正确率随 k（p = 0.6、0.4）/ best-of-N 四条线：上限、验证器不被骗、被骗 25%（蒙特卡洛，固定种子）、多数投票 / 固定预算下小模型 14 倍次数投票 vs 大模型（示意）/ GRPO 一组短长回答的优势 / 三种答法的 token 与等待时间），填进 `article.src.md` 写出 `src/content/blog/reasoning-models.md`。正文：思维链（每 token 约 2N FLOP、Llama-3-8B 32 层，中间结果写下来供后面读；句点对照无效）→ 自洽性（k = 3、5 手算二项分布，p < 0.5 越投越错，错答案分散时 p = 0.4 也有用）→ best-of-N（1 − (1 − p)^N 上限、会被骗的验证器极限 p / (p + (1 − p)q)）→ 测试时计算 vs 训练（Snell 2024 的 k = M + 3(M − 1)D_pre/D_inf 逐步推导，M = 14 时 R = 1、22、0.16 分别为 53、15.8、258）→ 推理模型怎么训（引用后训练讲的 RLVR/GRPO，R1-Zero 模板与规则奖励、AIME 15.6% → 71.0%、cons@64 86.7%、修订版 77.9%、aha moment 原话、语言混杂与 R1 补法；GRPO 一组手算说明长度为何变长）→ 代价（845 token/回答、每天百万次 $8,450 vs $30；想太多 2 + 3；何时不值得多想）→ 现状表（OpenAI reasoning.effort、Claude adaptive thinking + effort、Gemini thinking_level、DeepSeek thinking + reasoning_effort、百炼 enable_thinking + thinking_budget，2026-10-22 查各家文档）；4 个「停一下」。实验页 `public/labs/reasoning-models/` 由 `labs-src/reasoning-models/build.py` 拼出（模板 head/尾部脚本 + `lab.body.html` + `lab.js`）：01 直接答 vs 分步答玩具模型（每次前向一步运算，1–5 步）/ 02 多数投票计算器（二项分布精确值，错答案相同 / 各不相同）/ 03 best-of-N + 有噪声验证器（蒙特卡洛 4000 次，可抽一组看挑中谁）/ 04 思考成本计算器 / 05 固定预算取舍（示意）/ 06 GRPO 让思考变长（示意，五档长度，可加长度惩罚；数字已在 node 里跑过核对 note）。事实 2026-10-22 查证：Wei 表 1（PaLM 540B 17.9 → 56.9、GPT-3 175B 15.6 → 46.9）、Kojima 10.4 → 40.7、Wang 56.5 → 74.4、Brown 15.9% → 56%、Snell 公式与结论、o1 AIME 74 / 83 / 93、R1 v1 与修订版、Chen 2024（13 遍、1953%、92%、R1 ASDIV 845 token）。衔接：`rlhf-alignment.md` 末段改为下一讲推理模型、再下一讲评测；`model-evaluation.md` 末段补「上一讲推理模型」。本地 build 42 页通过；1512 浅色 / 390 深色文章与实验页无横向滚动、公式不溢出、无脚本错误；个人信息检索 0。
 
@@ -399,7 +402,7 @@ door4ai-lab/
    - 基础篇：`ai-coding-tools` 3.8 AI Coding 入门（Claude Code / Codex 怎么用，接 Resource 页）
    - 模型篇：`backpropagation` 30 反向传播 · `layernorm` 35 LayerNorm · `lora` 40 LoRA · `model-evaluation` 45 模型评测
    - Agent 篇：`tool-calling` 100 工具调用 · `agent-loop` 105 Agent Loop 与 ReAct · `context-window` 110 上下文与记忆 · `rag-embedding` 115 Embedding 与 RAG · `mcp` 120 MCP · `streaming` 125 流式输出（SSE）· `trace-eval` 130 Trace 与 Eval · `gateway-orchestration` 135 多模型网关与多 Agent 编排 · `agent-frameworks` 140 框架全景（纯文字）
-   - 补充（2026-10-22）：`post-training` 41 后训练总览 · `pretraining` 37 预训练 · `positional-encoding` 6 位置编码与 RoPE · `reasoning-models` 43 推理模型
+   - 补充（2026-10-22）：`post-training` 41 后训练总览 · `scaling-laws` 38 Scaling Laws · `pretraining` 37 预训练 · `positional-encoding` 6 位置编码与 RoPE · `reasoning-models` 43 推理模型
    - 补充（2026-10-22）：`prompt-engineering` 99 Prompt 工程（Agent 篇第一讲）
    - 补充（2026-10-22 已写）：`vision-tokens` 48 模型怎么看图
    - 补充（2026-10-22 已写）：`vectors-softmax` 4.5 向量、矩阵乘法与 softmax（数学讲）
