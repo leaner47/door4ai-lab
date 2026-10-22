@@ -3,7 +3,7 @@
 > 这份文件是本项目的唯一交接入口。任何 AI 或人接手时**先读完本文件**，再动手。
 > 任何一次工作结束前，**必须**按文末「更新协议」更新本文件并提交。没有更新 HANDOFF 的工作视为未完成。
 
-最后更新：2026-10-22 12:10 America/New_York · 更新者：Claude（会话 session_017Fwc1rzTkWkiTuLbPY9ZSq）
+最后更新：2026-10-22 11:57 America/New_York · 更新者：Claude（会话 session_01YFhhfqKLw4J3zvSgTz1aps）
 
 ---
 
@@ -184,6 +184,7 @@ door4ai-lab/
 - [x] 新增《向量、矩阵乘法与 softmax：读懂大模型需要的全部数学》（order 4.5，Token 讲之后、注意力讲之前；按新标准图文写，15 步、12 张分镜图、5 个「停一下」+ 6 个实验，无视频）（2026-10-22）
 - [x] 新增《模型是怎么看图的：一张图怎样变成一串 token》（order 48，模型篇最后一讲；按新标准图文写，10 张分镜图 + 6 个实验，无视频）（2026-10-22）
 - [x] 新增《位置编码与 RoPE：注意力怎么知道谁在前谁在后》（order 6，注意力讲之后、多头 GQA 讲之前；按新标准图文写，沿用注意力讲的四个 token，11 张分镜图 + 实验 01–05；无视频）（2026-10-22）
+- [x] 新增《预训练是什么：模型是怎么从一大堆文字里学会说话的》（order 37，LayerNorm 之后、Scaling Laws(38) 与 LoRA 之前；按新标准图文写，贯穿算例「我爱吃米饭。」+ 7 token bigram，13 张分镜图、3 个「停一下」+ 实验 01–06，含页内真实训练的字符级小模型；无视频）（2026-10-22）
 - [ ] 待补查（写手凭记忆、未找到原文出处）：RLHF 讲里 GPT-3 预训练 300 B token、InstructGPT 每题 4–9 个回答排序、Llama 2 双奖励模型与四档评分；量化讲的困惑度表来自单作者预印本（arXiv 2601.14277），如需更强出处可删
 - [ ] 本人自学时发现缺口再补
 - [ ] 关于页只有两句话，待充实
@@ -203,6 +204,8 @@ door4ai-lab/
 - [ ] 哪几讲免费试听未定（在文章 frontmatter 写 `access: free` 即可）
 
 ## 6. 工作日志（倒序，每次工作追加一条）
+
+- **2026-10-22 · Claude（session_01YFhhfqKLw4J3zvSgTz1aps）** — 按本人要求用 write-lesson 写预训练一讲。新增 `pretraining`（order 37）：`labs-src/pretraining/toy.py` 定义贯穿算例（7 个 token 的词表、「我爱吃米饭。」5 个位置、bigram 分数表、两句话一批、SGD 学习率 4），算出全部数字、生成 13 张 SVG，把 `article.src.md` 的 `{{figN}}` / `{{n:名字}}` 填好写到 `src/content/blog/pretraining.md`；**实验页也由脚本生成**：`lab.src.html` + `charlm.js`（字符级 bigram / 小 MLP：手写前向、交叉熵、反向、AdamW，种子固定）+ `corpus.txt`（自编约 670 字中文小语料，最后一句作验证集）→ `public/labs/pretraining/index.html`；`run_lab.mjs` 在 node 里用同一份代码训练，文章里的损失曲线与生成文本表来自它，Chromium 里跑出的结果逐字一致。正文：拆样本（n − 1）→ 因果遮罩 → softmax 一个位置 → 从整句概率连乘推到 −ln p 取平均 → 困惑度 = 几何平均的倒数 → 一个训练步（数值微分验证 p − y、「米」行梯度表、更新后「粥」升「饭」几乎不动）→ 损失下限 2 ln 2 / 10 → 数据来源 / FineWeb 清洗流程 / Jaccard + MinHash 证明 + 14×8 分桶曲线 / GPT-3 配比表与 Llama 3 配比、退火 → warmup + cosine（Adam 第一步 = ±η 的推导；带噪声碗的稳态方差 V = ησ²/(a(2 − ηa)) 推导）→ 页内小模型（MLP 验证损失第 225 步最低后上升 = 背原文）→ 学到了什么、为什么只会续写。实验：01 拆样本 + 遮罩 / 02 交叉熵计算器 / 03 bigram 一个训练步 / 04 真实训练（模型、调度、峰值学习率可选，可从任意开头生成）/ 05 学习率调度 + 带噪声碗恒定 vs 余弦 / 06 GPT-3 与 Llama 3 配比。事实 2026-10-22 查证：Llama 3 报告第 3 节（15.6 T token、清洗与三层去重、50/25/17/8 配比、退火 24.0% / 6.4%、405B 峰值 8e-5、预热 8000 步、余弦到 8e-7、120 万步、batch 4M→8M→16M）、FineWeb 论文（96 快照、36 T → 20 T → 15 T、MinHash 5-gram 112 哈希 14×8、全局去重仅剩约 4 T 反而更差、FineWeb-Edu 1.3 T）、GPT-3 表 2.2。衔接：`layernorm.md` 末段改为下一讲预训练；`lora.md` 两处改指预训练；`post-training`（article.src.md 重跑）开头与交叉熵处改指预训练一讲。本地 build 45 页通过；1512 浅色 / 390 深色无横向滚动、KaTeX 公式无溢出、无脚本错误（仅本地静态服务下 /api/me 等 404）；个人信息检索 0。
 
 - **2026-10-22 · Claude（session_017Fwc1rzTkWkiTuLbPY9ZSq）** — 按本人要求用 write-lesson 写数学讲。新增 `vectors-softmax`（order 4.5，模型篇第一讲）：`labs-src/vectors-softmax/toy.py` 定义贯穿算例（**与注意力讲同一组数**：粮油 (0, 1)、店 (0.4, 0.2)、买了 (0.2, 0)、小米 (0.5, 0.5)；W_Q x = (1.0, −0.6)；W_K 乘 2 × 4 的 X 得 K；K 乘 (1.0, −0.6) 得分数 1.6 / 0.48 / 0.08 / 1.0；softmax 47.8 / 15.6 / 10.4 / 26.2 %；T = 0.5 / 2 / √2；线性层 b = (0.2, 0.4)），生成 12 张 SVG 并把 `article.src.md` 的 `{{figN}}`、`{{n:名字}}` 填好写到 `src/content/blog/vectors-softmax.md`。正文 15 步：向量 → 箭头与长度 → 点积 → 投影与 ‖a‖‖b‖cos θ → 余弦相似度 → 矩阵乘向量（逐行点积）→ 形状规则 (m × n)(n) → (m) → 矩阵乘矩阵与转置 → 线性层 y = Wx + b 与参数量（GPT-2 FFN 768 → 3072 带偏置 2,362,368；Llama-3-8B 输出投影 128,256 × 4096 = 525,336,576）→ 为什么不能直接除以总和 → 指数 → softmax → 温度 → 减最大值（float32 溢出点 88.72、float16 11.09）→ 对数（0.478 在 float32 里连乘第 141 次变 0、log-softmax、交叉熵只点到）；5 个「停一下」。实验页由 `labs-src/vectors-softmax/build.py` 拼出（模板样式 + `lab.body.html` + `lab.script.js`）：01 拖两支箭头（点积、投影、夹角）/ 02 矩阵乘向量逐行高亮 / 03 形状检查器 + 线性层参数量（四个真实预设）/ 04 softmax + 温度 + 直接除以总和对照 + 抽 100 次 / 05 float64 / float32 / float16 下直接取指数 vs 先减最大值（每步按精度舍入，float16 用自写舍入）/ 06 float32 连乘与对数相加。衔接：`attention-qkv` 的 `article.src.md` 加三处「见上一讲」（矩阵乘向量、softmax、÷√2 = 温度 √2）并改「和前后两讲的关系」，重跑 toy.py（只有这几处变化）；`tokenizer-llm.md` 末段改为先接本讲。本地 build 42 页通过；1512 浅色 / 390 深色无横向滚动、KaTeX 无报错、无脚本错误，390 宽长公式已拆行；实验关键读数（56 倍 float32 溢出、7 倍 float16 溢出、第 141 次变 0）在 Chromium 里核对；个人信息检索 0。
 
@@ -393,7 +396,7 @@ door4ai-lab/
    - 基础篇：`ai-coding-tools` 3.8 AI Coding 入门（Claude Code / Codex 怎么用，接 Resource 页）
    - 模型篇：`backpropagation` 30 反向传播 · `layernorm` 35 LayerNorm · `lora` 40 LoRA · `model-evaluation` 45 模型评测
    - Agent 篇：`tool-calling` 100 工具调用 · `agent-loop` 105 Agent Loop 与 ReAct · `context-window` 110 上下文与记忆 · `rag-embedding` 115 Embedding 与 RAG · `mcp` 120 MCP · `streaming` 125 流式输出（SSE）· `trace-eval` 130 Trace 与 Eval · `gateway-orchestration` 135 多模型网关与多 Agent 编排 · `agent-frameworks` 140 框架全景（纯文字）
-   - 补充（2026-10-22）：`post-training` 41 后训练总览 · `positional-encoding` 6 位置编码与 RoPE
+   - 补充（2026-10-22）：`post-training` 41 后训练总览 · `pretraining` 37 预训练 · `positional-encoding` 6 位置编码与 RoPE
    - 补充（2026-10-22）：`prompt-engineering` 99 Prompt 工程（Agent 篇第一讲）
    - 补充（2026-10-22 已写）：`vision-tokens` 48 模型怎么看图
    - 补充（2026-10-22 已写）：`vectors-softmax` 4.5 向量、矩阵乘法与 softmax（数学讲）
